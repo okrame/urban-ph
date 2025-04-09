@@ -1,11 +1,20 @@
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from './config';
 
 // Function to initialize the Firestore database with initial data
 export const initializeFirestore = async () => {
   try {
-    // Create the current event document
-    await setDoc(doc(db, 'events', 'current-event'), {
+    // First check if the document already exists to avoid overwriting data
+    const docRef = doc(db, 'events', 'current-event');
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      console.log('Document already exists, not overwriting');
+      return;
+    }
+    
+    // Create the current event document only if it doesn't exist
+    await setDoc(docRef, {
       title: "Urban Photography Adventure: City Lights",
       date: "April 20, 2025",
       time: "6:00 PM - 9:00 PM",
@@ -20,5 +29,6 @@ export const initializeFirestore = async () => {
     console.log('Firestore initialized successfully');
   } catch (error) {
     console.error('Error initializing Firestore:', error);
+    throw error; // Re-throw to handle in the calling component
   }
 };

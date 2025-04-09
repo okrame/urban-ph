@@ -8,6 +8,7 @@ import { initializeFirestore } from '../firebase/setupFirebase';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [currentEvent] = useState({
     title: "Urban Photography Adventure: City Lights",
     date: "April 20, 2025",
@@ -21,18 +22,40 @@ function App() {
 
   useEffect(() => {
     console.log("App component mounted");
+    console.log("Current pathname:", window.location.pathname);
+    console.log("Current host:", window.location.host);
+    console.log("Current href:", window.location.href);
+    
+    // Check if we're on GitHub Pages
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    if (isGitHubPages) {
+      console.log("Running on GitHub Pages");
+    }
     
     // Initialize Firebase data (only run once)
-    initializeFirestore();
+    initializeFirestore().catch(err => {
+      console.error("Failed to initialize Firestore:", err);
+    });
     
     // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       console.log("Auth state changed:", currentUser ? "User logged in" : "No user");
       setUser(currentUser);
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <p className="text-xl">Loading Urban Photo Hunts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">

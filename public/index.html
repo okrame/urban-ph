@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Urban Photo Hunts</title>
     <script type="text/javascript">
-      // SPA GitHub Pages fix
+      // SPA GitHub Pages redirect fix
       (function(l) {
         if (l.search[1] === '/' ) {
           var decoded = l.search.slice(1).split('&').map(function(s) { 
@@ -21,6 +21,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/urban-ph/src/main.jsx"></script>
+    <!-- Ensure this path is correct -->
+    <script type="module" src="/urban-ph/assets/main.js"></script>
   </body>
 </html>

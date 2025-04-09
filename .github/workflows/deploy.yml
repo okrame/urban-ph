@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Imposta le autorizzazioni esplicite
+# Set explicit permissions
 permissions:
   contents: write
 
@@ -26,8 +26,14 @@ jobs:
         run: |
           npm ci
           npm run build
-          # Crea anche un file .nojekyll nella cartella di build
+          
+          # Create important GitHub Pages files
           touch dist/.nojekyll
+          cp public/404.html dist/404.html
+          
+          # Create a CNAME file if you have a custom domain
+          # echo "yourdomain.com" > dist/CNAME
+          
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
@@ -41,4 +47,4 @@ jobs:
         with:
           folder: dist
           branch: gh-pages
-          clean: true # Rimuove completamente i file esistenti
+          clean: true # Remove existing files completely

@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EventCard from './components/EventCard';
-import AuthModal from './components/AuthModal';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { initializeFirestore } from '../firebase/setupFirebase';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentEvent] = useState({
     title: "Urban Photography Adventure: City Lights",
     date: "April 20, 2025",
@@ -22,24 +20,19 @@ function App() {
   });
 
   useEffect(() => {
+    console.log("App component mounted");
+    
     // Initialize Firebase data (only run once)
     initializeFirestore();
     
     // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log("Auth state changed:", currentUser ? "User logged in" : "No user");
       setUser(currentUser);
     });
 
     return () => unsubscribe();
   }, []);
-
-  const openAuthModal = () => {
-    setIsAuthModalOpen(true);
-  };
-
-  const closeAuthModal = () => {
-    setIsAuthModalOpen(false);
-  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -52,18 +45,10 @@ function App() {
           <h2 className="text-3xl font-bold text-center mb-12">Current Event</h2>
           <EventCard 
             event={currentEvent} 
-            user={user} 
-            openAuthModal={openAuthModal} 
+            user={user}
           />
         </section>
       </main>
-
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={closeAuthModal} 
-        event={currentEvent}
-        user={user}
-      />
       
       <footer className="bg-gray-800 text-white text-center py-6">
         <p>© {new Date().getFullYear()} Urban Photo Hunts. All rights reserved.</p>

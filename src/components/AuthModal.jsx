@@ -5,7 +5,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider
 } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { auth } from '../../firebase/config';
 
 function AuthModal({ isOpen, onClose, event }) {
   const [email, setEmail] = useState('');

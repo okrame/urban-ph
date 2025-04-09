@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { db } from '../firebase/config';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { doc, getDoc, updateDoc, arrayUnion } from '../firebase/firestore';
 
 function EventCard({ event, user, openAuthModal }) {
   const [isBooked, setIsBooked] = useState(false);

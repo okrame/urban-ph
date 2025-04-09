@@ -4,8 +4,8 @@ import Hero from './components/Hero';
 import EventCard from './components/EventCard';
 import AuthModal from './components/AuthModal';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase/config';
-import { initializeFirestore } from './firebase/setupFirebase';
+import { auth } from '../firebase/config';
+import { initializeFirestore } from '../firebase/setupFirebase';
 
 function App() {
   const [user, setUser] = useState(null);

@@ -9,35 +9,7 @@ A simple, lightweight website for Urban Photo Hunts cultural association. The si
 - Event booking functionality
 - GitHub Actions workflow for automated deployment
 
-## Project Structure
 
-```
-urban-ph/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml      # GitHub Actions workflow for deployment
-├── public/
-│   └── ...                 # Public assets
-├── src/
-│   ├── components/
-│   │   ├── AuthModal.jsx   # Authentication modal component
-│   │   ├── EventCard.jsx   # Event card component
-│   │   ├── Hero.jsx        # Hero section component
-│   │   └── Navbar.jsx      # Navigation bar component
-│   ├── firebase/
-│   │   ├── config.js       # Firebase configuration
-│   │   └── setupFirebase.js # Firebase initialization helpers
-│   ├── App.jsx             # Main application component
-│   ├── index.css           # Global styles with Tailwind imports
-│   └── main.jsx            # Application entry point
-├── .env.example            # Example environment variables
-├── .gitignore              # Git ignore file
-├── index.html              # HTML entry point
-├── package.json            # Project dependencies and scripts
-├── postcss.config.js       # PostCSS configuration for Tailwind
-├── tailwind.config.js      # Tailwind CSS configuration
-└── vite.config.js          # Vite configuration
-```
 
 ## Setup Instructions
 

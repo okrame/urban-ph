@@ -26,6 +26,8 @@ jobs:
         run: |
           npm ci
           npm run build
+          # Crea anche un file .nojekyll nella cartella di build
+          touch dist/.nojekyll
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
@@ -39,3 +41,4 @@ jobs:
         with:
           folder: dist
           branch: gh-pages
+          clean: true # Rimuove completamente i file esistenti

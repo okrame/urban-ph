@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '../../firebase/config';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import BookingForm from './BookingForm';
 
 function EventCard({ event, user }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
   
   useEffect(() => {
     const checkBookingStatus = async () => {
@@ -64,9 +66,14 @@ function EventCard({ event, user }) {
       return;
     }
     
+    // Show the booking form instead of immediately booking
+    setShowBookingForm(true);
+  };
+  
+  const handleFormSubmit = async (formData) => {
     setLoading(true);
     try {
-      console.log("Attempting to book event");
+      console.log("Attempting to book event with form data:", formData);
       const eventRef = doc(db, 'events', 'current-event');
       
       // First check if the document exists
@@ -80,19 +87,49 @@ function EventCard({ event, user }) {
       const eventData = eventDoc.data();
       console.log("Current event data:", eventData);
       
+      // Add user to attendees array and decrement spotsLeft
       await updateDoc(eventRef, {
         attendees: arrayUnion(user.uid),
         spotsLeft: (eventData.spotsLeft || 0) - 1
       });
       
+      // Store user contact info in a separate collection
+      await setDoc(doc(db, 'attendees', user.uid), {
+        email: formData.email,
+        phone: formData.phone,
+        userId: user.uid,
+        eventId: 'current-event',
+        displayName: user.displayName || null,
+        registeredAt: new Date()
+      });
+      
       console.log("Event booked successfully");
       setIsBooked(true);
+      setShowBookingForm(false);
     } catch (error) {
       console.error("Error booking event:", error);
     } finally {
       setLoading(false);
     }
   };
+  
+  const handleCancelForm = () => {
+    setShowBookingForm(false);
+  };
+  
+  // If booking form is shown, display it
+  if (showBookingForm) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden p-6">
+        <h3 className="text-2xl font-bold mb-4">{event.title}</h3>
+        <BookingForm 
+          onSubmit={handleFormSubmit} 
+          onCancel={handleCancelForm}
+          loading={loading}
+        />
+      </div>
+    );
+  }
   
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden">

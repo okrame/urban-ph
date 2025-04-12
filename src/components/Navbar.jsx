@@ -1,16 +1,29 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
+import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 
 function Navbar({ user }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
     } catch (error) {
       console.error("Error signing out:", error);
+    }
+  };
+
+  const handleSignIn = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Error signing in:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,7 +56,16 @@ function Navbar({ user }) {
                 </button>
               </div>
             ) : (
-              <span>Welcome, Guest</span>
+              <div className="flex items-center gap-4">
+                <span className="hidden sm:block">Welcome, Guest</span>
+                <button 
+                  onClick={handleSignIn}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </div>
             )}
             
             {/* Mobile menu button */}
@@ -91,6 +113,17 @@ function Navbar({ user }) {
               >
                 Admin
               </Link>
+            )}
+            {!user && (
+              <button 
+                onClick={() => {
+                  handleSignIn();
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-700"
+              >
+                Sign In
+              </button>
             )}
           </div>
         </div>

@@ -4,8 +4,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EventCard from './components/EventCard';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import { initializeDatabase } from '../firebase/initDB';
+import { auth, setupFirebase } from '../firebase/config';
 import { getActiveEvents } from '../firebase/firestoreServices';
 
 function App() {
@@ -23,7 +22,7 @@ function App() {
     }
     
     // Initialize Firebase data (only run once)
-    initializeDatabase().catch(err => {
+    setupFirebase().catch(err => {
       console.error("Failed to initialize database:", err);
     });
     

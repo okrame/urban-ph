@@ -1,10 +1,18 @@
-import { collection, getDocs, query, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { db } from './config';
 
 // Function to initialize the database with sample events
 export const initializeDatabase = async () => {
   try {
-    // Check if there are already events in the database
+    // First check if we have a single event document from old initialization approach
+    const singleEventRef = doc(db, 'events', 'current-event');
+    const singleEventDoc = await getDoc(singleEventRef);
+    
+    if (singleEventDoc.exists()) {
+      console.log('Legacy event document exists, will not overwrite');
+    }
+    
+    // Check if there are already events in the database collection
     const eventsQuery = query(collection(db, 'events'));
     const querySnapshot = await getDocs(eventsQuery);
     

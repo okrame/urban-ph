@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import SimpleNavbar from './components/SimpleNavbar';
 import Hero from './components/Hero';
 import EventCard from './components/EventCard';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
 import { getActiveEvents } from '../firebase/firestoreServices';
+import { createUserProfile } from '../firebase/userServices';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -37,8 +38,18 @@ function App() {
     };
     
     // Set up auth state listener
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       console.log("Auth state changed:", currentUser ? "User logged in" : "No user");
+      
+      if (currentUser) {
+        // Create/update user profile when user logs in
+        try {
+          await createUserProfile(currentUser);
+        } catch (error) {
+          console.error("Error creating user profile:", error);
+        }
+      }
+      
       setUser(currentUser);
       setLoading(false);
     });
@@ -52,6 +63,10 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
+          <svg className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
           <p className="text-xl">Loading Urban Photo Hunts...</p>
         </div>
       </div>
@@ -60,7 +75,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar user={user} />
+      <SimpleNavbar user={user} />
       
       <main>
         <Hero />
@@ -80,8 +95,14 @@ function App() {
               
               {events.length > 3 && (
                 <div className="text-center mt-8">
-                  <Link to="/events" className="text-blue-600 hover:text-blue-800 font-semibold">
-                    View all {events.length} events →
+                  <Link 
+                    to="/events" 
+                    className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    View all {events.length} events
+                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                    </svg>
                   </Link>
                 </div>
               )}

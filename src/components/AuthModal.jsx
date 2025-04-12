@@ -6,6 +6,7 @@ import {
   GoogleAuthProvider
 } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+import { createUserProfile } from '../../firebase/userServices';
 
 function AuthModal({ isOpen, onClose, event }) {
   const [email, setEmail] = useState('');
@@ -48,13 +49,18 @@ function AuthModal({ isOpen, onClose, event }) {
     setLoading(true);
 
     try {
+      let userCredential;
       if (isSignIn) {
-        await signInWithEmailAndPassword(auth, email, password);
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       }
+      
+      // Crea o aggiorna il profilo utente nel database
+      await createUserProfile(userCredential.user);
       onClose();
     } catch (error) {
+      console.error("Auth error:", error);
       setError(
         error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' 
           ? 'Invalid email or password' 
@@ -73,11 +79,14 @@ function AuthModal({ isOpen, onClose, event }) {
     
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Crea o aggiorna il profilo utente nel database
+      await createUserProfile(result.user);
       onClose();
     } catch (error) {
+      console.error("Google sign-in error:", error);
       setError('Google sign-in failed. Please try again.');
-      console.error(error);
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../../firebase/config';
-import { bookEvent, checkUserBooking } from '../../firebase/firestoreServices';
+import { bookEventSimple, checkUserBooking } from '../../firebase/firestoreServices';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserProfile } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
 
 function EventCard({ event, user }) {
@@ -9,7 +10,9 @@ function EventCard({ event, user }) {
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [authError, setAuthError] = useState(null);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
   
+  // Effetto per verificare lo stato di prenotazione quando l'utente cambia o l'evento cambia
   useEffect(() => {
     // Check if the user has already booked this event
     const checkBookingStatus = async () => {
@@ -21,6 +24,10 @@ function EventCard({ event, user }) {
       try {
         const isAlreadyBooked = await checkUserBooking(user.uid, event.id);
         setIsBooked(isAlreadyBooked);
+        
+        if (isAlreadyBooked) {
+          setBookingSuccess(true); // Se già prenotato, mostriamo come successo
+        }
       } catch (error) {
         console.error("Error checking booking status:", error);
       }
@@ -34,11 +41,14 @@ function EventCard({ event, user }) {
       setLoading(true);
       setAuthError(null);
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Crea o aggiorna il profilo utente nel database
+      await createUserProfile(result.user);
       // After successful login, the auth state will change and trigger the useEffect
     } catch (error) {
       console.error("Google sign-in error:", error);
-      setAuthError(error.message);
+      setAuthError("Errore durante l'accesso con Google. Riprova."); 
     } finally {
       setLoading(false);
     }
@@ -52,15 +62,19 @@ function EventCard({ event, user }) {
     }
     
     if (isBooked) {
+      setAuthError("Hai già prenotato questo evento!");
       return; // Already booked, do nothing
     }
     
     // Show the booking form instead of immediately booking
     setShowBookingForm(true);
+    setAuthError(null); // Clear any previous errors
   };
   
   const handleFormSubmit = async (formData) => {
     setLoading(true);
+    setAuthError(null);
+    
     try {
       const userData = {
         userId: user.uid,
@@ -69,12 +83,31 @@ function EventCard({ event, user }) {
         displayName: user.displayName || null
       };
       
-      await bookEvent(event.id, userData);
-      setIsBooked(true);
-      setShowBookingForm(false);
+      // Utilizziamo la versione semplice senza transazioni per evitare problemi
+      const result = await bookEventSimple(event.id, userData);
+      
+      // Se la prenotazione è andata a buon fine
+      if (result && result.success) {
+        setIsBooked(true);
+        setBookingSuccess(true);
+        setShowBookingForm(false);
+      } else {
+        // Questo non dovrebbe mai accadere grazie alla gestione degli errori in bookEvent
+        throw new Error("Errore sconosciuto durante la prenotazione");
+      }
     } catch (error) {
       console.error("Error booking event:", error);
-      setAuthError(error.message);
+      
+      // Messaging più amichevole basato sul tipo di errore
+      if (error.message.includes("No spots left")) {
+        setAuthError("Non ci sono più posti disponibili per questo evento.");
+      } else if (error.message.includes("already booked")) {
+        setIsBooked(true);
+        setBookingSuccess(true);
+        setShowBookingForm(false);
+      } else {
+        setAuthError("Si è verificato un errore durante la prenotazione. Riprova.");
+      }
     } finally {
       setLoading(false);
     }
@@ -82,13 +115,61 @@ function EventCard({ event, user }) {
   
   const handleCancelForm = () => {
     setShowBookingForm(false);
+    setAuthError(null);
   };
   
-  // If booking form is shown, display it
+  // Se la prenotazione è andata a buon fine, mostra un messaggio di conferma
+  if (bookingSuccess && !showBookingForm) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="md:flex">
+          <div className="md:w-1/3">
+            <img 
+              src={event.image} 
+              alt={event.title}
+              className="h-64 w-full object-cover md:h-full"
+            />
+          </div>
+          <div className="p-6 md:w-2/3">
+            <h3 className="text-2xl font-bold mb-2">{event.title}</h3>
+            
+            <div className="mb-4 flex flex-wrap gap-3">
+              <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
+                📅 {event.date}
+              </span>
+              <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
+                🕒 {event.time}
+              </span>
+              <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
+                📍 {event.location}
+              </span>
+              <span className="inline-block bg-blue-200 rounded-full px-3 py-1 text-sm font-semibold text-blue-700">
+                {event.type}
+              </span>
+            </div>
+            
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+              <p className="font-bold">✓ Prenotazione confermata!</p>
+              <p>Hai prenotato con successo questo evento. Ti aspettiamo!</p>
+            </div>
+            
+            <p className="text-gray-700 mb-4">{event.description}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Se booking form è mostrato, display it
   if (showBookingForm) {
     return (
       <div className="bg-white rounded-lg shadow-lg overflow-hidden p-6">
         <h3 className="text-2xl font-bold mb-4">{event.title}</h3>
+        {authError && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+            {authError}
+          </div>
+        )}
         <BookingForm 
           onSubmit={handleFormSubmit} 
           onCancel={handleCancelForm}

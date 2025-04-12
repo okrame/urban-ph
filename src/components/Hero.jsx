@@ -10,7 +10,7 @@ function Hero() {
   };
 
   return (
-    <section className="relative h-screen flex items-center justify-center text-white overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden pt-16">
       {/* Background image with overlay */}
       <div className="absolute inset-0 z-0">
         <img
@@ -18,26 +18,30 @@ function Hero() {
           alt="Urban photography"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900/80 to-gray-900/70"></div>
       </div>
       
       {/* Content */}
       <div className="z-10 text-center p-4 max-w-4xl">
-        <h1 className="text-4xl md:text-6xl font-bold mb-4">Urban Photo Hunts</h1>
-        <p className="text-xl md:text-2xl mb-8">Explore the city through your lens</p>
-        <p className="text-lg md:text-xl max-w-2xl mx-auto">
+        <h1 className="text-4xl md:text-6xl font-bold mb-4">
+          Urban Photo Hunts
+        </h1>
+        <p className="text-xl md:text-2xl mb-8">
+          Explore the city through your lens
+        </p>
+        <p className="text-lg md:text-xl max-w-2xl mx-auto opacity-90">
           Join our photography adventures and discover the hidden beauty of urban landscapes
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <button 
             onClick={scrollToCurrentEvents} 
-            className="inline-block bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+            className="inline-block bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors transform hover:scale-105 duration-200"
           >
             Current Events
           </button>
           <Link
             to="/events"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors transform hover:scale-105 duration-200"
           >
             View All Events
           </Link>

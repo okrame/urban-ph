@@ -9,13 +9,14 @@ function Navbar({ user }) {
   const [loading, setLoading] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-
-  // Add scroll effect for navbar
+  
+  // Handle scroll effect for navbar
   useEffect(() => {
     const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
+      if (window.scrollY > 10) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
       }
     };
 
@@ -24,6 +25,19 @@ function Navbar({ user }) {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [scrolled]);
+
+  // Effect to prevent scrolling when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMenuOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -59,36 +73,37 @@ function Navbar({ user }) {
   };
 
   return (
-    <nav className={`fixed w-full z-50 transition-all duration-300 ${
-      scrolled || isMenuOpen ? 'bg-gray-900 shadow-lg' : 'bg-gray-900/80 backdrop-blur-sm'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center">
-              <span className="text-xl font-bold text-white">
+    <>
+      <nav className={`fixed w-full z-50 transition-all duration-300 ${
+        scrolled ? 'bg-white shadow-md py-2' : 'bg-blue-50/90 backdrop-blur-sm py-3'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              <Link to="/" className="text-blue-800 font-bold text-xl tracking-wider">
                 Urban Photo Hunts
-              </span>
-            </Link>
+              </Link>
+            </div>
             
-            {/* Desktop menu */}
-            <div className="hidden md:ml-10 md:flex md:space-x-8">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
               <Link 
                 to="/" 
-                className={`px-3 py-2 text-sm font-medium ${
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
                   isActive('/') 
-                    ? 'text-white border-b-2 border-blue-400' 
-                    : 'text-gray-300 hover:text-white hover:border-b-2 hover:border-gray-400'
+                    ? 'text-white bg-blue-600' 
+                    : 'text-blue-700 hover:bg-blue-100'
                 }`}
               >
                 Home
               </Link>
               <Link 
                 to="/events" 
-                className={`px-3 py-2 text-sm font-medium ${
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
                   isActive('/events') 
-                    ? 'text-white border-b-2 border-blue-400' 
-                    : 'text-gray-300 hover:text-white hover:border-b-2 hover:border-gray-400'
+                    ? 'text-white bg-blue-600' 
+                    : 'text-blue-700 hover:bg-blue-100'
                 }`}
               >
                 Events
@@ -96,44 +111,41 @@ function Navbar({ user }) {
               {user && (
                 <Link 
                   to="/admin" 
-                  className={`px-3 py-2 text-sm font-medium ${
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
                     isActive('/admin') 
-                      ? 'text-white border-b-2 border-blue-400' 
-                      : 'text-gray-300 hover:text-white hover:border-b-2 hover:border-gray-400'
+                      ? 'text-white bg-blue-600' 
+                      : 'text-blue-700 hover:bg-blue-100'
                   }`}
                 >
                   Admin
                 </Link>
               )}
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            {user ? (
-              <div className="hidden md:flex items-center gap-4">
-                {user.photoURL && (
-                  <img 
-                    src={user.photoURL} 
-                    alt="Profile" 
-                    className="h-8 w-8 rounded-full border border-gray-400"
-                  />
-                )}
-                <span className="text-sm text-white">
-                  {user.displayName || user.email}
-                </span>
-                <button 
-                  onClick={handleSignOut}
-                  className="ml-2 inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-md"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <div className="hidden md:block">
+              
+              {/* Auth Buttons */}
+              {user ? (
+                <div className="flex items-center ml-4 space-x-2">
+                  {user.photoURL && (
+                    <img 
+                      src={user.photoURL} 
+                      alt="Profile" 
+                      className="h-8 w-8 rounded-full border border-blue-300"
+                    />
+                  )}
+                  <span className="text-sm text-blue-800 mr-2 hidden lg:inline-block">
+                    {user.displayName || user.email}
+                  </span>
+                  <button 
+                    onClick={handleSignOut}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
                 <button 
                   onClick={handleSignIn}
                   disabled={loading}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md"
+                  className="ml-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors shadow-sm flex items-center"
                 >
                   {loading ? (
                     <>
@@ -147,14 +159,14 @@ function Navbar({ user }) {
                     <>Sign In</>
                   )}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center">
               <button 
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                className="inline-flex items-center justify-center p-2 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                 aria-expanded={isMenuOpen}
               >
                 <span className="sr-only">Open main menu</span>
@@ -171,90 +183,102 @@ function Navbar({ user }) {
             </div>
           </div>
         </div>
-      </div>
+      </nav>
       
-      {/* Mobile menu, show/hide based on menu state */}
+      {/* Mobile menu overlay */}
       {isMenuOpen && (
-        <div className="md:hidden bg-gray-900">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <Link
-              to="/"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActive('/') ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              to="/events"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActive('/events') ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Events
-            </Link>
-            {user && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-75 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
+          
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md mx-auto mt-20 md:mt-32 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-blue-900">Menu</h2>
+              <button 
+                onClick={() => setIsMenuOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-6">
               <Link
-                to="/admin"
+                to="/"
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive('/admin') ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  isActive('/') ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-blue-50'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                Admin
+                Home
               </Link>
-            )}
-          </div>
-          
-          {/* Mobile menu user section */}
-          <div className="pt-4 pb-3 border-t border-gray-700">
-            {user ? (
-              <div className="px-5 space-y-3">
-                <div className="flex items-center">
-                  {user.photoURL && (
-                    <div className="flex-shrink-0">
-                      <img className="h-10 w-10 rounded-full" src={user.photoURL} alt="" />
+              <Link
+                to="/events"
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive('/events') ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-blue-50'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Events
+              </Link>
+              {user && (
+                <Link
+                  to="/admin"
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    isActive('/admin') ? 'bg-blue-100 text-blue-800' : 'text-gray-700 hover:bg-blue-50'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
+              
+              {/* Auth button in menu */}
+              {user ? (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center mb-4">
+                    {user.photoURL && (
+                      <img src={user.photoURL} alt="Profile" className="h-10 w-10 rounded-full mr-2" />
+                    )}
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{user.displayName || 'User'}</div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
-                  )}
-                  <div className="ml-3">
-                    <div className="text-base font-medium leading-none text-white">{user.displayName || 'User'}</div>
-                    <div className="text-sm font-medium leading-none text-gray-400 mt-1">{user.email}</div>
                   </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                  >
+                    Sign Out
+                  </button>
                 </div>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <div className="px-5">
-                <button
-                  onClick={handleSignIn}
-                  disabled={loading}
-                  className="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Signing in...
-                    </>
-                  ) : (
-                    <>Sign In with Google</>
-                  )}
-                </button>
-              </div>
-            )}
+              ) : (
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handleSignIn}
+                    disabled={loading}
+                    className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Signing in...
+                      </>
+                    ) : (
+                      <>Sign In with Google</>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 }
 

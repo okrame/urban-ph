@@ -18,7 +18,7 @@ function Hero() {
           alt="Urban photography"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900/80 to-gray-900/70"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-gray-900/70 to-gray-900/60"></div>
       </div>
       
       {/* Content */}
@@ -29,19 +29,21 @@ function Hero() {
         <p className="text-xl md:text-2xl mb-8">
           Explore the city through your lens
         </p>
-        <p className="text-lg md:text-xl max-w-2xl mx-auto opacity-90">
+        <p className="text-lg md:text-xl max-w-2xl mx-auto opacity-90 mb-8">
           Join our photography adventures and discover the hidden beauty of urban landscapes
         </p>
-        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button 
             onClick={scrollToCurrentEvents} 
-            className="inline-block bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors transform hover:scale-105 duration-200"
+            className="px-6 py-3 bg-white text-gray-900 rounded-md font-semibold hover:bg-gray-100 transition-colors shadow-lg"
           >
             Current Events
           </button>
+          
           <Link
             to="/events"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors transform hover:scale-105 duration-200"
+            className="px-6 py-3 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             View All Events
           </Link>

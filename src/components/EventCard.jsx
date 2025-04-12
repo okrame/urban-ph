@@ -1,42 +1,34 @@
 import { useState, useEffect } from 'react';
-import { db, auth } from '../../firebase/config';
-import { doc, getDoc, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
+import { auth } from '../../firebase/config';
+import { bookEvent, checkUserBooking } from '../../firebase/firestoreServices';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import BookingForm from './BookingForm';
 
 function EventCard({ event, user }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [authError, setAuthError] = useState(null);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [authError, setAuthError] = useState(null);
   
   useEffect(() => {
+    // Check if the user has already booked this event
     const checkBookingStatus = async () => {
-      if (!user) {
+      if (!user || !event.id) {
         setIsBooked(false);
         return;
       }
       
       try {
-        console.log("Checking booking status for user:", user.uid);
-        const eventRef = doc(db, 'events', 'current-event');
-        const eventDoc = await getDoc(eventRef);
-        
-        if (eventDoc.exists()) {
-          const eventData = eventDoc.data();
-          console.log("Event data:", eventData);
-          setIsBooked(eventData.attendees && eventData.attendees.includes(user.uid));
-        } else {
-          console.error("Event document does not exist!");
-        }
+        const isAlreadyBooked = await checkUserBooking(user.uid, event.id);
+        setIsBooked(isAlreadyBooked);
       } catch (error) {
         console.error("Error checking booking status:", error);
       }
     };
     
     checkBookingStatus();
-  }, [user]);
-  
+  }, [user, event.id]);
+
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
@@ -53,17 +45,14 @@ function EventCard({ event, user }) {
   };
   
   const handleBookEvent = async () => {
-    console.log("Book button clicked, user:", user);
-    
     if (!user) {
-      console.log("No user, initiating Google sign-in");
+      // If no user is logged in, trigger Google sign-in
       await signInWithGoogle();
       return;
     }
     
     if (isBooked) {
-      console.log("Event already booked");
-      return;
+      return; // Already booked, do nothing
     }
     
     // Show the booking form instead of immediately booking
@@ -73,41 +62,19 @@ function EventCard({ event, user }) {
   const handleFormSubmit = async (formData) => {
     setLoading(true);
     try {
-      console.log("Attempting to book event with form data:", formData);
-      const eventRef = doc(db, 'events', 'current-event');
-      
-      // First check if the document exists
-      const eventDoc = await getDoc(eventRef);
-      if (!eventDoc.exists()) {
-        console.error("Event document doesn't exist!");
-        setLoading(false);
-        return;
-      }
-      
-      const eventData = eventDoc.data();
-      console.log("Current event data:", eventData);
-      
-      // Add user to attendees array and decrement spotsLeft
-      await updateDoc(eventRef, {
-        attendees: arrayUnion(user.uid),
-        spotsLeft: (eventData.spotsLeft || 0) - 1
-      });
-      
-      // Store user contact info in a separate collection
-      await setDoc(doc(db, 'attendees', user.uid), {
+      const userData = {
+        userId: user.uid,
         email: formData.email,
         phone: formData.phone,
-        userId: user.uid,
-        eventId: 'current-event',
-        displayName: user.displayName || null,
-        registeredAt: new Date()
-      });
+        displayName: user.displayName || null
+      };
       
-      console.log("Event booked successfully");
+      await bookEvent(event.id, userData);
       setIsBooked(true);
       setShowBookingForm(false);
     } catch (error) {
       console.error("Error booking event:", error);
+      setAuthError(error.message);
     } finally {
       setLoading(false);
     }
@@ -153,6 +120,9 @@ function EventCard({ event, user }) {
             </span>
             <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
               📍 {event.location}
+            </span>
+            <span className="inline-block bg-blue-200 rounded-full px-3 py-1 text-sm font-semibold text-blue-700">
+              {event.type}
             </span>
           </div>
           

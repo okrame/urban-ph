@@ -1,30 +1,20 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EventCard from './components/EventCard';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { initializeFirestore } from '../firebase/setupFirebase';
+import { initializeDatabase } from '../firebase/initDB';
+import { getActiveEvents } from '../firebase/firestoreServices';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentEvent] = useState({
-    title: "Urban Photography Adventure: City Lights",
-    date: "April 20, 2025",
-    time: "6:00 PM - 9:00 PM",
-    location: "Downtown Central Plaza",
-    description: "Join us for a magical evening photography walk through the city. Capture the urban landscape as it transforms with the setting sun and city lights. Perfect for all photography levels!",
-    spots: 15,
-    spotsLeft: 8,
-    image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=600&auto=format"
-  });
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     console.log("App component mounted");
-    console.log("Current pathname:", window.location.pathname);
-    console.log("Current host:", window.location.host);
-    console.log("Current href:", window.location.href);
     
     // Check if we're on GitHub Pages
     const isGitHubPages = window.location.hostname.includes('github.io');
@@ -33,9 +23,19 @@ function App() {
     }
     
     // Initialize Firebase data (only run once)
-    initializeFirestore().catch(err => {
-      console.error("Failed to initialize Firestore:", err);
+    initializeDatabase().catch(err => {
+      console.error("Failed to initialize database:", err);
     });
+    
+    // Load events
+    const loadEvents = async () => {
+      try {
+        const eventsData = await getActiveEvents();
+        setEvents(eventsData);
+      } catch (error) {
+        console.error("Error loading events:", error);
+      }
+    };
     
     // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -44,6 +44,8 @@ function App() {
       setLoading(false);
     });
 
+    loadEvents();
+    
     return () => unsubscribe();
   }, []);
 
@@ -64,12 +66,32 @@ function App() {
       <main>
         <Hero />
         
-        <section id="current-event" className="py-16 px-4 max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Current Event</h2>
-          <EventCard 
-            event={currentEvent} 
-            user={user}
-          />
+        <section id="current-events-section" className="py-16 px-4 max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12">Current Events</h2>
+          
+          {events.length > 0 ? (
+            <div className="space-y-8">
+              {events.slice(0, 3).map(event => (
+                <EventCard 
+                  key={event.id}
+                  event={event} 
+                  user={user}
+                />
+              ))}
+              
+              {events.length > 3 && (
+                <div className="text-center mt-8">
+                  <Link to="/events" className="text-blue-600 hover:text-blue-800 font-semibold">
+                    View all {events.length} events →
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center p-8 bg-white rounded-lg shadow">
+              <p className="text-gray-600">No events available at the moment. Check back soon!</p>
+            </div>
+          )}
         </section>
       </main>
       

@@ -1,10 +1,23 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../firebase/config';
 import Navbar from '../components/Navbar';
 
 function NotFound() {
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+  
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Navbar />
+      <Navbar user={user} />
       
       <div className="flex-grow flex items-center justify-center">
         <div className="max-w-md w-full px-6 py-12 bg-white shadow-lg rounded-lg text-center">

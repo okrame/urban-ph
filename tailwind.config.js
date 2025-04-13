@@ -12,7 +12,10 @@ export default {
       transitionProperty: {
         'height': 'height',
         'spacing': 'margin, padding',
-      }
+      },
+      fontFamily: {
+        sans: ['"Nunito Sans"', 'sans-serif'],
+      },
     },
   },
   plugins: [],

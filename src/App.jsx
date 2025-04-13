@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import SimpleNavbar from './components/SimpleNavbar';
+import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EventCard from './components/EventCard';
-import MinimalTest from './components/MinimalTest'; // Import the minimal test
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
 import { getActiveEvents } from '../firebase/firestoreServices';
@@ -76,8 +75,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <SimpleNavbar user={user} />
-      
+      <Navbar user={user} />
       
       <main>
         <Hero />

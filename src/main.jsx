@@ -5,6 +5,7 @@ import App from './App.jsx'
 import './index.css'
 import EventsPage from './pages/EventsPage.jsx'
 import AdminPanel from './pages/AdminPanel.jsx'
+import AboutUs from './pages/AboutUs.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 // Create router with appropriate base URL for GitHub Pages
@@ -22,6 +23,10 @@ const router = createBrowserRouter([
   {
     path: '/events',
     element: <EventsPage />,
+  },
+  {
+    path: '/about',
+    element: <AboutUs />,
   },
   {
     path: '/admin',

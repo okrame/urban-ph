@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../../firebase/config';
-import { bookEventSimple, checkUserBooking } from '../../firebase/firestoreServices';
+import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable } from '../../firebase/firestoreServices';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { createUserProfile } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
@@ -12,6 +12,33 @@ function EventCard({ event, user }) {
   const [authError, setAuthError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [eventStatus, setEventStatus] = useState('');
+  const [isBookable, setIsBookable] = useState(true);
+  const [bookableReason, setBookableReason] = useState('');
+  
+  // Check event status and bookability
+  useEffect(() => {
+    if (event) {
+      // Calculate the current status
+      const status = determineEventStatus(event.date, event.time);
+      setEventStatus(status);
+      
+      // Check if event is bookable
+      const checkBookability = async () => {
+        try {
+          const { bookable, reason } = await isEventBookable(event.id);
+          setIsBookable(bookable);
+          setBookableReason(reason || '');
+        } catch (error) {
+          console.error("Error checking event bookability:", error);
+          setIsBookable(false);
+          setBookableReason("Error checking event status");
+        }
+      };
+      
+      checkBookability();
+    }
+  }, [event]);
   
   // Check booking status when user or event changes
   useEffect(() => {
@@ -59,6 +86,15 @@ function EventCard({ event, user }) {
   };
   
   const handleBookEvent = async () => {
+    // Clear any previous errors
+    setAuthError(null);
+    
+    // Check if event is bookable first
+    if (!isBookable) {
+      setAuthError(bookableReason);
+      return;
+    }
+    
     if (!user) {
       // If no user is logged in, trigger Google sign-in
       await signInWithGoogle();
@@ -72,7 +108,6 @@ function EventCard({ event, user }) {
     
     // Show the booking form
     setShowBookingForm(true);
-    setAuthError(null);
   };
   
   const handleFormSubmit = async (formData) => {
@@ -80,6 +115,14 @@ function EventCard({ event, user }) {
     setAuthError(null);
     
     try {
+      // Check bookability again just before submission
+      const { bookable, reason } = await isEventBookable(event.id);
+      if (!bookable) {
+        setAuthError(reason);
+        setLoading(false);
+        return;
+      }
+      
       const userData = {
         userId: user.uid,
         email: formData.email,
@@ -94,7 +137,7 @@ function EventCard({ event, user }) {
         setBookingSuccess(true);
         setShowBookingForm(false);
       } else {
-        throw new Error("Unknown error during booking");
+        throw new Error(result.message || "Unknown error during booking");
       }
     } catch (error) {
       console.error("Error booking event:", error);
@@ -105,6 +148,8 @@ function EventCard({ event, user }) {
         setIsBooked(true);
         setBookingSuccess(true);
         setShowBookingForm(false);
+      } else if (error.message.includes("Booking is closed")) {
+        setAuthError("Booking is now closed for this event.");
       } else {
         setAuthError("An error occurred during booking. Please try again.");
       }
@@ -121,6 +166,12 @@ function EventCard({ event, user }) {
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
   };
+  
+  // Determine if event is closed for booking but still active
+  const isClosedForBooking = !isBookable && eventStatus === 'active';
+  
+  // Determine if event is fully booked
+  const isFullyBooked = bookableReason === "No spots left";
   
   // Success state
   if (bookingSuccess && !showBookingForm) {
@@ -143,6 +194,12 @@ function EventCard({ event, user }) {
               </span>
               <span className="inline-block bg-blue-200 rounded-full px-2 py-1 text-xs font-semibold text-blue-700">
                 {event.type}
+              </span>
+              <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold
+                ${eventStatus === 'active' ? 'bg-green-200 text-green-700' : 
+                  eventStatus === 'upcoming' ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-700'}`}>
+                {eventStatus === 'active' ? 'Active' : 
+                 eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
               </span>
             </div>
             
@@ -189,7 +246,7 @@ function EventCard({ event, user }) {
           </div>
           <div className="p-4 md:w-3/4">
             <div className="flex justify-between items-start">
-              <h3 className="text-xl font-bold">{event.title}</h3>
+              <h3 className="font-semibold">{event.title}</h3>
               <span className="text-blue-600">
                 {isExpanded ? 
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -202,17 +259,25 @@ function EventCard({ event, user }) {
               </span>
             </div>
             
-            <div className="flex gap-2 mb-2">
+            <div className="flex gap-2 mb-2 flex-wrap">
               <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
                 📅 {event.date}
               </span>
               <span className="inline-block bg-blue-200 rounded-full px-2 py-1 text-xs font-semibold text-blue-700">
                 {event.type}
               </span>
+              <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold
+                ${eventStatus === 'active' ? 'bg-green-200 text-green-700' : 
+                  eventStatus === 'upcoming' ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-700'}`}>
+                {eventStatus === 'active' ? 'Active' : 
+                 eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
+              </span>
             </div>
             
             <p className="text-sm text-gray-600">
-              {event.spotsLeft} spots left out of {event.spots}
+              {event.spotsLeft > 0 
+                ? `${event.spotsLeft} spots left out of ${event.spots}` 
+                : "No spots left"}
             </p>
           </div>
         </div>
@@ -239,25 +304,61 @@ function EventCard({ event, user }) {
           </div>
         )}
         
+        {/* Fully Booked Message with contact info */}
+        {isFullyBooked && (
+          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
+            <p className="font-bold">This event is fully booked!</p>
+            <p className="mt-1">If you'd like to be notified if a spot becomes available, please email:</p>
+            <a href="mailto:urbanphotohunts@example.com" className="text-blue-600 hover:underline block mt-1">
+              urbanphotohunts@example.com
+            </a>
+          </div>
+        )}
+        
+        {/* Past event message */}
+        {eventStatus === 'past' && (
+          <div className="mb-4 p-3 bg-gray-100 text-gray-700 rounded text-sm">
+            <p className="font-bold">This event has ended</p>
+            <p className="mt-1">Please check our upcoming events.</p>
+          </div>
+        )}
+        
+        {/* If event is active but booking window closed */}
+        {isClosedForBooking && (
+          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
+            <p className="font-bold">Booking for this event is now closed</p>
+            <p className="mt-1">Booking closes 1 hour after the event start time.</p>
+          </div>
+        )}
+        
+        {/* Book button with appropriate state */}
         <button 
           onClick={(e) => {
             e.stopPropagation();
             handleBookEvent();
           }}
-          disabled={isBooked || loading}
+          disabled={isBooked || loading || !isBookable}
           className={`w-full px-4 py-2 rounded font-bold text-white ${
             isBooked 
               ? 'bg-green-500 cursor-not-allowed' 
-              : loading 
-                ? 'bg-gray-400 cursor-wait' 
-                : 'bg-blue-600 hover:bg-blue-700'
+              : !isBookable
+                ? 'bg-gray-400 cursor-not-allowed'
+                : loading 
+                  ? 'bg-gray-400 cursor-wait' 
+                  : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
           {isBooked 
             ? '✓ Booked' 
             : loading 
               ? 'Processing...' 
-              : user ? 'Book Now (Free)' : 'Partecipa'}
+              : !isBookable
+                ? isFullyBooked 
+                  ? 'Fully Booked'
+                  : eventStatus === 'past'
+                    ? 'Event Ended'
+                    : 'Booking Closed'
+                : user ? 'Book Now (Free)' : 'Sign in to Book'}
         </button>
       </div>
     </div>

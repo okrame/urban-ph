@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createBrowserRouter, RouterProvider, createHashRouter } from 'react-router-dom'
+import { createHashRouter, RouterProvider } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
 import EventsPage from './pages/EventsPage.jsx'
@@ -8,13 +8,9 @@ import AdminPanel from './pages/AdminPanel.jsx'
 import AboutUs from './pages/AboutUs.jsx'
 import NotFound from './pages/NotFound.jsx'
 
-// Use HashRouter for GitHub Pages to avoid server-side path issues
-// This eliminates the need for complex 404.html handling
-const isGitHubPages = window.location.hostname.includes('github.io');
-const isDevelopment = import.meta.env.DEV;
-
-// Create routes array
-const routes = [
+// For GitHub Pages, we'll use HashRouter exclusively since it works better
+// with static file servers that don't support configurable routing
+const router = createHashRouter([
   {
     path: '/',
     element: <App />,
@@ -36,14 +32,7 @@ const routes = [
     path: '*',
     element: <NotFound />
   }
-];
-
-// Use HashRouter for GitHub Pages, BrowserRouter for development
-const router = isGitHubPages && !isDevelopment 
-  ? createHashRouter(routes)
-  : createBrowserRouter(routes, {
-      basename: isDevelopment ? '/' : '/urban-ph'
-    });
+]);
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

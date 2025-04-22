@@ -30,7 +30,8 @@ jobs:
           # Create important GitHub Pages files
           touch dist/.nojekyll
           
-          # Copy the camera icon to the dist folder
+          # Ensure camera-icon.svg is in the correct location
+          mkdir -p dist/assets
           cp public/camera-icon.svg dist/
           
           # Ensure 404.html is present for SPA routing

@@ -51,9 +51,16 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
 
+      - name: List built files
+        run: |
+          echo "Listing dist/"
+          ls -la dist
+          cat dist/index.html   
+                 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: gh-pages
           clean: true # Remove existing files completely
+          single-commit: true

@@ -7,11 +7,15 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
 import { getActiveEvents } from '../firebase/firestoreServices';
 import { createUserProfile } from '../firebase/userServices';
+import AuthModal from './components/AuthModal';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
 
   useEffect(() => {
     console.log("App component mounted");
@@ -75,7 +79,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar user={user} />
+      <Navbar 
+        user={user} 
+        onSignInClick={() => setShowAuthModal(true)}
+      />
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        event={selectedEvent}
+      />
       
       <main>
         <Hero />
@@ -90,6 +104,10 @@ function App() {
                   key={event.id}
                   event={event} 
                   user={user}
+                  onAuthNeeded={() => {
+                    setSelectedEvent(event);
+                    setShowAuthModal(true);
+                  }}
                 />
               ))}
               

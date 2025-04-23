@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import Navbar from '../components/Navbar';
+import AuthModal from '../components/AuthModal';
 
 function AboutUs() {
   const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   
   // Add a listener for auth state, just like in EventsPage
   useEffect(() => {
@@ -18,7 +21,17 @@ function AboutUs() {
   
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar user={user} />
+      <Navbar 
+        user={user} 
+        onSignInClick={() => setShowAuthModal(true)}
+      />
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        event={selectedEvent}
+      />
       
       <div className="container mx-auto px-4 py-16">
         <h1 className="text-4xl font-bold text-center mb-12">About Us</h1>

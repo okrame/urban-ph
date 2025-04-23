@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
-import { createUserProfile, getUserProfile } from '../../firebase/userServices';
+import { getUserProfile } from '../../firebase/userServices';
 import UPHLogo from '../assets/UPH_Logo.png';
 
-function Navbar({ user }) {
+function Navbar({ user, onSignInClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -52,34 +52,15 @@ function Navbar({ user }) {
     }
   };
 
-  const handleSignIn = async () => {
+  const handleSignIn = () => {
     setLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      // Create or update user profile
-      await createUserProfile(result.user);
+    // Instead of handling sign-in directly, trigger the auth modal
+    if (onSignInClick) {
+      onSignInClick();
+    }
+    setLoading(false);
+    if (isMenuOpen) {
       setIsMenuOpen(false);
-    } catch (error) {
-      console.error("Error signing in:", error);
-      
-      // Handle specific cases of popup closure or cancellation
-      if (
-        error.code === 'auth/cancelled-popup-request' || 
-        error.code === 'auth/popup-closed-by-user' ||
-        error.code === 'auth/popup-blocked'
-      ) {
-        // User closed the popup, immediately reset loading state
-        console.log("Sign-in popup was closed by the user");
-        // Force immediate UI update for popup closure
-        setTimeout(() => setLoading(false), 0);
-        return; // Exit early to prevent the finally block from executing
-      }
-    } finally {
-      // This will still run for other errors, but for popup closure,
-      // we've already handled it and returned early
-      setLoading(false);
     }
   };
 
@@ -286,7 +267,7 @@ function Navbar({ user }) {
                   disabled={loading}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
-                  {loading ? 'Signing in...' : 'Sign In with Google'}
+                  {loading ? 'Signing in...' : 'Sign In'}
                 </button>
               </div>
             )}

@@ -4,12 +4,15 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import EventCard from '../components/EventCard';
 import Navbar from '../components/Navbar';
+import AuthModal from '../components/AuthModal';
 
 function EventsPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'hunt', 'workshop', 'exhibition'
   const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   
   // Add a listener for auth state
   useEffect(() => {
@@ -41,10 +44,26 @@ function EventsPage() {
     
     fetchEvents();
   }, [filter]);
+
+  // Function to handle authentication needs
+  const handleAuthNeeded = (event) => {
+    setSelectedEvent(event);
+    setShowAuthModal(true);
+  };
   
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar user={user} />
+      <Navbar 
+        user={user} 
+        onSignInClick={() => setShowAuthModal(true)}
+      />
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        event={selectedEvent}
+      />
       
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-center mb-8">Upcoming Events</h1>
@@ -105,6 +124,7 @@ function EventsPage() {
                 key={event.id} 
                 event={event} 
                 user={user}
+                onAuthNeeded={() => handleAuthNeeded(event)}
               />
             ))}
           </div>

@@ -1,7 +1,7 @@
 // Consolidated Firebase configuration
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { initializeDatabase } from './initDB';
 
 // Your web app's Firebase configuration
@@ -18,22 +18,12 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
-// Enable offline persistence when possible
-try {
-  enableIndexedDbPersistence(db)
-    .then(() => console.log('Offline persistence enabled'))
-    .catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-      } else if (err.code === 'unimplemented') {
-        console.warn('The current browser does not support all of the features required to enable persistence.');
-      }
-    });
-} catch (err) {
-  console.error('Error enabling persistence:', err);
-}
+// Initialize Firestore with persistence settings
+const db = initializeFirestore(app, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  experimentalForceLongPolling: true,
+});
 
 // Function to set up Firebase and initialize the database with sample data if needed
 export const setupFirebase = async () => {

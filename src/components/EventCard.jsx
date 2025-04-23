@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { auth } from '../../firebase/config';
 import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable } from '../../firebase/firestoreServices';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { createUserProfile } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
 
-function EventCard({ event, user }) {
+function EventCard({ event, user, onAuthNeeded }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -62,28 +59,6 @@ function EventCard({ event, user }) {
     
     checkBookingStatus();
   }, [user, event.id]);
-
-  const signInWithGoogle = async () => {
-    try {
-      setLoading(true);
-      setAuthError(null);
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      // Create or update user profile in database
-      await createUserProfile(result.user);
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-      // Handle authentication cancellation
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-        setAuthError("Authentication was cancelled. Please try again.");
-      } else {
-        setAuthError("Error signing in with Google. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
   
   const handleBookEvent = async () => {
     // Clear any previous errors
@@ -96,8 +71,10 @@ function EventCard({ event, user }) {
     }
     
     if (!user) {
-      // If no user is logged in, trigger Google sign-in
-      await signInWithGoogle();
+      // If no user is logged in, trigger the auth modal
+      if (onAuthNeeded) {
+        onAuthNeeded();
+      }
       return;
     }
     
@@ -358,7 +335,7 @@ function EventCard({ event, user }) {
                   : eventStatus === 'past'
                     ? 'Event Ended'
                     : 'Booking Closed'
-                : user ? 'Book Now (Free)' : 'Sign in to Book'}
+                : user ? 'Book Now' : 'Book'}
         </button>
       </div>
     </div>

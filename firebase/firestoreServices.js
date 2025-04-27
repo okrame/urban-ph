@@ -13,6 +13,113 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 
+// Maximum image size for base64 encoding (3MB)
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
+
+// Convert file to base64
+export const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('No file provided'));
+      return;
+    }
+    
+    // Check file size
+    if (file.size > MAX_IMAGE_SIZE) {
+      reject(new Error(`File size exceeds maximum allowed (${MAX_IMAGE_SIZE / (1024 * 1024)}MB)`));
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Compress image if needed (reduces quality to fit size limit)
+export const compressImage = (file) => {
+  return new Promise((resolve, reject) => {
+    // If file is already small enough, return as is
+    if (file.size <= MAX_IMAGE_SIZE) {
+      resolve(file);
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate scale factor to reduce size while maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        
+        // Start with original dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image at current quality
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Reduce quality until we're under the size limit
+        let quality = 0.9; // Start with 90% quality
+        let dataUrl;
+        
+        // Try progressively lower quality until we get under the limit
+        while (quality > 0.1) {
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          
+          // Rough estimate of size (base64 string length * 0.75 is approximate size in bytes)
+          const estimatedSize = dataUrl.length * 0.75;
+          
+          if (estimatedSize <= MAX_IMAGE_SIZE) {
+            break;
+          }
+          
+          // Reduce quality for next attempt
+          quality -= 0.1;
+        }
+        
+        // If we couldn't get under the size limit with quality adjustments, 
+        // try reducing dimensions
+        if (quality <= 0.1) {
+          // Try again with reduced dimensions
+          const scaleFactor = Math.sqrt(MAX_IMAGE_SIZE / file.size) * 0.9; // 10% margin
+          width = Math.floor(width * scaleFactor);
+          height = Math.floor(height * scaleFactor);
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          dataUrl = canvas.toDataURL('image/jpeg', 0.7); // Use moderate quality
+        }
+        
+        // Convert base64 to a Blob
+        fetch(dataUrl)
+          .then(res => res.blob())
+          .then(blob => {
+            // Create a new File object
+            const compressedFile = new File(
+              [blob], 
+              file.name, 
+              { type: 'image/jpeg', lastModified: Date.now() }
+            );
+            resolve(compressedFile);
+          })
+          .catch(reject);
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
+
 // Helper function to determine event status based on date and time
 export const determineEventStatus = (eventDate, eventTime) => {
   const now = new Date();

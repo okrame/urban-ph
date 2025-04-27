@@ -416,7 +416,6 @@ function AdminPanel() {
 
                   <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded">
                     <p>Event status is automatically calculated from date and time.</p>
-                    <p>Events can only be in the tab that matches their status.</p>
                   </div>
 
                   {loading ? (

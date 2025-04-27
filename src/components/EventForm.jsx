@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createNewEvent } from '../../firebase/adminServices';
 import { getEventBookingsCount, determineEventStatus } from '../../firebase/firestoreServices';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import ImageUploader from './ImageUploader';
+import EmojiPicker from 'emoji-picker-react';
 
 function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const [formData, setFormData] = useState({
@@ -14,15 +16,37 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     description: '',
     spots: 10,
     image: '',
+    imageBase64: '',
     status: 'active',
     ...initialValues
   });
 
+  // Date picker related state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  
+  // Time picker related state
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [showStartAmPm, setShowStartAmPm] = useState('AM');
+  const [showEndAmPm, setShowEndAmPm] = useState('AM');
+  
+  // Emoji picker related state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef(null);
+  const descriptionRef = useRef(null);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  
+  // Form state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bookingsCount, setBookingsCount] = useState(0);
   const [calculatedStatus, setCalculatedStatus] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [isImageChanged, setIsImageChanged] = useState(false);
+  const [isUsingBase64, setIsUsingBase64] = useState(false);
 
+  // Parse and set initial date/time values
   useEffect(() => {
     // Update form when initialValues changes
     setFormData({
@@ -34,9 +58,26 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       description: '',
       spots: 10,
       image: '',
+      imageBase64: '',
       status: 'active',
       ...initialValues
     });
+
+    // Parse the date from initialValues if available
+    if (initialValues.date) {
+      const dateParts = initialValues.date.match(/(\w+)\s+(\d+),\s+(\d+)/);
+      if (dateParts) {
+        const month = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+          .indexOf(dateParts[1].toLowerCase());
+        const day = parseInt(dateParts[2], 10);
+        const year = parseInt(dateParts[3], 10);
+        const dateObj = new Date(year, month, day);
+        setSelectedDate(dateObj);
+      }
+    }
+
+    // Parse the time from initialValues if available
+    parseTimeFromInitialValues();
 
     // If editing an existing event, fetch bookings count
     const fetchBookingsCount = async () => {
@@ -50,17 +91,37 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             const status = determineEventStatus(initialValues.date, initialValues.time);
             setCalculatedStatus(status);
           }
+          
+          // Detect if we're using base64 for the image
+          setIsUsingBase64(!!initialValues.imageBase64);
         } catch (error) {
           console.error("Error fetching bookings count:", error);
         }
       } else {
         setBookingsCount(0);
         setCalculatedStatus('');
+        setIsUsingBase64(false);
       }
     };
 
     fetchBookingsCount();
+    
+    // Reset image change tracking when form is initialized/reset
+    setIsImageChanged(false);
   }, [initialValues]);
+
+  // Handle clicking outside of emoji picker
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Watch for date/time changes to update calculated status
   useEffect(() => {
@@ -69,6 +130,175 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       setCalculatedStatus(status);
     }
   }, [formData.date, formData.time]);
+
+  // Format date for display in the required format
+  const formatDateForDisplay = (date) => {
+    if (!date) return '';
+    
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    
+    return `${month} ${day}, ${year}`;
+  };
+
+  // Format time for display in the required format
+  const formatTimeForDisplay = () => {
+    if (!startTime || !endTime) return '';
+    return `${startTime} ${showStartAmPm} - ${endTime} ${showEndAmPm}`;
+  };
+
+  // Update date selection
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    setFormData({
+      ...formData,
+      date: formatDateForDisplay(date)
+    });
+    setShowDatePicker(false);
+  };
+
+  // Update time selection
+  const handleTimeChange = () => {
+    const formattedTime = formatTimeForDisplay();
+    setFormData({
+      ...formData,
+      time: formattedTime
+    });
+  };
+
+  // Helper function to parse time from initialValues
+  const parseTimeFromInitialValues = () => {
+    if (initialValues.time) {
+      // Format: "H:MM AM/PM - H:MM AM/PM"
+      const timeParts = initialValues.time.split('-');
+      if (timeParts.length === 2) {
+        const startPart = timeParts[0].trim();
+        const endPart = timeParts[1].trim();
+
+        // Parse start time
+        const startMatch = startPart.match(/(\d+):(\d+)\s*([AP]M)/i);
+        if (startMatch) {
+          const hour = startMatch[1];
+          const minute = startMatch[2];
+          const ampm = startMatch[3].toUpperCase();
+          setStartTime(`${hour}:${minute}`);
+          setShowStartAmPm(ampm);
+        }
+
+        // Parse end time
+        const endMatch = endPart.match(/(\d+):(\d+)\s*([AP]M)/i);
+        if (endMatch) {
+          const hour = endMatch[1];
+          const minute = endMatch[2];
+          const ampm = endMatch[3].toUpperCase();
+          setEndTime(`${hour}:${minute}`);
+          setShowEndAmPm(ampm);
+        }
+      }
+    }
+  };
+
+  // Handle start time input change
+  const handleStartTimeChange = (e) => {
+    const timeValue = e.target.value;
+    const [hours, minutes] = timeValue.split(':');
+    let hour = parseInt(hours, 10);
+    
+    // If hour > 12, switch to PM
+    if (hour > 12) {
+      hour = hour % 12;
+      if (hour === 0) hour = 12;
+      setShowStartAmPm('PM');
+    } else if (hour === 0) {
+      hour = 12;
+      setShowStartAmPm('AM');
+    } else if (hour === 12) {
+      setShowStartAmPm('PM');
+    }
+    
+    // Format to ensure leading zeros if needed
+    const formattedTime = `${hour}:${minutes}`;
+    setStartTime(formattedTime);
+  };
+
+  // Handle end time input change
+  const handleEndTimeChange = (e) => {
+    const timeValue = e.target.value;
+    const [hours, minutes] = timeValue.split(':');
+    let hour = parseInt(hours, 10);
+    
+    // If hour > 12, switch to PM
+    if (hour > 12) {
+      hour = hour % 12;
+      if (hour === 0) hour = 12;
+      setShowEndAmPm('PM');
+    } else if (hour === 0) {
+      hour = 12;
+      setShowEndAmPm('AM');
+    } else if (hour === 12) {
+      setShowEndAmPm('PM');
+    }
+    
+    // Format to ensure leading zeros if needed
+    const formattedTime = `${hour}:${minutes}`;
+    setEndTime(formattedTime);
+  };
+
+  // Handle start AM/PM toggle
+  const handleStartAmPmChange = (e) => {
+    setShowStartAmPm(e.target.value);
+  };
+
+  // Handle end AM/PM toggle
+  const handleEndAmPmChange = (e) => {
+    setShowEndAmPm(e.target.value);
+  };
+
+  // Apply time changes
+  const applyTimeChanges = () => {
+    handleTimeChange();
+  };
+
+  // Handle emoji selection
+  const handleEmojiClick = (emojiObject) => {
+    const emoji = emojiObject.emoji;
+    const descriptionValue = formData.description;
+    
+    // Insert emoji at cursor position
+    const newDescription = descriptionValue.substring(0, cursorPosition) + emoji + descriptionValue.substring(cursorPosition);
+    
+    setFormData({
+      ...formData,
+      description: newDescription
+    });
+    
+    setCursorPosition(cursorPosition + emoji.length);
+    
+    // Update cursor position in textarea
+    if (descriptionRef.current) {
+      const newCursorPos = cursorPosition + emoji.length;
+      setTimeout(() => {
+        descriptionRef.current.focus();
+        descriptionRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    }
+  };
+
+  // Track cursor position in description field
+  const handleDescriptionCursorPosition = (e) => {
+    setCursorPosition(e.target.selectionStart);
+  };
+
+  // Toggle emoji picker visibility
+  const toggleEmojiPicker = () => {
+    setShowEmojiPicker(!showEmojiPicker);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -86,10 +316,39 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       setError(''); // Clear error if validation passes
     }
 
+    // For description field, update cursor position
+    if (name === 'description') {
+      setCursorPosition(e.target.selectionStart);
+    }
+
     setFormData({
       ...formData,
       [name]: name === 'spots' ? parseInt(value, 10) : value
     });
+  };
+
+  const handleImageSelected = (file) => {
+    setImageFile(file);
+    setIsImageChanged(true);
+    
+    // If file is null (user cleared the image), reset the image URL
+    if (!file && !initialValues.id) {
+      setFormData({
+        ...formData,
+        image: '',
+        imageBase64: ''
+      });
+    }
+  };
+  
+  const handleBase64Generated = (base64Data) => {
+    setFormData(prev => ({
+      ...prev,
+      imageBase64: base64Data
+    }));
+    
+    setIsUsingBase64(!!base64Data);
+    setIsImageChanged(true);
   };
 
   const validateDateFormat = (dateStr) => {
@@ -109,29 +368,38 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     setLoading(true);
     setError('');
 
-    // Validate date and time formats
-    if (!validateDateFormat(formData.date)) {
-      setError('Date format must be "Month DD, YYYY" (e.g., "April 20, 2025")');
-      setLoading(false);
-      return;
-    }
-
-    if (!validateTimeFormat(formData.time)) {
-      setError('Time format must be "H:MM AM/PM - H:MM AM/PM" (e.g., "6:00 PM - 9:00 PM")');
-      setLoading(false);
-      return;
-    }
-
-    // Ensure spots is at least equal to bookings count for existing events
-    if (initialValues.id && formData.spots < bookingsCount) {
-      setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
-      setLoading(false);
-      return;
-    }
-
     try {
+      // Validate date and time formats
+      if (!validateDateFormat(formData.date)) {
+        setError('Date format must be "Month DD, YYYY" (e.g., "April 20, 2025")');
+        setLoading(false);
+        return;
+      }
+
+      if (!validateTimeFormat(formData.time)) {
+        setError('Time format must be "H:MM AM/PM - H:MM AM/PM" (e.g., "6:00 PM - 9:00 PM")');
+        setLoading(false);
+        return;
+      }
+
+      // Ensure spots is at least equal to bookings count for existing events
+      if (initialValues.id && formData.spots < bookingsCount) {
+        setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
+        setLoading(false);
+        return;
+      }
+
+      // Check if we have an image (either file or URL or base64)
+      if (!formData.imageBase64 && !formData.image && !initialValues.id) {
+        setError('Please upload an image or provide an image URL');
+        setLoading(false);
+        return;
+      }
+
+      let updatedFormData = { ...formData };
+      
       // Determine the actual status based on date/time
-      const actualStatus = determineEventStatus(formData.date, formData.time);
+      const actualStatus = determineEventStatus(updatedFormData.date, updatedFormData.time);
 
       if (initialValues.id) {
         // Update existing event
@@ -147,11 +415,17 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
         // FIXED: Calculate spotsLeft correctly as total spots minus bookings
         // This ensures spotsLeft is always (total spots - bookings)
-        const spotsLeft = formData.spots - bookingsCount;
+        const spotsLeft = updatedFormData.spots - bookingsCount;
+
+        // If the image wasn't changed, keep the existing image data
+        if (!isImageChanged) {
+          updatedFormData.image = currentData.image;
+          updatedFormData.imageBase64 = currentData.imageBase64;
+        }
 
         // Update event with new data but preserve some fields
         await updateDoc(eventRef, {
-          ...formData,
+          ...updatedFormData,
           // Keep necessary fields from existing event
           status: actualStatus, // Override with calculated status
           spotsLeft: spotsLeft, // Correctly calculated available spots
@@ -164,9 +438,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       } else {
         // Create new event with calculated status
         await createNewEvent({
-          ...formData,
+          ...updatedFormData,
           status: actualStatus, // Set the calculated status
-          spotsLeft: formData.spots // Initialize spotsLeft equal to total spots (no bookings yet)
+          spotsLeft: updatedFormData.spots // Initialize spotsLeft equal to total spots (no bookings yet)
         });
         console.log("Event created successfully with status:", actualStatus);
       }
@@ -179,6 +453,41 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       setLoading(false);
     }
   };
+
+  // Generate an array of dates for the date picker
+  const getDaysArray = (year, month) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
+  };
+
+  // Get current month/year for the date picker
+  const currentDate = selectedDate || new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  const daysInMonth = getDaysArray(currentYear, currentMonth);
+
+  // Get day of week for the first day of the month (0 = Sunday, 6 = Saturday)
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+
+  // Month navigation for date picker
+  const prevMonth = () => {
+    const newDate = new Date(currentYear, currentMonth - 1, 1);
+    setSelectedDate(newDate);
+  };
+
+  const nextMonth = () => {
+    const newDate = new Date(currentYear, currentMonth + 1, 1);
+    setSelectedDate(newDate);
+  };
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
@@ -243,46 +552,193 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </select>
           </div>
 
-          <div>
+          {/* Enhanced date picker */}
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date (format: Month DD, YYYY)
+              Date
             </label>
-            <input
-              type="text"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded ${formData.date && !validateDateFormat(formData.date) ? 'border-red-500' : ''
-                }`}
-              placeholder="April 20, 2025"
-              required
-            />
-            {formData.date && !validateDateFormat(formData.date) && (
-              <p className="text-red-500 text-xs mt-1">
-                Format must be "Month DD, YYYY", e.g., "April 20, 2025"
-              </p>
+            <div className="relative">
+              <input
+                type="text"
+                name="date"
+                value={formData.date}
+                placeholder="Select a date"
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="w-full p-2 border rounded cursor-pointer bg-white"
+                readOnly
+                required
+              />
+              <span className="absolute right-2 top-2 text-gray-500">
+                📅
+              </span>
+            </div>
+            
+            {/* Calendar date picker */}
+            {showDatePicker && (
+              <div className="absolute z-10 mt-1 bg-white border rounded-lg shadow-lg p-2 w-64">
+                <div className="flex justify-between items-center mb-2">
+                  <button 
+                    type="button"
+                    onClick={prevMonth}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    &lt;
+                  </button>
+                  <div className="font-medium">
+                    {months[currentMonth]} {currentYear}
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={nextMonth}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    &gt;
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500">
+                  <div>Su</div>
+                  <div>Mo</div>
+                  <div>Tu</div>
+                  <div>We</div>
+                  <div>Th</div>
+                  <div>Fr</div>
+                  <div>Sa</div>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {/* Empty cells for days before the first day of the month */}
+                  {Array(firstDayOfMonth).fill(null).map((_, index) => (
+                    <div key={`empty-${index}`} className="h-8"></div>
+                  ))}
+                  
+                  {/* Calendar days */}
+                  {daysInMonth.map((date, index) => {
+                    const isSelected = selectedDate && 
+                                      date.getDate() === selectedDate.getDate() && 
+                                      date.getMonth() === selectedDate.getMonth() && 
+                                      date.getFullYear() === selectedDate.getFullYear();
+                    const isToday = new Date().toDateString() === date.toDateString();
+                    
+                    return (
+                      <button
+                        key={`day-${index}`}
+                        type="button"
+                        onClick={() => handleDateSelect(date)}
+                        className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
+                          isSelected 
+                            ? 'bg-blue-600 text-white' 
+                            : isToday
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        {date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 
+          {/* Time picker */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Time (format: H:MM AM/PM - H:MM AM/PM)
+              Time
             </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center">
+                <select
+                  className="p-2 border rounded mr-1 w-20"
+                  value={startTime.split(':')[0] || '12'}
+                  onChange={(e) => {
+                    const hour = e.target.value;
+                    const mins = startTime.split(':')[1] || '00';
+                    setStartTime(`${hour}:${mins}`);
+                  }}
+                >
+                  {[...Array(12)].map((_, i) => (
+                    <option key={`start-hour-${i+1}`} value={i+1}>{i+1}</option>
+                  ))}
+                </select>
+                <span className="mx-1">:</span>
+                <select
+                  className="p-2 border rounded mr-1 w-20"
+                  value={startTime.split(':')[1] || '00'}
+                  onChange={(e) => {
+                    const hour = startTime.split(':')[0] || '12';
+                    setStartTime(`${hour}:${e.target.value}`);
+                  }}
+                >
+                  {['00', '15', '30', '45'].map(min => (
+                    <option key={`start-min-${min}`} value={min}>{min}</option>
+                  ))}
+                </select>
+                <select 
+                  value={showStartAmPm}
+                  onChange={handleStartAmPmChange}
+                  className="border rounded p-2"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <div className="flex items-center">
+                <select
+                  className="p-2 border rounded mr-1 w-20"
+                  value={endTime.split(':')[0] || '12'}
+                  onChange={(e) => {
+                    const hour = e.target.value;
+                    const mins = endTime.split(':')[1] || '00';
+                    setEndTime(`${hour}:${mins}`);
+                  }}
+                >
+                  {[...Array(12)].map((_, i) => (
+                    <option key={`end-hour-${i+1}`} value={i+1}>{i+1}</option>
+                  ))}
+                </select>
+                <span className="mx-1">:</span>
+                <select
+                  className="p-2 border rounded mr-1 w-20"
+                  value={endTime.split(':')[1] || '00'}
+                  onChange={(e) => {
+                    const hour = endTime.split(':')[0] || '12';
+                    setEndTime(`${hour}:${e.target.value}`);
+                  }}
+                >
+                  {['00', '15', '30', '45'].map(min => (
+                    <option key={`end-min-${min}`} value={min}>{min}</option>
+                  ))}
+                </select>
+                <select 
+                  value={showEndAmPm}
+                  onChange={handleEndAmPmChange}
+                  className="border rounded p-2"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={applyTimeChanges}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Apply Time
+              </button>
+            </div>
             <input
-              type="text"
+              type="hidden"
               name="time"
               value={formData.time}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded ${formData.time && !validateTimeFormat(formData.time) ? 'border-red-500' : ''
-                }`}
-              placeholder="6:00 PM - 9:00 PM"
               required
             />
-            {formData.time && !validateTimeFormat(formData.time) && (
-              <p className="text-red-500 text-xs mt-1">
-                Format must be "H:MM AM/PM - H:MM AM/PM", e.g., "6:00 PM - 9:00 PM"
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.time || 'Start time - End time will appear here after you apply'}
+            </p>
           </div>
 
           <div>
@@ -341,7 +797,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Image URL
+              Image URL (Optional if file is uploaded)
             </label>
             <input
               type="url"
@@ -350,41 +806,68 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
               onChange={handleChange}
               className="w-full p-2 border rounded"
               placeholder="https://example.com/image.jpg"
-              required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              You can either provide a URL or upload an image file below
+            </p>
           </div>
         </div>
-
+        
+        {/* Image uploader component */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
+            Event Image
           </label>
+          <ImageUploader 
+            initialImage={formData.imageBase64 || formData.image}
+            onImageSelected={handleImageSelected}
+            onBase64Generated={handleBase64Generated}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Upload an image for the event card (PNG, JPG, GIF up to 3MB)
+          </p>
+        </div>
+
+        {/* Description with emoji support */}
+        <div className="mb-4 relative">
+          <div className="flex justify-between items-center mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <button
+              type="button"
+              onClick={toggleEmojiPicker}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              😊 Add Emoji
+            </button>
+          </div>
+          
           <textarea
+            ref={descriptionRef}
             name="description"
             value={formData.description}
             onChange={handleChange}
+            onClick={handleDescriptionCursorPosition}
+            onKeyUp={handleDescriptionCursorPosition}
             className="w-full p-2 border rounded"
             rows="4"
             required
           ></textarea>
+          
+          {showEmojiPicker && (
+            <div 
+              ref={emojiPickerRef}
+              className="absolute right-0 z-10 mt-1"
+            >
+              <EmojiPicker 
+                onEmojiClick={handleEmojiClick}
+                disableAutoFocus={true}
+                native={true}
+              />
+            </div>
+          )}
         </div>
-
-        {formData.image && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Image Preview
-            </label>
-            <img
-              src={formData.image}
-              alt="Event preview"
-              className="h-40 object-cover rounded"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/400x200?text=Invalid+Image+URL';
-              }}
-            />
-          </div>
-        )}
 
         <div className="flex justify-end space-x-2">
           <button

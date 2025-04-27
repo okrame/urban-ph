@@ -12,6 +12,7 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [eventStatus, setEventStatus] = useState('');
   const [isBookable, setIsBookable] = useState(true);
   const [bookableReason, setBookableReason] = useState('');
+  const [imageError, setImageError] = useState(false);
   
   // Check event status and bookability
   useEffect(() => {
@@ -19,6 +20,9 @@ function EventCard({ event, user, onAuthNeeded }) {
       // Calculate the current status
       const status = determineEventStatus(event.date, event.time);
       setEventStatus(status);
+      
+      // Reset image error state when event changes
+      setImageError(false);
       
       // Check if event is bookable
       const checkBookability = async () => {
@@ -144,6 +148,30 @@ function EventCard({ event, user, onAuthNeeded }) {
     setIsExpanded(!isExpanded);
   };
   
+  const handleImageError = () => {
+    setImageError(true);
+  };
+  
+  // Get appropriate image source with fallback
+  const getImageSource = () => {
+    if (imageError) {
+      return 'https://via.placeholder.com/600x400?text=No+Image+Available';
+    }
+    
+    // Use base64 image if available
+    if (event.imageBase64) {
+      return event.imageBase64;
+    }
+    
+    // Fall back to URL if provided
+    if (event.image) {
+      return event.image;
+    }
+    
+    // Default fallback
+    return 'https://via.placeholder.com/600x400?text=No+Image+Available';
+  };
+  
   // Determine if event is closed for booking but still active
   const isClosedForBooking = !isBookable && eventStatus === 'active';
   
@@ -157,9 +185,10 @@ function EventCard({ event, user, onAuthNeeded }) {
         <div className="md:flex">
           <div className="md:w-1/4">
             <img 
-              src={event.image} 
+              src={getImageSource()} 
               alt={event.title}
               className="h-40 w-full object-cover md:h-full"
+              onError={handleImageError}
             />
           </div>
           <div className="p-4 md:w-3/4">
@@ -216,9 +245,10 @@ function EventCard({ event, user, onAuthNeeded }) {
         <div className="md:flex">
           <div className="md:w-1/4">
             <img 
-              src={event.image} 
+              src={getImageSource()}
               alt={event.title}
               className="h-40 w-full object-cover md:h-32"
+              onError={handleImageError}
             />
           </div>
           <div className="p-4 md:w-3/4">

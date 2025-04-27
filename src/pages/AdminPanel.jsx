@@ -14,6 +14,8 @@ import { getDoc, doc, collection, query, where, getDocs, updateDoc, serverTimest
 import { auth, db } from '../../firebase/config';
 import Navbar from '../components/Navbar';
 import EventForm from '../components/EventForm';
+import UsersDatabase from '../components/UsersDatabase';
+
 
 function AdminPanel() {
   const [stats, setStats] = useState(null);
@@ -139,7 +141,7 @@ function AdminPanel() {
       // This helps when an event changes category and we need to re-select it
       if (!event) {
         event = [...activeEvents, ...upcomingEvents, ...pastEvents].find(e => e.id === eventId);
-        
+
         // If found in a different tab, switch to that tab
         if (event) {
           if (activeEvents.some(e => e.id === eventId)) {
@@ -195,7 +197,7 @@ function AdminPanel() {
 
         // Refresh all event lists and update selected event
         await fetchAllEventTypes();
-        
+
         // If this was the selected event, refresh its details
         if (selectedEvent && selectedEvent.id === eventId) {
           handleEventSelect(eventId);
@@ -246,12 +248,12 @@ function AdminPanel() {
     try {
       // Refresh all event lists
       await fetchAllEventTypes();
-      
+
       // If we were editing an event that was selected, reload that event's data
       if (editingEvent && selectedEvent && editingEvent.id === selectedEvent.id) {
         await handleEventSelect(editingEvent.id);
       }
-      
+
       // Reset form state
       setShowForm(false);
       setEditingEvent(null);
@@ -322,17 +324,17 @@ function AdminPanel() {
         <div className="flex border-b mb-6">
           <button
             className={`px-4 py-2 mr-2 ${activeTab === 'events'
-                ? 'border-b-2 border-blue-500 font-bold'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'border-b-2 border-blue-500 font-bold'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
             onClick={() => setActiveTab('events')}
           >
             Manage Events
           </button>
           <button
-            className={`px-4 py-2 ${activeTab === 'create'
-                ? 'border-b-2 border-blue-500 font-bold'
-                : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2 mr-2 ${activeTab === 'create'
+              ? 'border-b-2 border-blue-500 font-bold'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
             onClick={() => {
               setEditingEvent(null);
@@ -341,7 +343,17 @@ function AdminPanel() {
           >
             Create New Event
           </button>
+          <button
+            className={`px-4 py-2 ${activeTab === 'database'
+              ? 'border-b-2 border-blue-500 font-bold'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+            onClick={() => setActiveTab('database')}
+          >
+            Database
+          </button>
         </div>
+
 
         {activeTab === 'create' ? (
           <EventForm
@@ -349,14 +361,16 @@ function AdminPanel() {
             onCancel={handleFormCancel}
             initialValues={editingEvent || {}}
           />
+        ) : activeTab === 'database' ? (
+          <UsersDatabase />
         ) : (
           <>
             {/* Event Type Tabs */}
             <div className="flex mb-6 border-b">
               <button
                 className={`px-4 py-2 ${eventsTab === 'active'
-                    ? 'border-b-2 border-green-500 font-semibold text-green-700'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-b-2 border-green-500 font-semibold text-green-700'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
                 onClick={() => {
                   setEventsTab('active');
@@ -368,8 +382,8 @@ function AdminPanel() {
               </button>
               <button
                 className={`px-4 py-2 ${eventsTab === 'upcoming'
-                    ? 'border-b-2 border-blue-500 font-semibold text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-b-2 border-blue-500 font-semibold text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
                 onClick={() => {
                   setEventsTab('upcoming');
@@ -381,8 +395,8 @@ function AdminPanel() {
               </button>
               <button
                 className={`px-4 py-2 ${eventsTab === 'past'
-                    ? 'border-b-2 border-gray-500 font-semibold text-gray-700'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-b-2 border-gray-500 font-semibold text-gray-700'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
                 onClick={() => {
                   setEventsTab('past');
@@ -495,7 +509,7 @@ function AdminPanel() {
                         <p className="text-sm font-medium">Total Spots: <span className="text-gray-700">{selectedEvent.spots}</span></p>
                         <p className="text-sm font-medium">Available Spots: <span className="text-gray-700">{selectedEvent.spotsLeft || 0}</span></p>
                         <p className="text-sm font-medium">Actual Status: <span className={`font-semibold ${selectedEvent.actualStatus === 'active' ? 'text-green-700' :
-                            selectedEvent.actualStatus === 'upcoming' ? 'text-blue-700' : 'text-gray-700'
+                          selectedEvent.actualStatus === 'upcoming' ? 'text-blue-700' : 'text-gray-700'
                           }`}>{selectedEvent.actualStatus}</span></p>
                       </div>
                     </div>
@@ -520,8 +534,8 @@ function AdminPanel() {
                                 <td className="px-4 py-2 whitespace-nowrap">{booking.phone}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">
                                   <span className={`px-2 py-1 text-xs rounded-full ${booking.status === 'confirmed'
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-yellow-100 text-yellow-800'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-yellow-100 text-yellow-800'
                                     }`}>
                                     {booking.status}
                                   </span>

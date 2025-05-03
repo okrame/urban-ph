@@ -418,7 +418,7 @@ export const bookEventSimple = async (eventId, userData) => {
       throw new Error("Booking is closed for this event");
     }
     
-    // 4. Create the booking
+    // 4. Create the booking with only necessary contact info
     const newBooking = {
       userId: userData.userId,
       eventId: eventId,
@@ -428,7 +428,9 @@ export const bookEventSimple = async (eventId, userData) => {
         email: userData.email,
         phone: userData.phone,
         displayName: userData.displayName
-      }
+      },
+      // Include optional specific request if provided
+      specificRequest: userData.requests || null
     };
     
     await addDoc(collection(db, 'bookings'), newBooking);
@@ -439,16 +441,26 @@ export const bookEventSimple = async (eventId, userData) => {
       attendees: arrayUnion(userData.userId)
     });
     
-    // 6. Update user profile (optional)
+    // 6. Update user profile with all the new fields
     try {
       const userRef = doc(db, 'users', userData.userId);
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
-        await updateDoc(userRef, {
+        const userUpdates = {
           eventsBooked: arrayUnion(eventId),
           updatedAt: serverTimestamp()
-        });
+        };
+        
+        // Add user personal data if provided (only first time)
+        if (userData.name) userUpdates.name = userData.name;
+        if (userData.surname) userUpdates.surname = userData.surname;
+        if (userData.birthDate) userUpdates.birthDate = userData.birthDate;
+        if (userData.address) userUpdates.address = userData.address;
+        if (userData.taxId) userUpdates.taxId = userData.taxId;
+        if (userData.instagram) userUpdates.instagram = userData.instagram;
+        
+        await updateDoc(userRef, userUpdates);
       }
     } catch (userErr) {
       console.warn("Could not update user profile:", userErr);

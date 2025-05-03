@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable } from '../../firebase/firestoreServices';
+import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable, getUserContactInfo } from '../../firebase/firestoreServices';
+import { getUserProfile, checkUserProfileComplete } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
 
 function EventCard({ event, user, onAuthNeeded }) {
@@ -13,6 +14,10 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [isBookable, setIsBookable] = useState(true);
   const [bookableReason, setBookableReason] = useState('');
   const [imageError, setImageError] = useState(false);
+  
+  // New state variables for enhanced booking form
+  const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
+  const [existingUserData, setExistingUserData] = useState({});
   
   // Check event status and bookability
   useEffect(() => {
@@ -87,6 +92,38 @@ function EventCard({ event, user, onAuthNeeded }) {
       return;
     }
     
+    // Check if this is user's first time booking
+    try {
+      setLoading(true);
+      const isProfileComplete = await checkUserProfileComplete(user.uid);
+      setIsFirstTimeBooking(!isProfileComplete);
+      
+      // Get user profile data
+      const userProfile = await getUserProfile(user.uid);
+      
+      if (!isProfileComplete) {
+        // First time booking - use whatever profile data is available
+        setExistingUserData(userProfile || {});
+      } else {
+        // Not first time - already has complete profile
+        // Get contact info from previous bookings
+        const contactInfo = await getUserContactInfo(user.uid);
+        if (contactInfo) {
+          setExistingUserData({
+            ...userProfile,
+            email: contactInfo.email || userProfile.email,
+            phone: contactInfo.phone || ''
+          });
+        } else {
+          setExistingUserData(userProfile || {});
+        }
+      }
+    } catch (error) {
+      console.error("Error checking user profile:", error);
+    } finally {
+      setLoading(false);
+    }
+    
     // Show the booking form
     setShowBookingForm(true);
   };
@@ -108,7 +145,15 @@ function EventCard({ event, user, onAuthNeeded }) {
         userId: user.uid,
         email: formData.email,
         phone: formData.phone,
-        displayName: user.displayName || null
+        displayName: user.displayName || null,
+        // Include additional user data for profile
+        name: formData.name,
+        surname: formData.surname,
+        birthDate: formData.birthDate,
+        address: formData.address,
+        taxId: formData.taxId,
+        instagram: formData.instagram,
+        requests: formData.requests
       };
       
       const result = await bookEventSimple(event.id, userData);
@@ -233,6 +278,8 @@ function EventCard({ event, user, onAuthNeeded }) {
           onSubmit={handleFormSubmit} 
           onCancel={handleCancelForm}
           loading={loading}
+          isFirstTime={isFirstTimeBooking}
+          existingData={existingUserData}
         />
       </div>
     );

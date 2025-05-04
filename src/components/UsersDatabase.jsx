@@ -7,79 +7,86 @@ function UsersDatabase() {
   const [data, setData] = useState([]);
   const [editingCell, setEditingCell] = useState({});
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, 'users'));
-        const users = [];
+  const fetchUsers = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      const users = [];
 
-        for (const userDoc of snapshot.docs) {
-          const userData = userDoc.data();
-          const events = userData.eventsBooked || [];
+      for (const userDoc of snapshot.docs) {
+        const userData = userDoc.data();
+        const events = userData.eventsBooked || [];
 
-          const eventsDetails = [];
-          let phoneNumber = ''; 
-          
-          const bookingsQuery = query(
-            collection(db, 'bookings'),
-            where('userId', '==', userDoc.id)
-          );
-          const bookingsSnapshot = await getDocs(bookingsQuery);
-          
-          if (!bookingsSnapshot.empty) {
-            const firstBooking = bookingsSnapshot.docs[0].data();
-            phoneNumber = firstBooking.contactInfo?.phone || '';
-          }
-
-          for (const eventId of events) {
-            try {
-              const eventRef = doc(db, 'events', eventId);
-              const eventSnap = await getDoc(eventRef);
-              if (eventSnap.exists()) {
-                const eventData = eventSnap.data();
-                eventsDetails.push(`${eventData.title} (${eventData.date})`);
-              }
-            } catch (error) {
-              console.error('Error fetching event:', error);
-            }
-          }
-
-          const fullName = userData.name && userData.surname 
-            ? `${userData.name} ${userData.surname}`
-            : userData.displayName || ''; // Fallback to displayName if name/surname not available
-
-          const birthDate = userData.birthDate;
-          const birthDateString = birthDate ? 
-            (birthDate instanceof Date ? birthDate.toLocaleDateString() :
-             typeof birthDate === 'string' ? birthDate :
-             birthDate.toDate ? birthDate.toDate().toLocaleDateString() : '') : '';
-
-          users.push({
-            id: userDoc.id,
-            email: userData.email || '',
-            taxId: userData.taxId || '',
-            fullName: fullName,
-            birthDate: birthDateString,
-            phone: phoneNumber, 
-            address: userData.address || '',
-            instagram: userData.instagram || '',
-            role: userData.role || '',
-            createdAt: userData.createdAt?.toDate().toLocaleString() || '',
-            eventsBooked: eventsDetails.length > 0 ? eventsDetails : ['No events booked']
-          });
+        const eventsDetails = [];
+        let phoneNumber = ''; 
+        
+        const bookingsQuery = query(
+          collection(db, 'bookings'),
+          where('userId', '==', userDoc.id)
+        );
+        const bookingsSnapshot = await getDocs(bookingsQuery);
+        
+        if (!bookingsSnapshot.empty) {
+          const firstBooking = bookingsSnapshot.docs[0].data();
+          phoneNumber = firstBooking.contactInfo?.phone || '';
         }
 
-        setData(users);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        for (const eventId of events) {
+          try {
+            const eventRef = doc(db, 'events', eventId);
+            const eventSnap = await getDoc(eventRef);
+            if (eventSnap.exists()) {
+              const eventData = eventSnap.data();
+              eventsDetails.push(`${eventData.title} (${eventData.date})`);
+            }
+          } catch (error) {
+            console.error('Error fetching event:', error);
+          }
+        }
 
+        const fullName = userData.name && userData.surname 
+          ? `${userData.name} ${userData.surname}`
+          : userData.displayName || ''; // Fallback to displayName if name/surname not available
+
+        const birthDate = userData.birthDate;
+        const birthDateString = birthDate ? 
+          (birthDate instanceof Date ? birthDate.toLocaleDateString() :
+           typeof birthDate === 'string' ? birthDate :
+           birthDate.toDate ? birthDate.toDate().toLocaleDateString() : '') : '';
+
+        users.push({
+          id: userDoc.id,
+          email: userData.email || '',
+          taxId: userData.taxId || '',
+          fullName: fullName,
+          birthDate: birthDateString,
+          phone: phoneNumber, 
+          address: userData.address || '',
+          instagram: userData.instagram || '',
+          role: userData.role || '',
+          createdAt: userData.createdAt?.toDate().toLocaleString() || '',
+          eventsBooked: eventsDetails.length > 0 ? eventsDetails : ['No events booked']
+        });
+      }
+
+      setData(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchUsers();
   }, []);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await fetchUsers();
+    setSyncing(false);
+  };
 
   const handleEdit = (rowId, columnId, value) => {
     if (columnId === 'eventsBooked' || columnId === 'phone') return; // Prevent editing these columns
@@ -160,12 +167,39 @@ function UsersDatabase() {
     <div className="bg-white p-4 rounded shadow">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Users Database</h2>
-        <button 
-          onClick={downloadCSV}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Download CSV
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleSync}
+            disabled={syncing}
+            className={`flex items-center px-4 py-2 rounded ${
+              syncing 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-yellow-600 hover:bg-yellow-700'
+            } text-white`}
+          >
+            <svg 
+              className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth="2" 
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            {syncing ? 'Syncing...' : 'Sync Data'}
+          </button>
+          <button 
+            onClick={downloadCSV}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Download CSV
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

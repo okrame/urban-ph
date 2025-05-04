@@ -572,6 +572,7 @@ export const getEventsStats = async () => {
   }
 };
 
+
 // Get bookings for a specific event
 export const getEventBookings = async (eventId) => {
   try {
@@ -583,6 +584,7 @@ export const getEventBookings = async (eventId) => {
       const data = doc.data();
       bookings.push({
         id: doc.id,
+        userId: data.userId, // Include userId to fetch user profile data
         email: data.contactInfo?.email || 'N/A',
         phone: data.contactInfo?.phone || 'N/A',
         displayName: data.contactInfo?.displayName || 'N/A',

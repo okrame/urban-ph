@@ -156,8 +156,28 @@ function AdminPanel() {
 
       if (event) {
         setSelectedEvent(event);
+        
+        // Get bookings with full user details
         const bookingsData = await getEventBookings(eventId);
-        setBookings(bookingsData);
+        
+        // Enrich bookings with user profile data to get real name
+        const enrichedBookings = await Promise.all(bookingsData.map(async (booking) => {
+          const userRef = doc(db, 'users', booking.userId);
+          const userDoc = await getDoc(userRef);
+          const userData = userDoc.exists() ? userDoc.data() : {};
+          
+          // Get the real name from user profile (collected during first booking)
+          const userFullName = userData.name && userData.surname 
+            ? `${userData.name} ${userData.surname}`
+            : null;
+          
+          return {
+            ...booking,
+            userFullName
+          };
+        }));
+        
+        setBookings(enrichedBookings);
       } else {
         console.error('Event not found in any category');
         setSelectedEvent(null);
@@ -529,7 +549,9 @@ function AdminPanel() {
                           <tbody className="divide-y divide-gray-200">
                             {bookings.map(booking => (
                               <tr key={booking.id}>
-                                <td className="px-4 py-2 whitespace-nowrap">{booking.displayName || 'N/A'}</td>
+                                <td className="px-4 py-2 whitespace-nowrap">
+                                  {booking.userFullName || booking.displayName || 'N/A'}
+                                </td>
                                 <td className="px-4 py-2 whitespace-nowrap">{booking.email}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">{booking.phone}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">

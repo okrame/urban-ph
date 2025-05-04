@@ -17,6 +17,27 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
 
 
+  // useEffect(() => {
+  //   // Clean up URL when the component mounts
+  //   const cleanupURL = () => {
+  //     const url = new URL(window.location.href);
+  //     if (url.searchParams.has('apiKey') || url.searchParams.has('oobCode')) {
+  //       url.searchParams.delete('apiKey');
+  //       url.searchParams.delete('oobCode');
+  //       url.searchParams.delete('mode');
+  //       url.searchParams.delete('lang');
+  //       window.history.replaceState({}, document.title, url.pathname + url.hash);
+  //     }
+  //   };
+  
+  //   // Clean on mount
+  //   cleanupURL();
+  
+  //   // Also clean on auth state changes
+  //   return () => cleanupURL();
+  // }, []);
+
+
   useEffect(() => {
     console.log("App component mounted");
     
@@ -49,6 +70,8 @@ function App() {
         // Create/update user profile when user logs in
         try {
           await createUserProfile(currentUser);
+
+          //setShowAuthModal(false);
         } catch (error) {
           console.error("Error creating user profile:", error);
         }

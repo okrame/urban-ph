@@ -5,7 +5,10 @@ import {
   FacebookAuthProvider,
   sendSignInLinkToEmail, 
   isSignInWithEmailLink, 
-  signInWithEmailLink
+  signInWithEmailLink,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  setPersistence
 } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { createUserProfile } from '../../firebase/userServices';
@@ -15,27 +18,92 @@ function AuthModal({ isOpen, onClose, event }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [useMagicLink, setUseMagicLink] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
 
   useEffect(() => {
-    // Check if the URL contains an email sign-in link
+    // Controlla se l'URL contiene un link di sign-in email
     if (isSignInWithEmailLink(auth, window.location.href)) {
-      let storedEmail = window.localStorage.getItem('emailForSignIn');
-      if (!storedEmail) {
-        storedEmail = window.prompt('Please provide your email for confirmation');
-      }
+      setIsSigningIn(true);
+      
+      const processSignInLink = async () => {
+        let storedEmail = window.localStorage.getItem('emailForSignIn');
+        
+        // Se non c'è email salvata, chiedi SOLO SE non stiamo già processando
+        if (!storedEmail) {
+          // Aggiungiamo una flag per evitare prompt multipli
+          const isProcessingSignIn = sessionStorage.getItem('isProcessingSignIn');
+          
+          if (!isProcessingSignIn) {
+            sessionStorage.setItem('isProcessingSignIn', 'true');
+            
+            // Solo se necessario, prova a estrarre dall'URL
+            const extractEmailFromUrl = () => {
+              const urlParams = new URLSearchParams(window.location.search);
+              return urlParams.get('email');
+            };
+            
+            const urlEmail = extractEmailFromUrl();
+            
+            if (!urlEmail) {
+              const promptEmail = window.prompt('Please provide your email for confirmation');
+              if (promptEmail) {
+                storedEmail = promptEmail;
+                window.localStorage.setItem('emailForSignIn', promptEmail);
+              } else {
+                // Se l'utente cancella il prompt, pulisce l'URL e chiude
+                cleanupUrl();
+                sessionStorage.removeItem('isProcessingSignIn');
+                setIsSigningIn(false);
+                return;
+              }
+            } else {
+              storedEmail = urlEmail;
+              window.localStorage.setItem('emailForSignIn', urlEmail);
+            }
+          } else {
+            // Se stiamo già processando, aspetta un po' e riprova
+            setTimeout(() => {
+              processSignInLink();
+            }, 100);
+            return;
+          }
+        }
 
-      signInWithEmailLink(auth, storedEmail, window.location.href)
-        .then(async (result) => {
+        try {
+          const result = await signInWithEmailLink(auth, storedEmail, window.location.href);
           await createUserProfile(result.user);
           window.localStorage.removeItem('emailForSignIn');
+          sessionStorage.removeItem('isProcessingSignIn');
+          cleanupUrl();
           onClose();
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error("Email link sign-in failed", err);
           setError('Invalid or expired sign-in link.');
-        });
+          sessionStorage.removeItem('isProcessingSignIn');
+          cleanupUrl();
+        } finally {
+          setIsSigningIn(false);
+        }
+      };
+
+      processSignInLink();
     }
-  }, [onClose]);
+  }, []); // Rimuovi onClose dalla dependency array per evitare re-renders
+
+  // Funzione di pulizia URL separata per evitare duplicazione
+  const cleanupUrl = () => {
+    const url = new URL(window.location.href);
+    ['apiKey', 'oobCode', 'mode', 'lang', 'email'].forEach(param => {
+      url.searchParams.delete(param);
+    });
+    window.history.replaceState({}, document.title, url.pathname + url.hash);
+  };
+
+  // Non renderizzare se si sta processando il sign-in
+  if (isSigningIn) {
+    return null;
+  }
 
   if (!isOpen) {
     return null;
@@ -77,7 +145,7 @@ function AuthModal({ isOpen, onClose, event }) {
       }
 
       const actionCodeSettings = {
-        url: window.location.href,
+        url: window.location.origin + window.location.pathname,
         handleCodeInApp: true,
       };
 
@@ -97,10 +165,19 @@ function AuthModal({ isOpen, onClose, event }) {
     setLoading(true);
     
     try {
+      // Imposta la persistenza prima del sign-in
+      await setPersistence(auth, keepSignedIn ? browserLocalPersistence : browserSessionPersistence);
+      
       const provider = new GoogleAuthProvider();
+      
+      // Forza la selezione dell'account
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
       const result = await signInWithPopup(auth, provider);
       
-      // Create or update user profile in database
+      // Crea o aggiorna il profilo utente nel database
       await createUserProfile(result.user);
       onClose();
     } catch (error) {
@@ -116,10 +193,13 @@ function AuthModal({ isOpen, onClose, event }) {
     setLoading(true);
     
     try {
+      // Imposta la persistenza prima del sign-in
+      await setPersistence(auth, keepSignedIn ? browserLocalPersistence : browserSessionPersistence);
+      
       const provider = new FacebookAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
-      // Create or update user profile in database
+      // Crea o aggiorna il profilo utente nel database
       await createUserProfile(result.user);
       onClose();
     } catch (error) {
@@ -219,11 +299,34 @@ function AuthModal({ isOpen, onClose, event }) {
                 border: 'none',
                 borderRadius: '4px',
                 fontWeight: 'bold',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                marginBottom: '20px'
               }}
             >
               Use Magic Link (Passwordless)
             </button>
+            
+            {/* Checkbox per Keep me signed in */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '16px',
+              userSelect: 'none'
+            }}>
+              <input
+                type="checkbox"
+                id="keepSignedIn"
+                checked={keepSignedIn}
+                onChange={(e) => setKeepSignedIn(e.target.checked)}
+                style={{marginRight: '8px'}}
+              />
+              <label 
+                htmlFor="keepSignedIn" 
+                style={{cursor: 'pointer', fontSize: '14px'}}
+              >
+                Keep me signed in
+              </label>
+            </div>
           </>
         )}
 

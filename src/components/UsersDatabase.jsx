@@ -1,53 +1,88 @@
 import { useState, useEffect } from 'react';
-import { getDocs, collection, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { getDocs, collection, updateDoc, doc, getDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table';
 
 function UsersDatabase() {
   const [data, setData] = useState([]);
   const [editingCell, setEditingCell] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const snapshot = await getDocs(collection(db, 'users'));
-      const users = [];
+      try {
+        const snapshot = await getDocs(collection(db, 'users'));
+        const users = [];
 
-      for (const userDoc of snapshot.docs) {
-        const userData = userDoc.data();
-        const events = userData.eventsBooked || [];
+        for (const userDoc of snapshot.docs) {
+          const userData = userDoc.data();
+          const events = userData.eventsBooked || [];
 
-        const eventsDetails = [];
-        for (const eventId of events) {
-          try {
-            const eventRef = doc(db, 'events', eventId);
-            const eventSnap = await getDoc(eventRef);
-            if (eventSnap.exists()) {
-              const eventData = eventSnap.data();
-              eventsDetails.push(`${eventData.title} (${eventData.date})`);
-            }
-          } catch (error) {
-            console.error('Error fetching event:', error);
+          const eventsDetails = [];
+          let phoneNumber = ''; 
+          
+          const bookingsQuery = query(
+            collection(db, 'bookings'),
+            where('userId', '==', userDoc.id)
+          );
+          const bookingsSnapshot = await getDocs(bookingsQuery);
+          
+          if (!bookingsSnapshot.empty) {
+            const firstBooking = bookingsSnapshot.docs[0].data();
+            phoneNumber = firstBooking.contactInfo?.phone || '';
           }
+
+          for (const eventId of events) {
+            try {
+              const eventRef = doc(db, 'events', eventId);
+              const eventSnap = await getDoc(eventRef);
+              if (eventSnap.exists()) {
+                const eventData = eventSnap.data();
+                eventsDetails.push(`${eventData.title} (${eventData.date})`);
+              }
+            } catch (error) {
+              console.error('Error fetching event:', error);
+            }
+          }
+
+          const fullName = userData.name && userData.surname 
+            ? `${userData.name} ${userData.surname}`
+            : userData.displayName || ''; // Fallback to displayName if name/surname not available
+
+          const birthDate = userData.birthDate;
+          const birthDateString = birthDate ? 
+            (birthDate instanceof Date ? birthDate.toLocaleDateString() :
+             typeof birthDate === 'string' ? birthDate :
+             birthDate.toDate ? birthDate.toDate().toLocaleDateString() : '') : '';
+
+          users.push({
+            id: userDoc.id,
+            email: userData.email || '',
+            taxId: userData.taxId || '',
+            fullName: fullName,
+            birthDate: birthDateString,
+            phone: phoneNumber, 
+            address: userData.address || '',
+            instagram: userData.instagram || '',
+            role: userData.role || '',
+            createdAt: userData.createdAt?.toDate().toLocaleString() || '',
+            eventsBooked: eventsDetails.length > 0 ? eventsDetails : ['No events booked']
+          });
         }
 
-        users.push({
-          id: userDoc.id,
-          email: userData.email,
-          displayName: userData.displayName,
-          role: userData.role,
-          createdAt: userData.createdAt?.toDate().toLocaleString() || '',
-          eventsBooked: eventsDetails.length > 0 ? eventsDetails : ['No events booked']
-        });
+        setData(users);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoading(false);
       }
-
-      setData(users);
     };
 
     fetchUsers();
   }, []);
 
   const handleEdit = (rowId, columnId, value) => {
-    if (columnId === 'eventsBooked') return; // Prevent editing this column
+    if (columnId === 'eventsBooked' || columnId === 'phone') return; // Prevent editing these columns
     setEditingCell({ rowId, columnId, value });
   };
 
@@ -70,7 +105,7 @@ function UsersDatabase() {
   };
 
   const downloadCSV = () => {
-    const header = ['id', 'email', 'displayName', 'role', 'createdAt', 'eventsBooked'];
+    const header = ['id', 'email', 'taxId', 'fullName', 'birthDate', 'phone', 'address', 'instagram', 'role', 'createdAt', 'eventsBooked'];
     const csv = [
       header.join(','),
       ...data.map(row => header.map(field => JSON.stringify(row[field] ?? '')).join(','))
@@ -89,7 +124,12 @@ function UsersDatabase() {
   const columns = [
     { accessorKey: 'id', header: 'ID' },
     { accessorKey: 'email', header: 'Email' },
-    { accessorKey: 'displayName', header: 'Display Name' },
+    { accessorKey: 'taxId', header: 'Codice Fiscale' },
+    { accessorKey: 'fullName', header: 'Full Name' },
+    { accessorKey: 'birthDate', header: 'Data di nascita' },
+    { accessorKey: 'phone', header: 'Phone' },
+    { accessorKey: 'address', header: 'Residenza' },
+    { accessorKey: 'instagram', header: 'Instagram' },
     { accessorKey: 'role', header: 'Role' },
     { accessorKey: 'createdAt', header: 'Created At' },
     { accessorKey: 'eventsBooked', header: 'Events Booked' },
@@ -100,6 +140,21 @@ function UsersDatabase() {
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  if (loading) {
+    return (
+      <div className="bg-white p-4 rounded shadow">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-4 rounded shadow">
@@ -119,7 +174,7 @@ function UsersDatabase() {
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
-                  <th key={header.id} className="px-4 py-2 text-left">
+                  <th key={header.id} className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
@@ -128,14 +183,15 @@ function UsersDatabase() {
           </thead>
           <tbody>
             {table.getRowModel().rows.map(row => (
-              <tr key={row.id} className="divide-y">
+              <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
                 {row.getVisibleCells().map(cell => {
                   const isEditing = editingCell.rowId === row.original.id && editingCell.column.id === cell.column.id;
                   const isEventsColumn = cell.column.id === 'eventsBooked';
+                  const isPhoneColumn = cell.column.id === 'phone';
 
                   return (
                     <td key={cell.id} className="px-4 py-2">
-                      {isEditing && !isEventsColumn ? (
+                      {isEditing && !isEventsColumn && !isPhoneColumn ? (
                         <input
                           type="text"
                           className="border rounded p-1 w-full"
@@ -145,8 +201,8 @@ function UsersDatabase() {
                         />
                       ) : (
                         <div
-                          onClick={() => handleEdit(row.original.id, cell.column.id, cell.getValue())}
-                          className={`p-1 rounded ${!isEventsColumn ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                          onClick={() => !isPhoneColumn && handleEdit(row.original.id, cell.column.id, cell.getValue())}
+                          className={`p-1 rounded ${!isEventsColumn && !isPhoneColumn ? 'cursor-pointer hover:bg-gray-100' : ''}`}
                         >
                           {Array.isArray(cell.getValue()) 
                             ? cell.getValue().join(', ')

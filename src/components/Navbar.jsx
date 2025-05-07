@@ -64,10 +64,22 @@ function Navbar({ user, onSignInClick }) {
     }
   };
 
+  // Function to scroll to current events section
+  const scrollToCurrentEvents = (e) => {
+    e.preventDefault();
+    const currentEventsSection = document.getElementById('current-events-section');
+    if (currentEventsSection) {
+      currentEventsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Check if a nav link is active
   const isActive = (path) => {
     if (path === '/' && location.pathname === '/') {
       return true;
+    }
+    if (path === '/events' && location.pathname === '/') {
+      return false; // We're treating events differently now
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
@@ -96,16 +108,21 @@ function Navbar({ user, onSignInClick }) {
               Home
             </Link>
             <Link 
-              to="/events" 
+              to="/" 
+              onClick={(e) => {
+                if (location.pathname === '/') {
+                  scrollToCurrentEvents(e);
+                }
+              }}
               className={isActive('/events') ? 'text-blue-600 border-b-2 border-blue-500 px-3 py-2' : 'text-gray-600 hover:text-blue-600 px-3 py-2'}
             >
-              Events
+              .ourEvents
             </Link>
             <Link 
               to="/about" 
               className={isActive('/about') ? 'text-blue-600 border-b-2 border-blue-500 px-3 py-2' : 'text-gray-600 hover:text-blue-600 px-3 py-2'}
             >
-              About Us
+              .aboutUs
             </Link>
             {user && isAdmin && (
               <Link 
@@ -199,9 +216,14 @@ function Navbar({ user, onSignInClick }) {
               Home
             </Link>
             <Link
-              to="/events"
+              to="/"
               className={`block px-3 py-2 rounded ${isActive('/events') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`}
-              onClick={() => setIsMenuOpen(false)}
+              onClick={(e) => {
+                if (location.pathname === '/') {
+                  scrollToCurrentEvents(e);
+                }
+                setIsMenuOpen(false);
+              }}
             >
               Events
             </Link>

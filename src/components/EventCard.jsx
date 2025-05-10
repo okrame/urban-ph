@@ -19,6 +19,15 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
   const [existingUserData, setExistingUserData] = useState({});
   
+  // Reset booking states when user changes (signs in or out)
+  useEffect(() => {
+    // Reset booking states when user changes
+    setIsBooked(false);
+    setBookingSuccess(false);
+    setAuthError(null);
+    setShowBookingForm(false);
+  }, [user]);
+
   // Check event status and bookability
   useEffect(() => {
     if (event) {
@@ -49,8 +58,10 @@ function EventCard({ event, user, onAuthNeeded }) {
   // Check booking status when user or event changes
   useEffect(() => {
     const checkBookingStatus = async () => {
+      // Reset the booking state if there's no user
       if (!user || !event.id) {
         setIsBooked(false);
+        setBookingSuccess(false);
         return;
       }
       
@@ -60,9 +71,13 @@ function EventCard({ event, user, onAuthNeeded }) {
         
         if (isAlreadyBooked) {
           setBookingSuccess(true);
+        } else {
+          setBookingSuccess(false);
         }
       } catch (error) {
         console.error("Error checking booking status:", error);
+        setIsBooked(false);
+        setBookingSuccess(false);
       }
     };
     
@@ -223,46 +238,8 @@ function EventCard({ event, user, onAuthNeeded }) {
   // Determine if event is fully booked
   const isFullyBooked = bookableReason === "No spots left";
   
-  // Success state
-  if (bookingSuccess && !showBookingForm) {
-    return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="md:flex">
-          <div className="md:w-1/4">
-            <img 
-              src={getImageSource()} 
-              alt={event.title}
-              className="h-40 w-full object-cover md:h-full"
-              onError={handleImageError}
-            />
-          </div>
-          <div className="p-4 md:w-3/4">
-            <h3 className="text-xl font-bold mb-2">{event.title}</h3>
-            
-            <div className="mb-3 flex flex-wrap gap-2">
-              <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
-                📅 {event.date}
-              </span>
-              <span className="inline-block bg-blue-200 rounded-full px-2 py-1 text-xs font-semibold text-blue-700">
-                {event.type}
-              </span>
-              <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold
-                ${eventStatus === 'active' ? 'bg-green-200 text-green-700' : 
-                  eventStatus === 'upcoming' ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-700'}`}>
-                {eventStatus === 'active' ? 'Active' : 
-                 eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
-              </span>
-            </div>
-            
-            <div className="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded mb-3">
-              <p className="font-bold">✓ Booking confirmed!</p>
-              <p className="text-sm">We look forward to seeing you there!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // We no longer need a special success state view
+  // Instead we'll just show the normal view with the booking button status
   
   // Booking form state
   if (showBookingForm) {
@@ -393,7 +370,7 @@ function EventCard({ event, user, onAuthNeeded }) {
           }}
           disabled={isBooked || loading || !isBookable}
           className={`w-full px-4 py-2 rounded font-bold text-white ${
-            isBooked 
+            isBooked || bookingSuccess
               ? 'bg-green-500 cursor-not-allowed' 
               : !isBookable
                 ? 'bg-gray-400 cursor-not-allowed'
@@ -402,8 +379,8 @@ function EventCard({ event, user, onAuthNeeded }) {
                   : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {isBooked 
-            ? '✓ Booked' 
+          {isBooked || bookingSuccess
+            ? '✓ Booking Confirmed' 
             : loading 
               ? 'Processing...' 
               : !isBookable

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {} }) {
   const [name, setName] = useState(existingData.name || '');

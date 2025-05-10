@@ -108,9 +108,10 @@ function Navbar({ user, onSignInClick }) {
               Home
             </Link>
             <Link 
-              to="/" 
+              to={location.pathname === '/' ? '/' : '/#/?scrollToEvents=true'} 
               onClick={(e) => {
                 if (location.pathname === '/') {
+                  e.preventDefault();
                   scrollToCurrentEvents(e);
                 }
               }}
@@ -216,10 +217,11 @@ function Navbar({ user, onSignInClick }) {
               Home
             </Link>
             <Link
-              to="/"
+              to={location.pathname === '/' ? '/' : '/#/?scrollToEvents=true'}
               className={`block px-3 py-2 rounded ${isActive('/events') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`}
               onClick={(e) => {
                 if (location.pathname === '/') {
+                  e.preventDefault();
                   scrollToCurrentEvents(e);
                 }
                 setIsMenuOpen(false);

@@ -83,6 +83,22 @@ function App() {
 
     loadEvents();
     
+    // Check if we should scroll to events section
+    // For hash router, we need to check the hash for parameters
+    const hashParts = window.location.hash.split('?');
+    if (hashParts.length > 1) {
+      const urlParams = new URLSearchParams(hashParts[1]);
+      if (urlParams.get('scrollToEvents') === 'true') {
+        // Delay the scroll slightly to ensure the page is fully rendered
+        setTimeout(() => {
+          const eventsSection = document.getElementById('current-events-section');
+          if (eventsSection) {
+            eventsSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 400); // A bit longer delay to ensure everything is rendered
+      }
+    }
+    
     return () => unsubscribe();
   }, []);
 

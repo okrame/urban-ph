@@ -15,6 +15,7 @@ import { auth, db } from '../../firebase/config';
 import Navbar from '../components/Navbar';
 import EventForm from '../components/EventForm';
 import UsersDatabase from '../components/UsersDatabase';
+import PaymentsView from '../components/PaymentsView';
 
 
 function AdminPanel() {
@@ -29,7 +30,7 @@ function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
-  const [activeTab, setActiveTab] = useState('events'); // 'events' or 'create'
+  const [activeTab, setActiveTab] = useState('events'); // 'events' or 'create' or 'db' or 'payments'
   const [eventsTab, setEventsTab] = useState('active'); // 'active', 'upcoming', or 'past'
 
   useEffect(() => {
@@ -156,27 +157,27 @@ function AdminPanel() {
 
       if (event) {
         setSelectedEvent(event);
-        
+
         // Get bookings with full user details
         const bookingsData = await getEventBookings(eventId);
-        
+
         // Enrich bookings with user profile data to get real name
         const enrichedBookings = await Promise.all(bookingsData.map(async (booking) => {
           const userRef = doc(db, 'users', booking.userId);
           const userDoc = await getDoc(userRef);
           const userData = userDoc.exists() ? userDoc.data() : {};
-          
+
           // Get the real name from user profile (collected during first booking)
-          const userFullName = userData.name && userData.surname 
+          const userFullName = userData.name && userData.surname
             ? `${userData.name} ${userData.surname}`
             : null;
-          
+
           return {
             ...booking,
             userFullName
           };
         }));
-        
+
         setBookings(enrichedBookings);
       } else {
         console.error('Event not found in any category');
@@ -372,10 +373,20 @@ function AdminPanel() {
           >
             Database
           </button>
+          <button
+            className={`px-4 py-2 ${activeTab === 'payments'
+              ? 'border-b-2 border-blue-500 font-bold'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+            onClick={() => setActiveTab('payments')}
+          >
+            Payments
+          </button>
         </div>
 
-
-        {activeTab === 'create' ? (
+        {activeTab === 'payments' ? (
+          <PaymentsView eventId={selectedEvent?.id} />
+        ) : activeTab === 'create' ? (
           <EventForm
             onSuccess={handleFormSuccess}
             onCancel={handleFormCancel}

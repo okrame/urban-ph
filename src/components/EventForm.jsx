@@ -18,25 +18,29 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     image: '',
     imageBase64: '',
     status: 'active',
+    // Add payment fields
+    isPaid: initialValues.paymentAmount ? true : false,
+    paymentAmount: initialValues.paymentAmount || 0,
+    paymentCurrency: initialValues.paymentCurrency || 'EUR',
     ...initialValues
   });
 
   // Date picker related state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
-  
+
   // Time picker related state
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [showStartAmPm, setShowStartAmPm] = useState('AM');
   const [showEndAmPm, setShowEndAmPm] = useState('AM');
-  
+
   // Emoji picker related state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef(null);
   const descriptionRef = useRef(null);
   const [cursorPosition, setCursorPosition] = useState(0);
-  
+
   // Form state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,6 +64,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       image: '',
       imageBase64: '',
       status: 'active',
+      // Initialize payment fields
+      isPaid: initialValues.paymentAmount ? true : false,
+      paymentAmount: initialValues.paymentAmount || 0,
+      paymentCurrency: initialValues.paymentCurrency || 'EUR',
       ...initialValues
     });
 
@@ -91,7 +99,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             const status = determineEventStatus(initialValues.date, initialValues.time);
             setCalculatedStatus(status);
           }
-          
+
           // Detect if we're using base64 for the image
           setIsUsingBase64(!!initialValues.imageBase64);
         } catch (error) {
@@ -105,7 +113,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     };
 
     fetchBookingsCount();
-    
+
     // Reset image change tracking when form is initialized/reset
     setIsImageChanged(false);
   }, [initialValues]);
@@ -134,16 +142,16 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Format date for display in the required format
   const formatDateForDisplay = (date) => {
     if (!date) return '';
-    
+
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    
+
     const month = months[date.getMonth()];
     const day = date.getDate();
     const year = date.getFullYear();
-    
+
     return `${month} ${day}, ${year}`;
   };
 
@@ -204,63 +212,14 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     }
   };
 
-  // Handle start time input change
-  const handleStartTimeChange = (e) => {
-    const timeValue = e.target.value;
-    const [hours, minutes] = timeValue.split(':');
-    let hour = parseInt(hours, 10);
-    
-    // If hour > 12, switch to PM
-    if (hour > 12) {
-      hour = hour % 12;
-      if (hour === 0) hour = 12;
-      setShowStartAmPm('PM');
-    } else if (hour === 0) {
-      hour = 12;
-      setShowStartAmPm('AM');
-    } else if (hour === 12) {
-      setShowStartAmPm('PM');
-    }
-    
-    // Format to ensure leading zeros if needed
-    const formattedTime = `${hour}:${minutes}`;
-    setStartTime(formattedTime);
-  };
-
-  // Handle end time input change
-  const handleEndTimeChange = (e) => {
-    const timeValue = e.target.value;
-    const [hours, minutes] = timeValue.split(':');
-    let hour = parseInt(hours, 10);
-    
-    // If hour > 12, switch to PM
-    if (hour > 12) {
-      hour = hour % 12;
-      if (hour === 0) hour = 12;
-      setShowEndAmPm('PM');
-    } else if (hour === 0) {
-      hour = 12;
-      setShowEndAmPm('AM');
-    } else if (hour === 12) {
-      setShowEndAmPm('PM');
-    }
-    
-    // Format to ensure leading zeros if needed
-    const formattedTime = `${hour}:${minutes}`;
-    setEndTime(formattedTime);
-  };
-
-  // Handle start AM/PM toggle
   const handleStartAmPmChange = (e) => {
     setShowStartAmPm(e.target.value);
   };
 
-  // Handle end AM/PM toggle
   const handleEndAmPmChange = (e) => {
     setShowEndAmPm(e.target.value);
   };
 
-  // Apply time changes
   const applyTimeChanges = () => {
     handleTimeChange();
   };
@@ -269,17 +228,17 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const handleEmojiClick = (emojiObject) => {
     const emoji = emojiObject.emoji;
     const descriptionValue = formData.description;
-    
+
     // Insert emoji at cursor position
     const newDescription = descriptionValue.substring(0, cursorPosition) + emoji + descriptionValue.substring(cursorPosition);
-    
+
     setFormData({
       ...formData,
       description: newDescription
     });
-    
+
     setCursorPosition(cursorPosition + emoji.length);
-    
+
     // Update cursor position in textarea
     if (descriptionRef.current) {
       const newCursorPos = cursorPosition + emoji.length;
@@ -298,6 +257,17 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Toggle emoji picker visibility
   const toggleEmojiPicker = () => {
     setShowEmojiPicker(!showEmojiPicker);
+  };
+
+  // Handle paid event toggle
+  const handlePaidToggle = (e) => {
+    const isPaid = e.target.checked;
+    setFormData({
+      ...formData,
+      isPaid,
+      // Reset payment amount to 0 if toggling to free
+      paymentAmount: isPaid ? formData.paymentAmount : 0
+    });
   };
 
   const handleChange = (e) => {
@@ -321,16 +291,25 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       setCursorPosition(e.target.selectionStart);
     }
 
+    // Special handling for payment amount
+    if (name === 'paymentAmount') {
+      // Ensure it's a positive number with at most 2 decimal places
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        return; // Don't update invalid amounts
+      }
+    }
+
     setFormData({
       ...formData,
-      [name]: name === 'spots' ? parseInt(value, 10) : value
+      [name]: name === 'spots' || name === 'paymentAmount' ? parseFloat(value) : value
     });
   };
 
   const handleImageSelected = (file) => {
     setImageFile(file);
     setIsImageChanged(true);
-    
+
     // If file is null (user cleared the image), reset the image URL
     if (!file && !initialValues.id) {
       setFormData({
@@ -340,13 +319,13 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       });
     }
   };
-  
+
   const handleBase64Generated = (base64Data) => {
     setFormData(prev => ({
       ...prev,
       imageBase64: base64Data
     }));
-    
+
     setIsUsingBase64(!!base64Data);
     setIsImageChanged(true);
   };
@@ -396,8 +375,24 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
-      let updatedFormData = { ...formData };
-      
+      // Validate payment amount if event is paid
+      if (formData.isPaid && (formData.paymentAmount <= 0 || isNaN(formData.paymentAmount))) {
+        setError('Please enter a valid payment amount greater than 0');
+        setLoading(false);
+        return;
+      }
+
+      // Prepare the form data
+      let updatedFormData = {
+        ...formData,
+        // Set payment amount only if isPaid is true
+        paymentAmount: formData.isPaid ? formData.paymentAmount : null,
+        paymentCurrency: formData.isPaid ? formData.paymentCurrency : null
+      };
+
+      // Remove isPaid as it's not needed in the database
+      delete updatedFormData.isPaid;
+
       // Determine the actual status based on date/time
       const actualStatus = determineEventStatus(updatedFormData.date, updatedFormData.time);
 
@@ -572,12 +567,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                 📅
               </span>
             </div>
-            
+
             {/* Calendar date picker */}
             {showDatePicker && (
               <div className="absolute z-10 mt-1 bg-white border rounded-lg shadow-lg p-2 w-64">
                 <div className="flex justify-between items-center mb-2">
-                  <button 
+                  <button
                     type="button"
                     onClick={prevMonth}
                     className="text-gray-600 hover:text-gray-900"
@@ -587,7 +582,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                   <div className="font-medium">
                     {months[currentMonth]} {currentYear}
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={nextMonth}
                     className="text-gray-600 hover:text-gray-900"
@@ -595,7 +590,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                     &gt;
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500">
                   <div>Su</div>
                   <div>Mo</div>
@@ -605,33 +600,32 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                   <div>Fr</div>
                   <div>Sa</div>
                 </div>
-                
+
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {/* Empty cells for days before the first day of the month */}
                   {Array(firstDayOfMonth).fill(null).map((_, index) => (
                     <div key={`empty-${index}`} className="h-8"></div>
                   ))}
-                  
+
                   {/* Calendar days */}
                   {daysInMonth.map((date, index) => {
-                    const isSelected = selectedDate && 
-                                      date.getDate() === selectedDate.getDate() && 
-                                      date.getMonth() === selectedDate.getMonth() && 
-                                      date.getFullYear() === selectedDate.getFullYear();
+                    const isSelected = selectedDate &&
+                      date.getDate() === selectedDate.getDate() &&
+                      date.getMonth() === selectedDate.getMonth() &&
+                      date.getFullYear() === selectedDate.getFullYear();
                     const isToday = new Date().toDateString() === date.toDateString();
-                    
+
                     return (
                       <button
                         key={`day-${index}`}
                         type="button"
                         onClick={() => handleDateSelect(date)}
-                        className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
-                          isSelected 
-                            ? 'bg-blue-600 text-white' 
+                        className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${isSelected
+                            ? 'bg-blue-600 text-white'
                             : isToday
                               ? 'bg-blue-100 text-blue-800'
                               : 'hover:bg-gray-100'
-                        }`}
+                          }`}
                       >
                         {date.getDate()}
                       </button>
@@ -659,7 +653,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                   }}
                 >
                   {[...Array(12)].map((_, i) => (
-                    <option key={`start-hour-${i+1}`} value={i+1}>{i+1}</option>
+                    <option key={`start-hour-${i + 1}`} value={i + 1}>{i + 1}</option>
                   ))}
                 </select>
                 <span className="mx-1">:</span>
@@ -675,7 +669,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                     <option key={`start-min-${min}`} value={min}>{min}</option>
                   ))}
                 </select>
-                <select 
+                <select
                   value={showStartAmPm}
                   onChange={handleStartAmPmChange}
                   className="border rounded p-2"
@@ -695,7 +689,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                   }}
                 >
                   {[...Array(12)].map((_, i) => (
-                    <option key={`end-hour-${i+1}`} value={i+1}>{i+1}</option>
+                    <option key={`end-hour-${i + 1}`} value={i + 1}>{i + 1}</option>
                   ))}
                 </select>
                 <span className="mx-1">:</span>
@@ -711,7 +705,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                     <option key={`end-min-${min}`} value={min}>{min}</option>
                   ))}
                 </select>
-                <select 
+                <select
                   value={showEndAmPm}
                   onChange={handleEndAmPmChange}
                   className="border rounded p-2"
@@ -795,6 +789,80 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </p>
           </div>
 
+          {/* Payment settings section */}
+          <div className="md:col-span-2">
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-medium text-lg mb-3">Payment Settings</h3>
+
+              <div className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  id="isPaid"
+                  checked={formData.isPaid}
+                  onChange={handlePaidToggle}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="isPaid" className="ml-2 block text-sm text-gray-700">
+                  This is a paid event
+                </label>
+              </div>
+
+              {formData.isPaid && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="paymentAmount">
+                      Price
+                    </label>
+                    <div className="relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">€</span>
+                      </div>
+                      <input
+                        type="number"
+                        name="paymentAmount"
+                        id="paymentAmount"
+                        value={formData.paymentAmount}
+                        onChange={handleChange}
+                        step="0.01"
+                        min="0"
+                        className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                        placeholder="0.00"
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">EUR</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="paymentCurrency">
+                      Currency
+                    </label>
+                    <select
+                      id="paymentCurrency"
+                      name="paymentCurrency"
+                      value={formData.paymentCurrency}
+                      onChange={handleChange}
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      disabled /* For now, we only support EUR */
+                    >
+                      <option value="EUR">EUR - Euro</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 text-xs text-gray-500">
+                <p>Payment will be processed securely via PayPal during the booking process.</p>
+                {formData.isPaid && (
+                  <p className="mt-1 font-medium">
+                    Current price: €{formData.paymentAmount.toFixed(2)} {formData.paymentCurrency}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Image URL (Optional if file is uploaded)
@@ -812,13 +880,13 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </p>
           </div>
         </div>
-        
+
         {/* Image uploader component */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Event Image
           </label>
-          <ImageUploader 
+          <ImageUploader
             initialImage={formData.imageBase64 || formData.image}
             onImageSelected={handleImageSelected}
             onBase64Generated={handleBase64Generated}
@@ -842,7 +910,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
               😊 Add Emoji
             </button>
           </div>
-          
+
           <textarea
             ref={descriptionRef}
             name="description"
@@ -854,13 +922,13 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             rows="4"
             required
           ></textarea>
-          
+
           {showEmojiPicker && (
-            <div 
+            <div
               ref={emojiPickerRef}
               className="absolute right-0 z-10 mt-1"
             >
-              <EmojiPicker 
+              <EmojiPicker
                 onEmojiClick={handleEmojiClick}
                 disableAutoFocus={true}
                 native={true}

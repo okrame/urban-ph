@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable, getUserContactInfo } from '../../firebase/firestoreServices';
 import { getUserProfile, checkUserProfileComplete } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
+import PaymentModal from './PaymentModal';
 
 function EventCard({ event, user, onAuthNeeded }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -14,6 +16,9 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [isBookable, setIsBookable] = useState(true);
   const [bookableReason, setBookableReason] = useState('');
   const [imageError, setImageError] = useState(false);
+  
+  // Store form data for payment processing
+  const [bookingFormData, setBookingFormData] = useState(null);
   
   // New state variables for enhanced booking form
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
@@ -26,6 +31,7 @@ function EventCard({ event, user, onAuthNeeded }) {
     setBookingSuccess(false);
     setAuthError(null);
     setShowBookingForm(false);
+    setShowPaymentModal(false);
   }, [user]);
 
   // Check event status and bookability
@@ -156,6 +162,7 @@ function EventCard({ event, user, onAuthNeeded }) {
         return;
       }
       
+      // Store form data for payment processing
       const userData = {
         userId: user.uid,
         email: formData.email,
@@ -171,32 +178,48 @@ function EventCard({ event, user, onAuthNeeded }) {
         requests: formData.requests
       };
       
-      const result = await bookEventSimple(event.id, userData);
+      // Store form data for payment
+      setBookingFormData(userData);
+      
+      // Show payment modal
+      setShowBookingForm(false);
+      setShowPaymentModal(true);
+      
+    } catch (error) {
+      console.error("Error preparing for payment:", error);
+      setAuthError("An error occurred while preparing for payment. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handlePaymentSuccess = async (paymentData) => {
+    setLoading(true);
+    
+    try {
+      // Complete booking with payment details
+      const result = await bookEventSimple(event.id, {
+        ...bookingFormData,
+        paymentDetails: paymentData.paymentDetails
+      });
       
       if (result && result.success) {
         setIsBooked(true);
         setBookingSuccess(true);
-        setShowBookingForm(false);
+        setShowPaymentModal(false);
       } else {
         throw new Error(result.message || "Unknown error during booking");
       }
     } catch (error) {
-      console.error("Error booking event:", error);
-      
-      if (error.message.includes("No spots left")) {
-        setAuthError("No spots left for this event.");
-      } else if (error.message.includes("already booked")) {
-        setIsBooked(true);
-        setBookingSuccess(true);
-        setShowBookingForm(false);
-      } else if (error.message.includes("Booking is closed")) {
-        setAuthError("Booking is now closed for this event.");
-      } else {
-        setAuthError("An error occurred during booking. Please try again.");
-      }
+      console.error("Error completing booking:", error);
+      setAuthError("An error occurred during booking. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handlePaymentCancel = () => {
+    setShowPaymentModal(false);
   };
   
   const handleCancelForm = () => {
@@ -262,6 +285,29 @@ function EventCard({ event, user, onAuthNeeded }) {
     );
   }
   
+  // Payment modal
+  if (showPaymentModal) {
+    return (
+      <>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
+          <h3 className="text-xl font-bold mb-3">{event.title}</h3>
+          <p className="text-center text-gray-600">
+            Please complete the payment to confirm your booking.
+          </p>
+        </div>
+        
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentCancel}
+          event={event}
+          userData={bookingFormData}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentCancel={handlePaymentCancel}
+        />
+      </>
+    );
+  }
+  
   // Default state with accordion
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300">
@@ -303,6 +349,11 @@ function EventCard({ event, user, onAuthNeeded }) {
                 {eventStatus === 'active' ? 'Active' : 
                  eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
               </span>
+              {event.paymentAmount && (
+                <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700">
+                  €{event.paymentAmount}
+                </span>
+              )}
             </div>
             
             <p className="text-sm text-gray-600">
@@ -325,6 +376,11 @@ function EventCard({ event, user, onAuthNeeded }) {
           <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
             📍 {event.location}
           </span>
+          {event.paymentAmount && (
+            <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
+              Cost: €{event.paymentAmount}
+            </span>
+          )}
         </div>
         
         <p className="text-gray-700 mb-4 text-sm">{event.description}</p>
@@ -389,7 +445,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                   : eventStatus === 'past'
                     ? 'Event Ended'
                     : 'Booking Closed'
-                : user ? 'Book Now' : 'Book'}
+                : user ? (event.paymentAmount ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Book'}
         </button>
       </div>
     </div>

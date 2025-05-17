@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { createHashRouter, RouterProvider } from 'react-router-dom'
+import { PayPalScriptProvider } from '@paypal/react-paypal-js'
 import App from './App.jsx'
 import './index.css'
 import EventsPage from './pages/EventsPage.jsx'
@@ -8,8 +9,14 @@ import AdminPanel from './pages/AdminPanel.jsx'
 import AboutUs from './pages/AboutUs.jsx'
 import NotFound from './pages/NotFound.jsx'
 
-// For GitHub Pages, we'll use HashRouter exclusively since it works better
-// with static file servers that don't support configurable routing
+// PayPal initial options
+const paypalOptions = {
+  "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID,
+  currency: "EUR",
+  intent: "capture"
+};
+
+// For GitHub Pages, we'll use HashRouter
 const router = createHashRouter([
   {
     path: '/',
@@ -33,9 +40,10 @@ const router = createHashRouter([
     element: <NotFound />
   }
 ]);
-
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <PayPalScriptProvider options={paypalOptions}>
+      <RouterProvider router={router} />
+    </PayPalScriptProvider>
   </React.StrictMode>,
 );

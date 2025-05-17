@@ -335,7 +335,7 @@ export const bookEventSimple = async (eventId, userData) => {
       throw new Error("Booking is closed for this event");
     }
     
-    // 4. Create the booking with only necessary contact info
+    // 4. Create the booking with payment details
     const newBooking = {
       userId: userData.userId,
       eventId: eventId,
@@ -347,7 +347,20 @@ export const bookEventSimple = async (eventId, userData) => {
         displayName: userData.displayName
       },
       // Include optional specific request if provided
-      specificRequest: userData.requests || null
+      specificRequest: userData.requests || null,
+      // Include payment details
+      payment: userData.paymentDetails ? {
+        id: userData.paymentDetails.paymentId,
+        amount: userData.paymentDetails.amount,
+        currency: userData.paymentDetails.currency,
+        status: userData.paymentDetails.status,
+        payer: {
+          id: userData.paymentDetails.payerID,
+          email: userData.paymentDetails.payerEmail
+        },
+        createdAt: userData.paymentDetails.createTime,
+        updatedAt: userData.paymentDetails.updateTime
+      } : null
     };
     
     await addDoc(collection(db, 'bookings'), newBooking);

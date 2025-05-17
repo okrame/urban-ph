@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
 import { getActiveEvents } from '../firebase/firestoreServices';
 import { createUserProfile } from '../firebase/userServices';
+import { bookEventSimple } from '../firebase/firestoreServices';
 import AuthModal from './components/AuthModal';
 
 function App() {
@@ -15,28 +16,7 @@ function App() {
   const [events, setEvents] = useState([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
-
-
-  // useEffect(() => {
-  //   // Clean up URL when the component mounts
-  //   const cleanupURL = () => {
-  //     const url = new URL(window.location.href);
-  //     if (url.searchParams.has('apiKey') || url.searchParams.has('oobCode')) {
-  //       url.searchParams.delete('apiKey');
-  //       url.searchParams.delete('oobCode');
-  //       url.searchParams.delete('mode');
-  //       url.searchParams.delete('lang');
-  //       window.history.replaceState({}, document.title, url.pathname + url.hash);
-  //     }
-  //   };
-  
-  //   // Clean on mount
-  //   cleanupURL();
-  
-  //   // Also clean on auth state changes
-  //   return () => cleanupURL();
-  // }, []);
-
+  const [paymentNotification, setPaymentNotification] = useState(null);
 
   useEffect(() => {
     console.log("App component mounted");
@@ -70,8 +50,6 @@ function App() {
         // Create/update user profile when user logs in
         try {
           await createUserProfile(currentUser);
-
-          //setShowAuthModal(false);
         } catch (error) {
           console.error("Error creating user profile:", error);
         }
@@ -83,24 +61,155 @@ function App() {
 
     loadEvents();
     
-    // Check if we should scroll to events section
-    // For hash router, we need to check the hash for parameters
-    const hashParts = window.location.hash.split('?');
-    if (hashParts.length > 1) {
-      const urlParams = new URLSearchParams(hashParts[1]);
-      if (urlParams.get('scrollToEvents') === 'true') {
-        // Delay the scroll slightly to ensure the page is fully rendered
-        setTimeout(() => {
-          const eventsSection = document.getElementById('current-events-section');
-          if (eventsSection) {
-            eventsSection.scrollIntoView({ behavior: 'smooth' });
+    // Handle PayPal redirect
+    const handlePayPalRedirect = async () => {
+      // Parse the URL parameters from hash 
+      // Since we're using hash router, we need to check the hash part
+      const hashParts = window.location.hash.split('?');
+      if (hashParts.length > 1) {
+        const urlParams = new URLSearchParams(hashParts[1]);
+        
+        // Check for payment status
+        const paymentSuccess = urlParams.get('payment-success');
+        const paymentCancelled = urlParams.get('payment-cancelled');
+        
+        // Successful payment
+        if (paymentSuccess === 'true') {
+          console.log("Payment success detected in URL");
+          
+          // Get the stored booking data
+          const pendingBookingJSON = localStorage.getItem('pendingBooking');
+          if (pendingBookingJSON) {
+            const pendingBooking = JSON.parse(pendingBookingJSON);
+            
+            // Ensure we have a user logged in
+            if (user) {
+              setLoading(true);
+              
+              try {
+                // Complete the booking process with enhanced payment details
+                const paymentDetails = {
+                  status: 'COMPLETED',
+                  paymentId: urlParams.get('tx') || 'DIRECT_PAYMENT',
+                  payerID: urlParams.get('st') || 'UNKNOWN',
+                  payerEmail: pendingBooking.userData.email || '',
+                  amount: pendingBooking.amount,
+                  currency: 'EUR',
+                  createTime: new Date().toISOString(),
+                  updateTime: new Date().toISOString()
+                };
+                
+                // Use the dedicated payment processor function if available
+                if (typeof processBookingPayment === 'function') {
+                  await processBookingPayment(pendingBooking, paymentDetails);
+                } else {
+                  // Fallback to direct booking
+                  await bookEventSimple(pendingBooking.eventId, {
+                    ...pendingBooking.userData,
+                    paymentDetails
+                  });
+                  
+                  // Create a separate payment record if possible
+                  if (typeof savePaymentRecord === 'function') {
+                    await savePaymentRecord({
+                      paymentId: paymentDetails.paymentId,
+                      payerId: paymentDetails.payerID,
+                      amount: pendingBooking.amount,
+                      currency: 'EUR',
+                      status: 'COMPLETED',
+                      eventId: pendingBooking.eventId,
+                      userId: pendingBooking.userData.userId,
+                      payerEmail: pendingBooking.userData.email,
+                      fullDetails: paymentDetails
+                    });
+                  }
+                }
+                
+                // Show success message
+                setPaymentNotification({
+                  type: 'success',
+                  message: 'Payment successful! Your booking is confirmed.'
+                });
+                
+                // Clean up
+                localStorage.removeItem('pendingBooking');
+                
+                // Reload events to show updated booking status
+                loadEvents();
+              } catch (error) {
+                console.error("Error completing booking after payment:", error);
+                setPaymentNotification({
+                  type: 'error',
+                  message: 'Error completing booking. Please contact support.'
+                });
+              } finally {
+                setLoading(false);
+              }
+            } else {
+              // User not logged in - store notification to show after login
+              setPaymentNotification({
+                type: 'warning',
+                message: 'Please log in to complete your booking.'
+              });
+            }
+          } else {
+            console.warn("No pending booking found in localStorage");
           }
-        }, 400); // A bit longer delay to ensure everything is rendered
+        } 
+        // Cancelled payment
+        else if (paymentCancelled === 'true') {
+          console.log("Payment cancellation detected in URL");
+          // Handle cancelled payment
+          setPaymentNotification({
+            type: 'info',
+            message: 'Payment was cancelled.'
+          });
+          
+          localStorage.removeItem('pendingBooking');
+        }
+        
+        // Remove query parameters from URL
+        const baseHash = window.location.hash.split('?')[0];
+        window.history.replaceState({}, document.title, window.location.pathname + baseHash);
       }
+    };
+    
+    // Handle scroll to events if needed
+    const checkScrollToEvents = () => {
+      const hashParts = window.location.hash.split('?');
+      if (hashParts.length > 1) {
+        const urlParams = new URLSearchParams(hashParts[1]);
+        if (urlParams.get('scrollToEvents') === 'true') {
+          // Delay the scroll slightly to ensure the page is fully rendered
+          setTimeout(() => {
+            const eventsSection = document.getElementById('current-events-section');
+            if (eventsSection) {
+              eventsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 400);
+        }
+      }
+    };
+    
+    // Only run these when the user is set (logged in or not)
+    if (!loading) {
+      handlePayPalRedirect();
+      checkScrollToEvents();
     }
     
     return () => unsubscribe();
-  }, []);
+  }, [user, loading]); // Depend on user and loading to run after auth is determined
+
+  // Auto-hide payment notification after 5 seconds
+  useEffect(() => {
+    if (paymentNotification) {
+      const timer = setTimeout(() => {
+        setPaymentNotification(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [paymentNotification]);
 
   if (loading) {
     return (
@@ -129,6 +238,48 @@ function App() {
         onClose={() => setShowAuthModal(false)} 
         event={selectedEvent}
       />
+      
+      {/* Payment notification */}
+      {paymentNotification && (
+        <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-md ${
+          paymentNotification.type === 'success' ? 'bg-green-100 text-green-800' :
+          paymentNotification.type === 'error' ? 'bg-red-100 text-red-800' :
+          paymentNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+          'bg-blue-100 text-blue-800'
+        }`}>
+          <div className="flex items-center">
+            {paymentNotification.type === 'success' && (
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            )}
+            {paymentNotification.type === 'error' && (
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            )}
+            {paymentNotification.type === 'warning' && (
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            )}
+            {paymentNotification.type === 'info' && (
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            )}
+            <span>{paymentNotification.message}</span>
+            <button 
+              className="ml-4 text-gray-500 hover:text-gray-700" 
+              onClick={() => setPaymentNotification(null)}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       
       <main>
         <Hero />

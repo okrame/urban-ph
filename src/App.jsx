@@ -72,6 +72,7 @@ function App() {
         // Check for payment status
         const paymentSuccess = urlParams.get('payment-success');
         const paymentCancelled = urlParams.get('payment-cancelled');
+        const orderId = urlParams.get('order_id');
         
         // Successful payment
         if (paymentSuccess === 'true') {
@@ -82,54 +83,60 @@ function App() {
           if (pendingBookingJSON) {
             const pendingBooking = JSON.parse(pendingBookingJSON);
             
+            // Check if orderId matches (for security)
+            if (orderId && pendingBooking.orderId !== orderId) {
+              console.warn("Order ID mismatch, possible tampering attempt");
+              setPaymentNotification({
+                type: 'error',
+                message: 'Payment verification failed. Please contact support.'
+              });
+              return;
+            }
+            
             // Ensure we have a user logged in
             if (user) {
               setLoading(true);
               
               try {
-                // Complete the booking process with enhanced payment details
+                // Instead of completing the booking immediately,
+                // we'll show a success message and check for status updates
+                
+                // The webhook should handle the actual payment verification,
+                // but we can still create a preliminary booking
+                
                 const paymentDetails = {
-                  status: 'COMPLETED',
-                  paymentId: urlParams.get('tx') || 'DIRECT_PAYMENT',
+                  status: 'PENDING_WEBHOOK_CONFIRMATION',
+                  paymentId: urlParams.get('tx') || orderId || 'DIRECT_PAYMENT',
                   payerID: urlParams.get('st') || 'UNKNOWN',
                   payerEmail: pendingBooking.userData.email || '',
                   amount: pendingBooking.amount,
                   currency: 'EUR',
                   createTime: new Date().toISOString(),
-                  updateTime: new Date().toISOString()
+                  updateTime: new Date().toISOString(),
+                  orderId: orderId
                 };
                 
-                // Use the dedicated payment processor function if available
+                // Create a booking in "pending payment confirmation" status
+                const { processBookingPayment } = await import('../firebase/paypalServices');
                 if (typeof processBookingPayment === 'function') {
                   await processBookingPayment(pendingBooking, paymentDetails);
                 } else {
-                  // Fallback to direct booking
+                  // Fallback to direct booking with pending status
+                  const { bookEventSimple } = await import('../firebase/firestoreServices');
                   await bookEventSimple(pendingBooking.eventId, {
                     ...pendingBooking.userData,
                     paymentDetails
                   });
-                  
-                  // Create a separate payment record if possible
-                  if (typeof savePaymentRecord === 'function') {
-                    await savePaymentRecord({
-                      paymentId: paymentDetails.paymentId,
-                      payerId: paymentDetails.payerID,
-                      amount: pendingBooking.amount,
-                      currency: 'EUR',
-                      status: 'COMPLETED',
-                      eventId: pendingBooking.eventId,
-                      userId: pendingBooking.userData.userId,
-                      payerEmail: pendingBooking.userData.email,
-                      fullDetails: paymentDetails
-                    });
-                  }
                 }
                 
-                // Show success message
+                // Show success message - webhook will update status asynchronously
                 setPaymentNotification({
                   type: 'success',
-                  message: 'Payment successful! Your booking is confirmed.'
+                  message: 'Payment received! Your booking will be confirmed shortly.'
                 });
+                
+                // We could poll for confirmation, but that's optional
+                // startPaymentStatusPolling(paymentDetails.paymentId);
                 
                 // Clean up
                 localStorage.removeItem('pendingBooking');
@@ -139,8 +146,8 @@ function App() {
               } catch (error) {
                 console.error("Error completing booking after payment:", error);
                 setPaymentNotification({
-                  type: 'error',
-                  message: 'Error completing booking. Please contact support.'
+                  type: 'warning',
+                  message: 'Payment received but booking confirmation is pending. We will email you once confirmed.'
                 });
               } finally {
                 setLoading(false);
@@ -154,6 +161,10 @@ function App() {
             }
           } else {
             console.warn("No pending booking found in localStorage");
+            setPaymentNotification({
+              type: 'warning',
+              message: 'Payment received but booking details are missing. Please contact support.'
+            });
           }
         } 
         // Cancelled payment
@@ -173,6 +184,51 @@ function App() {
         window.history.replaceState({}, document.title, window.location.pathname + baseHash);
       }
     };
+
+    // Optional: Add a function to poll for payment status updates
+const startPaymentStatusPolling = async (paymentId) => {
+  // This is optional, as the webhook should update the database
+  // but can be useful for better UX
+  let attempts = 0;
+  const maxAttempts = 5;
+  const interval = 3000; // 3 seconds
+  
+  const checkPaymentStatus = async () => {
+    if (attempts >= maxAttempts) return;
+    
+    try {
+      // Import the necessary function
+      const { verifyPayment } = await import('../firebase/paypalServices');
+      
+      // Check payment status
+      const result = await verifyPayment(paymentId);
+      
+      if (result.verified) {
+        // Payment is verified, update UI
+        setPaymentNotification({
+          type: 'success',
+          message: 'Your booking is confirmed!'
+        });
+        
+        // Reload events
+        loadEvents();
+        return;
+      }
+      
+      // Not verified yet, try again
+      attempts++;
+      setTimeout(checkPaymentStatus, interval);
+    } catch (error) {
+      console.error("Error checking payment status:", error);
+      // Still try again
+      attempts++;
+      setTimeout(checkPaymentStatus, interval);
+    }
+  };
+  
+  // Start polling
+  setTimeout(checkPaymentStatus, interval);
+};
     
     // Handle scroll to events if needed
     const checkScrollToEvents = () => {

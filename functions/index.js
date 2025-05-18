@@ -1,19 +1,348 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+// functions/index.js - Updated for better payment handling
+const { onRequest } = require("firebase-functions/v2/https");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { defineString } = require("firebase-functions/params");
+const { verifyWebhook } = require('./webhookVerification');
 
-const {onRequest} = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
+// Define parameters for configuration
+const paypalWebhookId = defineString("PAYPAL_WEBHOOK_ID");
+const paypalSandbox = defineString("PAYPAL_SANDBOX", { default: "true" });
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+// Initialize Firebase
+initializeApp();
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// PayPal webhook handler
+exports.paypalWebhook = onRequest(
+  {
+    // Configure function settings
+    region: "us-central1",
+    cors: true, // Enable CORS
+    maxInstances: 10, // Maximum concurrent instances
+  },
+  async (req, res) => {
+    try {
+      // Log webhook data for debugging
+      console.log("Received webhook request with headers:", JSON.stringify(req.headers));
+      console.log("Webhook body summary:", summarizeWebhookBody(req.body));
+      
+      // Get PayPal webhook signature from headers
+      const transmissionId = req.headers["paypal-transmission-id"];
+      const timestamp = req.headers["paypal-transmission-time"];
+      const webhookSignature = req.headers["paypal-transmission-sig"];
+      const certUrl = req.headers["paypal-cert-url"];
+      
+      // For validation request, just return success
+      if (req.body && req.body.event_type === "VALIDATION") {
+        console.log("Received validation request from PayPal");
+        return res.status(200).json({
+          verification_status: "SUCCESS"
+        });
+      }
+      
+      // Process webhook
+      if (req.body && req.body.event_type) {
+        const webhookEvent = req.body;
+        console.log(`Received PayPal webhook: ${webhookEvent.event_type}`);
+        
+        // Optional: Verify webhook signature with PayPal
+        if (transmissionId && timestamp && webhookSignature && certUrl) {
+          try {
+            const verificationResult = await verifyWebhook(req, paypalWebhookId.value());
+            if (!verificationResult.verified) {
+              console.warn("Webhook verification failed:", verificationResult.message);
+              // During development, continue processing unverified webhooks
+              // In production, you should reject unverified webhooks
+            }
+          } catch (verifyError) {
+            console.error("Error verifying webhook:", verifyError);
+            // Continue for development
+          }
+        }
+        
+        // Store the webhook event for reference
+        try {
+          const db = getFirestore();
+          await db.collection("paypal_webhooks").add({
+            event_type: webhookEvent.event_type,
+            event_id: webhookEvent.id,
+            resource_type: webhookEvent.resource_type,
+            summary: summarizeWebhookBody(webhookEvent),
+            receivedAt: new Date(),
+            headers: req.headers,
+            processed: false
+          });
+          console.log("Webhook metadata stored in Firestore");
+        } catch (dbError) {
+          console.error("Error storing webhook metadata:", dbError);
+          // Continue processing regardless
+        }
+        
+        // Process different event types
+        switch (webhookEvent.event_type) {
+          case "PAYMENT.CAPTURE.COMPLETED":
+            await handlePaymentCompleted(webhookEvent);
+            break;
+          
+          case "PAYMENT.CAPTURE.DENIED":
+          case "PAYMENT.CAPTURE.REVERSED":
+          case "PAYMENT.CAPTURE.REFUNDED":
+            await handlePaymentFailed(webhookEvent);
+            break;
+            
+          default:
+            console.log(`Unhandled event type: ${webhookEvent.event_type}`);
+        }
+      }
+      
+      // Acknowledge receipt of the event
+      return res.status(200).send("Webhook received successfully");
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      // Still return 200 to prevent PayPal from retrying
+      return res.status(200).send("Webhook acknowledged with errors");
+    }
+  }
+);
+
+// Create a summary of the webhook body to avoid overly large logs
+function summarizeWebhookBody(body) {
+  if (!body) return "Empty body";
+  
+  const summary = {
+    event_type: body.event_type,
+    event_id: body.id,
+    resource_type: body.resource_type,
+    resource_id: body.resource?.id,
+    create_time: body.create_time,
+  };
+  
+  // Add payment-specific fields if available
+  if (body.resource) {
+    if (body.resource.status) summary.status = body.resource.status;
+    if (body.resource.amount) summary.amount = body.resource.amount;
+    if (body.resource.custom_id) summary.custom_id = body.resource.custom_id;
+    if (body.resource.invoice_id) summary.invoice_id = body.resource.invoice_id;
+  }
+  
+  return summary;
+}
+
+// Handle successful payment
+async function handlePaymentCompleted(event) {
+  try {
+    const db = getFirestore();
+    const paymentData = event.resource;
+    
+    // Extract key information
+    const transactionId = paymentData.id;
+    const status = paymentData.status;
+    const customId = paymentData.custom_id || ""; // This might be the userId
+    const invoiceId = paymentData.invoice_id || ""; // This might contain the orderId
+    
+    console.log(`Processing completed payment: ${transactionId}, Invoice: ${invoiceId}, Custom: ${customId}`);
+    
+    // Try to find an order ID in the invoice field
+    let orderId = null;
+    if (invoiceId && invoiceId.startsWith('order_')) {
+      orderId = invoiceId;
+    }
+    
+    // First, try to find the payment by transactionId
+    const paymentsQuery = db.collection("payments").where("paymentId", "==", transactionId);
+    const paymentsSnapshot = await paymentsQuery.get();
+    
+    if (!paymentsSnapshot.empty) {
+      // Update existing payment record
+      const paymentDoc = paymentsSnapshot.docs[0];
+      await paymentDoc.ref.update({
+        status: "COMPLETED",
+        updatedAt: new Date(),
+        webhookDetails: summarizeWebhookBody(event)
+      });
+      
+      console.log(`Updated payment status for ${transactionId} to COMPLETED`);
+      
+      // Update related booking if it exists
+      const paymentData = paymentDoc.data();
+      if (paymentData.bookingId) {
+        await updateBookingStatus(db, paymentData.bookingId, "COMPLETED");
+      } else if (paymentData.eventId && paymentData.userId) {
+        // Try to find the booking by event and user
+        await updateBookingByEventAndUser(db, paymentData.eventId, paymentData.userId, "COMPLETED");
+      }
+      
+      return true;
+    }
+    
+    // If not found by transaction ID, try by orderId if available
+    if (orderId) {
+      const orderQuery = db.collection("payments").where("orderId", "==", orderId);
+      const orderSnapshot = await orderQuery.get();
+      
+      if (!orderSnapshot.empty) {
+        // Update payment with real PayPal transaction ID
+        const paymentDoc = orderSnapshot.docs[0];
+        await paymentDoc.ref.update({
+          paymentId: transactionId,
+          status: "COMPLETED",
+          updatedAt: new Date(),
+          webhookDetails: summarizeWebhookBody(event)
+        });
+        
+        console.log(`Updated payment by orderId ${orderId} to COMPLETED with transaction ID ${transactionId}`);
+        
+        // Update related booking if it exists
+        const paymentData = paymentDoc.data();
+        if (paymentData.bookingId) {
+          await updateBookingStatus(db, paymentData.bookingId, "COMPLETED");
+        } else if (paymentData.eventId && paymentData.userId) {
+          // Try to find the booking by event and user
+          await updateBookingByEventAndUser(db, paymentData.eventId, paymentData.userId, "COMPLETED");
+        }
+        
+        return true;
+      }
+    }
+    
+    // Payment not found - create a new entry
+    await db.collection("payments").add({
+      paymentId: transactionId,
+      orderId: orderId,
+      status: "COMPLETED",
+      amount: paymentData.amount ? parseFloat(paymentData.amount.value) : 0,
+      currency: paymentData.amount ? paymentData.amount.currency_code : "EUR",
+      custom_id: customId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      webhookDetails: summarizeWebhookBody(event),
+      source: "webhook"
+    });
+    
+    console.log(`Created new payment record for ${transactionId} from webhook`);
+    return true;
+  } catch (error) {
+    console.error("Error handling payment completion:", error);
+    throw error;
+  }
+}
+
+// Handle failed or reversed payment
+async function handlePaymentFailed(event) {
+  try {
+    const db = getFirestore();
+    const paymentData = event.resource;
+    const transactionId = paymentData.id;
+    
+    // Determine the appropriate status
+    let newStatus = "FAILED";
+    if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
+      newStatus = "REFUNDED";
+    } else if (event.event_type === "PAYMENT.CAPTURE.REVERSED") {
+      newStatus = "REVERSED";
+    }
+    
+    console.log(`Processing failed payment: ${transactionId} with status ${newStatus}`);
+    
+    // Find and update any related payment records
+    const paymentsQuery = db.collection("payments").where("paymentId", "==", transactionId);
+    const paymentsSnapshot = await paymentsQuery.get();
+    
+    if (!paymentsSnapshot.empty) {
+      // Update existing payment record
+      const paymentDoc = paymentsSnapshot.docs[0];
+      await paymentDoc.ref.update({
+        status: newStatus,
+        updatedAt: new Date(),
+        webhookDetails: summarizeWebhookBody(event)
+      });
+      
+      // If the payment has a booking ID, update that too
+      const paymentData = paymentDoc.data();
+      if (paymentData.bookingId) {
+        await updateBookingStatus(db, paymentData.bookingId, newStatus);
+      } else if (paymentData.eventId && paymentData.userId) {
+        // Try to find the booking by event and user
+        await updateBookingByEventAndUser(db, paymentData.eventId, paymentData.userId, newStatus);
+      }
+      
+      console.log(`Updated payment status for ${transactionId} to ${newStatus}`);
+    } else {
+      // Payment record not found - create a new one
+      await db.collection("payments").add({
+        paymentId: transactionId,
+        status: newStatus,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        webhookDetails: summarizeWebhookBody(event),
+        source: "webhook"
+      });
+      
+      console.log(`Created new payment record for ${transactionId} with status ${newStatus}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error handling payment failure:", error);
+    throw error;
+  }
+}
+
+// Helper function to update booking status
+async function updateBookingStatus(db, bookingId, status) {
+  try {
+    const bookingRef = db.collection("bookings").doc(bookingId);
+    const bookingDoc = await bookingRef.get();
+    
+    if (bookingDoc.exists) {
+      await bookingRef.update({
+        paymentStatus: status,
+        updatedAt: new Date()
+      });
+      
+      console.log(`Updated booking ${bookingId} payment status to ${status}`);
+      return true;
+    } else {
+      console.log(`Booking ${bookingId} not found`);
+      return false;
+    }
+  } catch (error) {
+    console.error("Error updating booking status:", error);
+    return false;
+  }
+}
+
+// Helper function to find booking by event and user
+async function updateBookingByEventAndUser(db, eventId, userId, status) {
+  try {
+    if (!eventId || !userId) {
+      console.log("Missing eventId or userId for booking lookup");
+      return false;
+    }
+    
+    const bookingsQuery = db.collection("bookings")
+      .where("eventId", "==", eventId)
+      .where("userId", "==", userId);
+    
+    const bookingsSnapshot = await bookingsQuery.get();
+    
+    if (!bookingsSnapshot.empty) {
+      // Update the first matching booking
+      const bookingDoc = bookingsSnapshot.docs[0];
+      
+      await bookingDoc.ref.update({
+        paymentStatus: status,
+        updatedAt: new Date()
+      });
+      
+      console.log(`Updated booking ${bookingDoc.id} by event/user match to status ${status}`);
+      return true;
+    } else {
+      console.log(`No booking found for eventId=${eventId}, userId=${userId}`);
+      return false;
+    }
+  } catch (error) {
+    console.error("Error updating booking by event and user:", error);
+    return false;
+  }
+}

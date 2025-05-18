@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, query, getDocs, where, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 function PaymentsView({ eventId = null }) {
@@ -7,6 +7,7 @@ function PaymentsView({ eventId = null }) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0, totalAmount: 0 });
   const [filter, setFilter] = useState('all'); // 'all', 'completed', 'pending'
+  const [eventTitles, setEventTitles] = useState({}); // Cache for event titles
 
   useEffect(() => {
     fetchPayments();
@@ -18,22 +19,58 @@ function PaymentsView({ eventId = null }) {
       // First, try to fetch payments from dedicated payments collection
       let paymentsData = [];
       
-      const paymentsQuery = eventId 
-        ? query(collection(db, 'payments'), where('eventId', '==', eventId))
-        : query(collection(db, 'bookings'), where('payment', '!=', null));
+      // Create a query for the payments collection
+      let paymentsQuery;
+      if (eventId) {
+        paymentsQuery = query(
+          collection(db, 'payments'),
+          where('eventId', '==', eventId)
+        );
+      } else {
+        // No specific event, get all payments
+        paymentsQuery = query(
+          collection(db, 'payments')
+        );
+      }
       
-      const snapshot = await getDocs(paymentsQuery);
+      const paymentsSnapshot = await getDocs(paymentsQuery);
       
-      // If no results in payments collection, search in bookings collection
-      if (snapshot.empty && !eventId) {
-        console.log("No payments found in payments collection, checking bookings");
-        
-        const bookingsQuery = query(collection(db, 'bookings'));
-        const bookingsSnapshot = await getDocs(bookingsQuery);
-        
-        bookingsSnapshot.forEach(doc => {
-          const booking = doc.data();
-          if (booking.payment) {
+      // Process payments from payments collection
+      if (!paymentsSnapshot.empty) {
+        paymentsSnapshot.forEach(doc => {
+          const data = doc.data();
+          paymentsData.push({
+            id: doc.id,
+            paymentId: data.paymentId || 'N/A',
+            amount: data.amount || 0,
+            currency: data.currency || 'EUR',
+            status: data.status || 'PENDING',
+            eventId: data.eventId || 'N/A',
+            userId: data.userId || 'N/A',
+            createdAt: data.createdAt,
+            bookingId: data.bookingId || null,
+            userEmail: data.payerEmail || 'N/A',
+            source: 'paymentCollection'
+          });
+        });
+      }
+      
+      // Also look for bookings with payment data (legacy records)
+      const bookingsQuery = eventId 
+        ? query(collection(db, 'bookings'), where('eventId', '==', eventId))
+        : query(collection(db, 'bookings'));
+      
+      const bookingsSnapshot = await getDocs(bookingsQuery);
+      
+      bookingsSnapshot.forEach(doc => {
+        const booking = doc.data();
+        if (booking.payment) {
+          // Check if we already have this payment in our list (to avoid duplicates)
+          const paymentId = booking.payment.id;
+          const existingPayment = paymentId ? 
+            paymentsData.find(p => p.paymentId === paymentId) : null;
+          
+          if (!existingPayment) {
             paymentsData.push({
               id: doc.id,
               paymentId: booking.payment.id || 'N/A',
@@ -43,44 +80,13 @@ function PaymentsView({ eventId = null }) {
               eventId: booking.eventId,
               userId: booking.userId,
               createdAt: booking.payment.createdAt || booking.createdAt,
-              userEmail: booking.contactInfo?.email || 'N/A'
+              bookingId: doc.id,
+              userEmail: booking.contactInfo?.email || 'N/A',
+              source: 'bookingCollection'
             });
           }
-        });
-      } else {
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          
-          // Check if this is a payment document or a booking with payment
-          if (data.payment) {
-            // It's a booking with payment property
-            paymentsData.push({
-              id: doc.id,
-              paymentId: data.payment.id || 'N/A',
-              amount: data.payment.amount || 0,
-              currency: data.payment.currency || 'EUR',
-              status: data.payment.status || 'PENDING',
-              eventId: data.eventId,
-              userId: data.userId,
-              createdAt: data.payment.createdAt || data.createdAt,
-              userEmail: data.contactInfo?.email || 'N/A'
-            });
-          } else {
-            // It's a payment document
-            paymentsData.push({
-              id: doc.id,
-              paymentId: data.paymentId || data.id || 'N/A',
-              amount: data.amount || 0,
-              currency: data.currency || 'EUR',
-              status: data.status || 'PENDING',
-              eventId: data.eventId || 'N/A',
-              userId: data.userId || 'N/A',
-              createdAt: data.createdAt,
-              userEmail: data.payerEmail || data.payer?.email || 'N/A'
-            });
-          }
-        });
-      }
+        }
+      });
       
       console.log("Payments found:", paymentsData.length);
       
@@ -92,6 +98,20 @@ function PaymentsView({ eventId = null }) {
         paymentsData = paymentsData.filter(payment => 
           payment.status !== 'COMPLETED' && payment.status !== 'completed');
       }
+      
+      // Sort by date descending (newest first)
+      paymentsData.sort((a, b) => {
+        // Handle various timestamp formats
+        const getTimestamp = (payment) => {
+          if (!payment.createdAt) return 0;
+          if (payment.createdAt.toDate) return payment.createdAt.toDate().getTime();
+          if (payment.createdAt.seconds) return payment.createdAt.seconds * 1000;
+          if (typeof payment.createdAt === 'string') return new Date(payment.createdAt).getTime();
+          return 0;
+        };
+        
+        return getTimestamp(b) - getTimestamp(a);
+      });
       
       // Calculate statistics
       const totalPayments = paymentsData.length;
@@ -111,10 +131,51 @@ function PaymentsView({ eventId = null }) {
         pending: pendingPayments,
         totalAmount: totalAmount
       });
+      
+      // Fetch event titles for event IDs
+      fetchEventTitles(paymentsData);
     } catch (error) {
       console.error('Error fetching payments:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Fetch event titles for all event IDs in payments
+  const fetchEventTitles = async (paymentsData) => {
+    try {
+      // Get unique event IDs
+      const uniqueEventIds = [...new Set(
+        paymentsData
+          .filter(payment => payment.eventId && payment.eventId !== 'N/A')
+          .map(payment => payment.eventId)
+      )];
+      
+      // Skip if no event IDs or if we only have one event ID that matches the filter
+      if (uniqueEventIds.length === 0 || (uniqueEventIds.length === 1 && uniqueEventIds[0] === eventId)) {
+        return;
+      }
+      
+      // Fetch titles for all event IDs
+      const eventTitlesMap = {};
+      
+      await Promise.all(uniqueEventIds.map(async (eventId) => {
+        try {
+          const eventDoc = await getDoc(doc(db, 'events', eventId));
+          if (eventDoc.exists()) {
+            eventTitlesMap[eventId] = eventDoc.data().title || 'Unknown Event';
+          } else {
+            eventTitlesMap[eventId] = 'Event Not Found';
+          }
+        } catch (err) {
+          console.error(`Error fetching event ${eventId}:`, err);
+          eventTitlesMap[eventId] = 'Error Loading Event';
+        }
+      }));
+      
+      setEventTitles(eventTitlesMap);
+    } catch (error) {
+      console.error('Error fetching event titles:', error);
     }
   };
 
@@ -142,6 +203,24 @@ function PaymentsView({ eventId = null }) {
     }
   };
 
+  // Format payment status with more clarity
+  const formatStatus = (status) => {
+    status = status?.toUpperCase() || 'UNKNOWN';
+    
+    switch(status) {
+      case 'COMPLETED':
+        return { label: 'Completed', class: 'bg-green-100 text-green-800' };
+      case 'PENDING':
+        return { label: 'Pending', class: 'bg-yellow-100 text-yellow-800' };
+      case 'FAILED':
+        return { label: 'Failed', class: 'bg-red-100 text-red-800' };
+      case 'REFUNDED':
+        return { label: 'Refunded', class: 'bg-blue-100 text-blue-800' };
+      default:
+        return { label: status, class: 'bg-gray-100 text-gray-800' };
+    }
+  };
+
   // Handle filter change
   const handleFilterChange = (newFilter) => {
     setFilter(newFilter);
@@ -160,8 +239,11 @@ function PaymentsView({ eventId = null }) {
         </h2>
         <button
           onClick={handleRefresh}
-          className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
           Refresh
         </button>
       </div>
@@ -212,7 +294,7 @@ function PaymentsView({ eventId = null }) {
             ? 'bg-yellow-600 text-white' 
             : 'bg-yellow-100 text-yellow-800'}`}
         >
-          Pending
+          Pending/Other
         </button>
       </div>
 
@@ -250,40 +332,60 @@ function PaymentsView({ eventId = null }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {payments.map((payment, index) => (
-                <tr key={payment.id || index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.paymentId.length > 12 
-                      ? `${payment.paymentId.substring(0, 12)}...` 
-                      : payment.paymentId}
-                  </td>
-                  {!eventId && (
+              {payments.map((payment, index) => {
+                const status = formatStatus(payment.status);
+                
+                return (
+                  <tr key={payment.id || index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {payment.eventId.length > 8 
-                        ? `${payment.eventId.substring(0, 8)}...` 
-                        : payment.eventId}
+                      <div className="flex flex-col">
+                        <span>
+                          {payment.paymentId.length > 12 
+                            ? `${payment.paymentId.substring(0, 12)}...` 
+                            : payment.paymentId}
+                        </span>
+                        {payment.bookingId && (
+                          <span className="text-xs text-gray-500">
+                            Booking: {payment.bookingId.substring(0, 8)}...
+                          </span>
+                        )}
+                      </div>
                     </td>
-                  )}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.amount} {payment.currency}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      payment.status === 'COMPLETED' || payment.status === 'completed'
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {payment.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {payment.userEmail || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(payment.createdAt)}
-                  </td>
-                </tr>
-              ))}
+                    {!eventId && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div 
+                          className="group relative cursor-help"
+                          title={eventTitles[payment.eventId] || "Loading event title..."}
+                        >
+                          <span>{payment.eventId.length > 8 
+                            ? `${payment.eventId.substring(0, 8)}...` 
+                            : payment.eventId}
+                          </span>
+                          
+                          {/* Tooltip */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute z-10 p-2 bg-gray-900 text-white text-xs rounded whitespace-normal w-48 -top-2 left-full ml-2 pointer-events-none">
+                            {eventTitles[payment.eventId] || "Loading event title..."}
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {payment.amount} {payment.currency}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${status.class}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {payment.userEmail || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(payment.createdAt)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

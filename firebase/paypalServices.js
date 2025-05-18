@@ -13,10 +13,10 @@ import {
 
 import { bookEventSimple } from './firestoreServices';
 
-
 // Store payment information in Firestore
 export const savePaymentRecord = async (paymentData) => {
   try {
+    // Build payment object with optional fields properly handled
     const payment = {
       paymentId: paymentData.paymentId || paymentData.id || 'DIRECT_PAYMENT',
       payerId: paymentData.payerId || 'UNKNOWN',
@@ -25,10 +25,14 @@ export const savePaymentRecord = async (paymentData) => {
       status: paymentData.status || 'COMPLETED',
       eventId: paymentData.eventId,
       userId: paymentData.userId,
-      bookingId: paymentData.bookingId,
+      // Only include bookingId if it's provided and not undefined
+      ...(paymentData.bookingId && { bookingId: paymentData.bookingId }),
+      // Only include orderId if it's provided and not undefined
+      ...(paymentData.orderId && { orderId: paymentData.orderId }),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       payerEmail: paymentData.payerEmail || '',
+      // Store details if available, otherwise use an empty object
       fullDetails: paymentData.fullDetails || {}
     };
 
@@ -54,26 +58,63 @@ export const updatePaymentStatus = async (paymentId, newStatus, details = {}) =>
     const snapshot = await getDocs(paymentsQuery);
     
     if (snapshot.empty) {
-      throw new Error(`Payment with ID ${paymentId} not found`);
+      console.log(`Payment with ID ${paymentId} not found, checking order ID...`);
+      
+      // Try finding by order ID if available
+      if (details.orderId) {
+        const orderQuery = query(
+          collection(db, 'payments'),
+          where('orderId', '==', details.orderId)
+        );
+        
+        const orderSnapshot = await getDocs(orderQuery);
+        
+        if (!orderSnapshot.empty) {
+          const paymentDoc = orderSnapshot.docs[0];
+          
+          // Update payment with real PayPal ID and status
+          await updateDoc(doc(db, 'payments', paymentDoc.id), {
+            paymentId: paymentId, // Update with real PayPal transaction ID
+            status: newStatus,
+            updatedAt: serverTimestamp(),
+            updateDetails: details
+          });
+          
+          console.log(`Updated payment by order ID: ${details.orderId}`);
+          
+          // Update booking if needed
+          await updateRelatedBooking(paymentDoc.data(), newStatus, details);
+          
+          return true;
+        }
+      }
+      
+      // No matching payment found - create a new record
+      console.log(`Creating new payment record for ${paymentId}`);
+      
+      await addDoc(collection(db, 'payments'), {
+        paymentId: paymentId,
+        status: newStatus,
+        updateDetails: details,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        source: 'webhook'
+      });
+      
+      return true;
     }
     
+    // Update existing payment found by payment ID
     const paymentDoc = snapshot.docs[0];
     
-    // Update payment status
     await updateDoc(doc(db, 'payments', paymentDoc.id), {
       status: newStatus,
       updatedAt: serverTimestamp(),
       updateDetails: details
     });
     
-    // If payment was completed, also update booking status
-    if (newStatus === 'COMPLETED' && paymentDoc.data().bookingId) {
-      const bookingRef = doc(db, 'bookings', paymentDoc.data().bookingId);
-      await updateDoc(bookingRef, {
-        paymentStatus: 'COMPLETED',
-        updatedAt: serverTimestamp()
-      });
-    }
+    // Update any related booking
+    await updateRelatedBooking(paymentDoc.data(), newStatus, details);
     
     return true;
   } catch (error) {
@@ -81,6 +122,67 @@ export const updatePaymentStatus = async (paymentId, newStatus, details = {}) =>
     throw error;
   }
 };
+
+// Helper function to update related booking
+async function updateRelatedBooking(paymentData, newStatus, details) {
+  try {
+    // Check if we have booking ID
+    if (paymentData.bookingId) {
+      const bookingRef = doc(db, 'bookings', paymentData.bookingId);
+      const bookingDoc = await getDoc(bookingRef);
+      
+      if (bookingDoc.exists()) {
+        await updateDoc(bookingRef, {
+          paymentStatus: newStatus,
+          updatedAt: serverTimestamp(),
+          paymentDetails: details
+        });
+        
+        console.log(`Updated booking ${paymentData.bookingId} payment status to ${newStatus}`);
+        return true;
+      }
+    }
+    
+    // If no booking ID or booking not found, try to find by event and user
+    if (paymentData.eventId && paymentData.userId) {
+      const bookingsQuery = query(
+        collection(db, 'bookings'),
+        where('eventId', '==', paymentData.eventId),
+        where('userId', '==', paymentData.userId)
+      );
+      
+      const bookingsSnapshot = await getDocs(bookingsQuery);
+      
+      if (!bookingsSnapshot.empty) {
+        // Update the first matching booking
+        const bookingDoc = bookingsSnapshot.docs[0];
+        
+        await updateDoc(bookingDoc.ref, {
+          paymentStatus: newStatus,
+          updatedAt: serverTimestamp(),
+          paymentDetails: details
+        });
+        
+        console.log(`Updated booking ${bookingDoc.id} by event/user match`);
+        
+        // Also update the payment record with the booking ID
+        if (paymentData.id) {
+          await updateDoc(doc(db, 'payments', paymentData.id), {
+            bookingId: bookingDoc.id
+          });
+        }
+        
+        return true;
+      }
+    }
+    
+    console.log('No matching booking found to update');
+    return false;
+  } catch (error) {
+    console.error('Error updating related booking:', error);
+    throw error;
+  }
+}
 
 // Get all payments for an event
 export const getEventPayments = async (eventId) => {
@@ -187,11 +289,45 @@ export const getUserPayments = async (userId) => {
   }
 };
 
-// Verify payment with PayPal (can be implemented when needed for security)
-export const verifyPayment = async (paymentId, amount, currency) => {
-  // This would normally call PayPal's verify API
-  // For simplicity, we're just doing a basic check here
+// Process a new booking payment (after PayPal redirect)
+export const processBookingPayment = async (bookingData, paymentDetails) => {
   try {
+    // Create booking with payment details
+    const bookingResult = await bookEventSimple(bookingData.eventId, {
+      ...bookingData.userData,
+      paymentDetails
+    });
+    
+    // Get the booking ID if available
+    const bookingId = bookingResult?.bookingId;
+    
+    // Save standalone payment record
+    await savePaymentRecord({
+      paymentId: paymentDetails.paymentId,
+      payerId: paymentDetails.payerId,
+      amount: bookingData.amount,
+      currency: 'EUR',
+      status: paymentDetails.status,
+      eventId: bookingData.eventId,
+      userId: bookingData.userData.userId,
+      payerEmail: bookingData.userData.email,
+      orderId: paymentDetails.orderId || bookingData.orderId,
+      // Only include bookingId if it's available
+      ...(bookingId && { bookingId }),
+      fullDetails: paymentDetails
+    });
+    
+    return bookingResult;
+  } catch (error) {
+    console.error('Error processing booking payment:', error);
+    throw error;
+  }
+};
+
+// Verify payment with PayPal
+export const verifyPayment = async (paymentId, amount, currency) => {
+  try {
+    // Find payment by ID
     const paymentsQuery = query(
       collection(db, 'payments'),
       where('paymentId', '==', paymentId)
@@ -205,52 +341,32 @@ export const verifyPayment = async (paymentId, amount, currency) => {
     
     const payment = snapshot.docs[0].data();
     
-    // Check payment amount and currency
-    if (
-      payment.amount === amount &&
-      payment.currency === currency &&
-      payment.status === 'COMPLETED'
-    ) {
-      return { verified: true };
+    // Check payment amount and currency if provided
+    if (amount && currency) {
+      if (
+        payment.amount === amount &&
+        payment.currency === currency &&
+        (payment.status === 'COMPLETED' || payment.status === 'completed')
+      ) {
+        return { verified: true, paymentData: payment };
+      } else {
+        return { 
+          verified: false, 
+          reason: 'Payment details mismatch or payment not completed',
+          expected: { amount, currency, status: 'COMPLETED' },
+          actual: { amount: payment.amount, currency: payment.currency, status: payment.status }
+        };
+      }
     } else {
-      return { 
-        verified: false, 
-        reason: 'Payment details mismatch or payment not completed',
-        expected: { amount, currency, status: 'COMPLETED' },
-        actual: { amount: payment.amount, currency: payment.currency, status: payment.status }
-      };
+      // Just check if it's completed
+      if (payment.status === 'COMPLETED' || payment.status === 'completed') {
+        return { verified: true, paymentData: payment };
+      } else {
+        return { verified: false, reason: `Payment status is ${payment.status}` };
+      }
     }
   } catch (error) {
     console.error('Error verifying payment:', error);
-    throw error;
-  }
-};
-
-// Process a new booking payment (after PayPal redirect)
-export const processBookingPayment = async (bookingData, paymentDetails) => {
-  try {
-    // Create booking with payment details
-    const bookingResult = await bookEventSimple(bookingData.eventId, {
-      ...bookingData.userData,
-      paymentDetails
-    });
-    
-    // Save standalone payment record
-    await savePaymentRecord({
-      paymentId: paymentDetails.paymentId,
-      payerId: paymentDetails.payerId,
-      amount: bookingData.amount,
-      currency: 'EUR',
-      status: paymentDetails.status,
-      eventId: bookingData.eventId,
-      userId: bookingData.userData.userId,
-      payerEmail: bookingData.userData.email,
-      fullDetails: paymentDetails
-    });
-    
-    return bookingResult;
-  } catch (error) {
-    console.error('Error processing booking payment:', error);
     throw error;
   }
 };

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPaymentCancel }) {
   const [isPaying, setIsPaying] = useState(false);
   const [error, setError] = useState(null);
+  const [paypalLoaded, setPaypalLoaded] = useState(false);
+  const paypalButtonsRef = useRef(null);
 
   // Safe fallback for amount
   const amount = event?.paymentAmount !== undefined && event?.paymentAmount !== null
@@ -10,6 +12,149 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
     : 10;
 
   if (!isOpen) return null;
+
+  // Load PayPal JavaScript SDK
+  useEffect(() => {
+    // Clean up any existing PayPal button container
+    if (paypalButtonsRef.current) {
+      paypalButtonsRef.current.innerHTML = '';
+    }
+
+    if (!window.paypal && !document.querySelector('script[src*="paypal"]')) {
+      const script = document.createElement('script');
+      // Use your PayPal client ID from environment variables
+      script.src = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test'}&currency=EUR`;
+      script.async = true;
+      script.onload = () => setPaypalLoaded(true);
+      document.body.appendChild(script);
+      
+      return () => {
+        // Only remove if this component added it
+        if (script.parentNode) {
+          document.body.removeChild(script);
+        }
+      };
+    } else if (window.paypal) {
+      setPaypalLoaded(true);
+    }
+  }, [isOpen]);
+
+  // Initialize PayPal buttons when SDK is loaded
+  useEffect(() => {
+    if (paypalLoaded && window.paypal && paypalButtonsRef.current) {
+      // Clear previous buttons
+      paypalButtonsRef.current.innerHTML = '';
+      
+      const orderId = `order_${Date.now()}_${event.id.substring(0, 8)}_${userData.userId.substring(0, 8)}`;
+      
+      // Store pending booking data
+      const bookingData = {
+        userData,
+        eventId: event.id,
+        amount: amount,
+        eventTitle: event.title,
+        timestamp: Date.now(),
+        orderId
+      };
+      
+      localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+      
+      // Render PayPal buttons
+      window.paypal.Buttons({
+        // Style the buttons
+        style: {
+          layout: 'vertical',
+          color: 'blue',
+          shape: 'rect',
+          label: 'pay'
+        },
+        
+        // Create order
+        createOrder: function(data, actions) {
+          return actions.order.create({
+            purchase_units: [{
+              description: `Booking for ${event.title}`,
+              custom_id: userData.userId,
+              invoice_id: orderId,
+              amount: {
+                value: amount.toString(),
+                currency_code: 'EUR'
+              }
+            }]
+          });
+        },
+        
+        // Handle approval
+        onApprove: function(data, actions) {
+          setIsPaying(true);
+          
+          return actions.order.capture().then(function(details) {
+            console.log('Payment approved:', details);
+            
+            // Create payment details object for passing to callbacks
+            const paymentDetails = {
+              paymentId: details.id,
+              payerId: details.payer.payer_id,
+              payerEmail: details.payer.email_address,
+              status: 'COMPLETED',
+              amount: amount,
+              currency: 'EUR',
+              createTime: details.create_time,
+              updateTime: details.update_time,
+              orderId: orderId
+            };
+            
+            // Create payment record
+            try {
+              // Only try to save the payment record if needed, but don't wait for it
+              import('../../firebase/paypalServices').then(({ savePaymentRecord }) => {
+                savePaymentRecord({
+                  paymentId: details.id,
+                  payerId: details.payer.payer_id,
+                  amount: amount,
+                  currency: 'EUR',
+                  status: 'COMPLETED',
+                  eventId: event.id,
+                  userId: userData.userId,
+                  orderId: orderId,
+                  payerEmail: details.payer.email_address || '',
+                  // No bookingId at this point - it will be created in onPaymentSuccess
+                  fullDetails: details
+                }).catch(err => console.warn("Pre-creating payment record failed:", err));
+              }).catch(err => console.warn("Could not import paypalServices:", err));
+            } catch (error) {
+              console.warn("Could not create preliminary payment record:", error);
+              // Continue anyway since onPaymentSuccess will handle the main booking process
+            }
+            
+            // Call success callback with payment details
+            if (onPaymentSuccess) {
+              onPaymentSuccess({
+                paymentDetails
+              });
+            }
+            
+            setIsPaying(false);
+          });
+        },
+        
+        // Handle cancellation
+        onCancel: function() {
+          console.log('Payment cancelled by user');
+          
+          if (onPaymentCancel) {
+            onPaymentCancel();
+          }
+        },
+        
+        // Handle errors
+        onError: function(err) {
+          console.error('PayPal payment error:', err);
+          setError(`Payment error: ${err.message || 'Unknown error'}`);
+        }
+      }).render(paypalButtonsRef.current);
+    }
+  }, [paypalLoaded, event, userData, amount, onPaymentSuccess, onPaymentCancel]);
 
   const modalStyle = {
     position: 'fixed',
@@ -31,61 +176,6 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
     width: '90%',
     maxWidth: '500px',
     position: 'relative'
-  };
-
-  const handlePayNowClick = async () => {
-    try {
-      // Validate amount
-      const value = parseFloat(amount).toFixed(2);
-      if (isNaN(value) || Number(value) <= 0) {
-        setError("Invalid payment amount. Please contact support.");
-        return;
-      }
-
-      setIsPaying(true);
-      setError(null);
-
-      // Store pending booking data in localStorage
-      const bookingData = {
-        userData,
-        eventId: event.id,
-        amount: value,
-        eventTitle: event.title,
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-      
-      // Create URL parameters for PayPal redirect
-      const params = new URLSearchParams({
-        // This is normally your PayPal business email or merchant ID
-        // Replace with your actual PayPal business email in production
-        business: 'urbanphotohunts.roma@gmail.com', 
-        cmd: '_xclick',
-        item_name: `Booking for ${event.title}`,
-        item_number: event.id,
-        amount: value,
-        currency_code: 'EUR',
-        // Include return URLs (must be absolute URLs)
-        return: `${window.location.origin}${window.location.pathname}#/?payment-success=true`,
-        cancel_return: `${window.location.origin}${window.location.pathname}#/?payment-cancelled=true`,
-        // Include user ID in custom field for reference
-        custom: userData.userId,
-        // No shipping needed
-        no_shipping: '1',
-        // Don't show a note field
-        no_note: '1'
-      });
-      
-      // Redirect to PayPal
-      // Use sandbox URL for testing, change to www.paypal.com for production
-      window.location.href = `https://www.paypal.com/cgi-bin/webscr?${params.toString()}`;
-      
-    } catch (error) {
-      console.error("Payment error:", error);
-      setError(`Payment setup failed: ${error.message || "Unknown error"}`);
-      setIsPaying(false);
-    }
   };
 
   return (
@@ -118,26 +208,18 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
           </div>
         )}
 
-        <div className="mb-4">
-          {isPaying ? (
-            <div className="text-center p-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-2">Redirecting to PayPal...</p>
-            </div>
-          ) : (
-            <button
-              onClick={handlePayNowClick}
-              disabled={isPaying}
-              className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
-            >
-              Pay with PayPal
-            </button>
-          )}
-        </div>
+        {isPaying ? (
+          <div className="text-center p-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-2">Processing payment...</p>
+          </div>
+        ) : (
+          <div id="paypal-button-container" ref={paypalButtonsRef} className="mb-4"></div>
+        )}
 
         <div className="text-center text-sm text-gray-500 mt-4">
           <p>Your payment is processed securely by PayPal</p>
-          <p className="mt-1 text-xs">You will be redirected to PayPal to complete your payment</p>
+          <p className="mt-1 text-xs">You can pay with PayPal or credit card without a PayPal account</p>
         </div>
       </div>
     </div>

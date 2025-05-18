@@ -181,13 +181,25 @@ function EventCard({ event, user, onAuthNeeded }) {
       // Store form data for payment
       setBookingFormData(userData);
       
-      // Show payment modal
-      setShowBookingForm(false);
-      setShowPaymentModal(true);
-      
+      // If event requires payment, show payment modal
+      if (event.paymentAmount > 0) {
+        setShowBookingForm(false);
+        setShowPaymentModal(true);
+      } else {
+        // For free events, complete booking directly
+        const result = await bookEventSimple(event.id, userData);
+        
+        if (result.success) {
+          setIsBooked(true);
+          setBookingSuccess(true);
+          setShowBookingForm(false);
+        } else {
+          setAuthError(result.message || "Booking failed. Please try again.");
+        }
+      }
     } catch (error) {
-      console.error("Error preparing for payment:", error);
-      setAuthError("An error occurred while preparing for payment. Please try again.");
+      console.error("Error preparing for booking:", error);
+      setAuthError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -195,12 +207,28 @@ function EventCard({ event, user, onAuthNeeded }) {
   
   const handlePaymentSuccess = async (paymentData) => {
     setLoading(true);
+    setAuthError(null);
     
     try {
+      console.log("Payment approved:", paymentData);
+      
+      // Ensure paymentDetails has all needed properties with fallbacks for missing values
+      const sanitizedPaymentDetails = {
+        paymentId: paymentData.paymentDetails?.paymentId || '',
+        payerID: paymentData.paymentDetails?.payerID || null,  // Allow null/undefined here
+        payerEmail: paymentData.paymentDetails?.payerEmail || '',
+        status: paymentData.paymentDetails?.status || 'COMPLETED',
+        amount: event.paymentAmount || 0,
+        currency: event.paymentCurrency || 'EUR',
+        createTime: paymentData.paymentDetails?.createTime || new Date().toISOString(),
+        updateTime: paymentData.paymentDetails?.updateTime || new Date().toISOString(),
+        orderId: paymentData.paymentDetails?.orderId || null
+      };
+      
       // Complete booking with payment details
       const result = await bookEventSimple(event.id, {
         ...bookingFormData,
-        paymentDetails: paymentData.paymentDetails
+        paymentDetails: sanitizedPaymentDetails
       });
       
       if (result && result.success) {
@@ -212,7 +240,7 @@ function EventCard({ event, user, onAuthNeeded }) {
       }
     } catch (error) {
       console.error("Error completing booking:", error);
-      setAuthError("An error occurred during booking. Please try again.");
+      setAuthError("An error occurred during booking. Please contact support with your payment ID.");
     } finally {
       setLoading(false);
     }
@@ -220,6 +248,7 @@ function EventCard({ event, user, onAuthNeeded }) {
   
   const handlePaymentCancel = () => {
     setShowPaymentModal(false);
+    setAuthError("Payment was cancelled.");
   };
   
   const handleCancelForm = () => {
@@ -260,10 +289,7 @@ function EventCard({ event, user, onAuthNeeded }) {
   
   // Determine if event is fully booked
   const isFullyBooked = bookableReason === "No spots left";
-  
-  // We no longer need a special success state view
-  // Instead we'll just show the normal view with the booking button status
-  
+
   // Booking form state
   if (showBookingForm) {
     return (
@@ -280,6 +306,7 @@ function EventCard({ event, user, onAuthNeeded }) {
           loading={loading}
           isFirstTime={isFirstTimeBooking}
           existingData={existingUserData}
+          event={event}
         />
       </div>
     );
@@ -294,6 +321,11 @@ function EventCard({ event, user, onAuthNeeded }) {
           <p className="text-center text-gray-600">
             Please complete the payment to confirm your booking.
           </p>
+          {authError && (
+            <div className="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
+              {authError}
+            </div>
+          )}
         </div>
         
         <PaymentModal
@@ -349,7 +381,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                 {eventStatus === 'active' ? 'Active' : 
                  eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
               </span>
-              {event.paymentAmount && (
+              {event.paymentAmount > 0 && (
                 <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700">
                   €{event.paymentAmount}
                 </span>
@@ -376,7 +408,7 @@ function EventCard({ event, user, onAuthNeeded }) {
           <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
             📍 {event.location}
           </span>
-          {event.paymentAmount && (
+          {event.paymentAmount > 0 && (
             <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
               Cost: €{event.paymentAmount}
             </span>
@@ -445,7 +477,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                   : eventStatus === 'past'
                     ? 'Event Ended'
                     : 'Booking Closed'
-                : user ? (event.paymentAmount ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Book'}
+                : user ? (event.paymentAmount > 0 ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Sign In to Book'}
         </button>
       </div>
     </div>

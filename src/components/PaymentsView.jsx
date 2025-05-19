@@ -79,6 +79,11 @@ function PaymentsView({ eventId = null }) {
             createdAt: data.createdAt,
             bookingId: data.bookingId || null,
             userEmail: data.payerEmail || 'N/A',
+            // Extract PayPal payer email from various possible locations
+            paypalEmail: data.payerEmail || 
+                         (data.fullDetails?.payer?.email_address) || 
+                         (data.payer?.email) || 
+                         'N/A',
             source: 'paymentCollection'
           });
         });
@@ -111,6 +116,10 @@ function PaymentsView({ eventId = null }) {
               createdAt: booking.payment.createdAt || booking.createdAt,
               bookingId: doc.id,
               userEmail: booking.contactInfo?.email || 'N/A',
+              // Extract PayPal payer email from various possible locations
+              paypalEmail: booking.payment?.payer?.email || 
+                          (booking.paymentDetails?.payerEmail) || 
+                          'N/A',
               source: 'bookingCollection'
             });
           }
@@ -386,7 +395,10 @@ function PaymentsView({ eventId = null }) {
                   Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  User Email
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  PayPal Email
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
@@ -441,6 +453,13 @@ function PaymentsView({ eventId = null }) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {payment.userEmail || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {payment.paypalEmail && payment.paypalEmail !== 'N/A' && payment.paypalEmail !== payment.userEmail 
+                        ? payment.paypalEmail 
+                        : payment.paypalEmail === payment.userEmail
+                          ? <span className="italic text-gray-400">Same as user</span>
+                          : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(payment.createdAt)}

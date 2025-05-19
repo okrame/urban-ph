@@ -339,7 +339,8 @@ export const bookEventSimple = async (eventId, userData) => {
     const newBooking = {
       userId: userData.userId,
       eventId: eventId,
-      status: 'confirmed',
+      status: eventData.paymentAmount > 0 ? 'payment-pending' : 'confirmed',
+      paymentStatus: eventData.paymentAmount > 0 ? 'PENDING' : 'NOT_REQUIRED',
       createdAt: serverTimestamp(),
       contactInfo: {
         email: userData.email || '',
@@ -370,27 +371,65 @@ export const bookEventSimple = async (eventId, userData) => {
       
       // Add the payment object to the booking
       newBooking.payment = payment;
-      newBooking.paymentStatus = payment.status;
     }
     
     // Create the booking document
     const bookingRef = await addDoc(collection(db, 'bookings'), newBooking);
     const bookingId = bookingRef.id;
     
-    // 5. Update available spots count in the event
-    await updateDoc(eventRef, {
-      spotsLeft: eventData.spotsLeft - 1,
-      attendees: arrayUnion(userData.userId)
-    });
+    // 5. If payment details exist, create separate payment record linked to this booking
+    if (userData.paymentDetails && userData.paymentDetails.paymentId) {
+      try {
+        const paymentRecord = {
+          paymentId: userData.paymentDetails.paymentId,
+          amount: userData.paymentDetails.amount || eventData.paymentAmount || 0,
+          currency: userData.paymentDetails.currency || 'EUR',
+          status: userData.paymentDetails.status || 'PENDING',
+          eventId: eventId,
+          userId: userData.userId,
+          bookingId: bookingId, // This is the important link
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          orderId: userData.paymentDetails.orderId || null,
+          payerEmail: userData.email || userData.paymentDetails.payerEmail || '',
+          payerId: userData.paymentDetails.payerID || null
+        };
+        
+        await addDoc(collection(db, 'payments'), paymentRecord);
+        console.log("Created payment record linked to booking:", bookingId);
+      } catch (err) {
+        console.warn("Error creating payment record:", err);
+        // Don't block the booking creation if payment record fails
+      }
+    }
     
-    // 6. Update user profile with all the new fields
+    // 6. Update available spots count in the event - only reduce if payment not required or already completed
+    if (newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED') {
+      await updateDoc(eventRef, {
+        spotsLeft: eventData.spotsLeft - 1,
+        attendees: arrayUnion(userData.userId)
+      });
+    } else {
+      // For pending payments, don't reduce the available spots yet
+      console.log("Payment is pending - not reducing available spots yet");
+      
+      // But we should still add a "pendingBookings" array to track these
+      await updateDoc(eventRef, {
+        pendingBookings: arrayUnion(bookingId)
+      });
+    }
+    
+    // 7. Update user profile with all the new fields
     try {
       const userRef = doc(db, 'users', userData.userId);
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
         const userUpdates = {
-          eventsBooked: arrayUnion(eventId),
+          // Only add event to eventsBooked array if payment is not required or completed
+          ...(newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED' 
+              ? { eventsBooked: arrayUnion(eventId) } 
+              : { pendingBookings: arrayUnion(bookingId) }),
           updatedAt: serverTimestamp()
         };
         
@@ -409,34 +448,12 @@ export const bookEventSimple = async (eventId, userData) => {
       // Don't block booking if user update fails
     }
     
-    // 7. If there's payment info and it has been saved to a separate payments collection,
-    // update the payment record with the booking ID for reference
-    if (userData.paymentDetails && userData.paymentDetails.paymentId) {
-      try {
-        const paymentsQuery = query(
-          collection(db, 'payments'),
-          where('paymentId', '==', userData.paymentDetails.paymentId)
-        );
-        
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        
-        if (!paymentsSnapshot.empty) {
-          const paymentDoc = paymentsSnapshot.docs[0];
-          await updateDoc(paymentDoc.ref, {
-            bookingId: bookingId,
-            updatedAt: serverTimestamp()
-          });
-        }
-      } catch (paymentUpdateErr) {
-        console.warn("Could not update payment record with booking ID:", paymentUpdateErr);
-        // Non-blocking - booking is still valid
-      }
-    }
-    
     return { 
       success: true, 
-      message: "Booking completed successfully",
-      bookingId: bookingId
+      message: "Booking created successfully",
+      bookingId: bookingId,
+      requiresPayment: eventData.paymentAmount > 0 && newBooking.paymentStatus !== 'COMPLETED',
+      status: newBooking.status
     };
   } catch (error) {
     console.error("Error booking event:", error);

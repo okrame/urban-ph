@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, getDocs, where, orderBy, doc, getDoc } from 'firebase/firestore';
+import { useState, useEffect, useRef } from 'react';
+import { collection, query, getDocs, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 function PaymentsView({ eventId = null }) {
@@ -8,9 +8,38 @@ function PaymentsView({ eventId = null }) {
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0, totalAmount: 0 });
   const [filter, setFilter] = useState('all'); // 'all', 'completed', 'pending'
   const [eventTitles, setEventTitles] = useState({}); // Cache for event titles
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const refreshTimerRef = useRef(null);
 
+  // Set up auto-refresh effect
+  useEffect(() => {
+    if (autoRefresh) {
+      refreshTimerRef.current = setInterval(() => {
+        console.log('Auto-refreshing payments data...');
+        fetchPayments();
+        setLastRefresh(new Date());
+      }, 30000); // 30 seconds
+    }
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
+    };
+  }, [autoRefresh, eventId, filter]);
+
+  // Initial fetch and when dependencies change
   useEffect(() => {
     fetchPayments();
+    setLastRefresh(new Date());
+    
+    // Clear any existing interval when dependencies change
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
+    };
   }, [eventId, filter]);
 
   const fetchPayments = async () => {
@@ -87,8 +116,6 @@ function PaymentsView({ eventId = null }) {
           }
         }
       });
-      
-      console.log("Payments found:", paymentsData.length);
       
       // Apply filter
       if (filter === 'completed') {
@@ -229,23 +256,58 @@ function PaymentsView({ eventId = null }) {
   // Handle refresh
   const handleRefresh = () => {
     fetchPayments();
+    setLastRefresh(new Date());
+  };
+
+  // Toggle auto refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
+  };
+
+  // Format last refresh time
+  const formatLastRefresh = () => {
+    return lastRefresh.toLocaleTimeString();
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">
-          {eventId ? 'Event Payments' : 'All Payments'}
-        </h2>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Refresh
-        </button>
+        <div>
+          <h2 className="text-xl font-bold">
+            {eventId ? 'Event Payments' : 'All Payments'}
+          </h2>
+          <div className="text-xs text-gray-500 mt-1">
+            Last updated: {formatLastRefresh()}
+            {autoRefresh && <span className="ml-1">(Auto-refreshing every 30s)</span>}
+          </div>
+        </div>
+        <div className="relative">
+          <button
+            onClick={loading ? toggleAutoRefresh : handleRefresh}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 relative"
+            disabled={loading}
+          >
+            <svg className={`w-4 h-4 mr-2 ${loading || autoRefresh ? 'animate-spin' : ''}`} 
+                 style={(loading || autoRefresh) ? { animationDuration: '3s' } : {}}
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loading ? 'Refreshing...' : 'Refresh'}
+            {autoRefresh && (
+              <span className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+              </span>
+            )}
+          </button>
+          <div 
+            onClick={toggleAutoRefresh}
+            className="absolute top-full right-0 mt-1 text-xs cursor-pointer hover:underline text-blue-600"
+          >
+            {autoRefresh ? 'Turn Off' : 'Turn On'}
+          </div>
+        </div>
       </div>
 
       {/* Stats summary */}

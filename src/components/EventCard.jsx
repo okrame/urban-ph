@@ -16,14 +16,24 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [isBookable, setIsBookable] = useState(true);
   const [bookableReason, setBookableReason] = useState('');
   const [imageError, setImageError] = useState(false);
+  const [prevUserState, setPrevUserState] = useState(null);
+  const [authRequested, setAuthRequested] = useState(false);
   
-  // Store form data for payment processing
   const [bookingFormData, setBookingFormData] = useState(null);
-  
-  // New state variables for enhanced booking form
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
   const [existingUserData, setExistingUserData] = useState({});
   
+  // Track previous user state to detect sign-in, but only for requested auth
+  useEffect(() => {
+    if (!prevUserState && user && authRequested && !isBooked) {
+      handleBookEvent();
+      // Reset the auth requested flag to prevent reopening on subsequent renders
+      setAuthRequested(false);
+    }
+    
+    setPrevUserState(user);
+  }, [user, authRequested, isBooked]);
+
   // Reset booking states when user changes (signs in or out)
   useEffect(() => {
     // Reset booking states when user changes
@@ -37,14 +47,12 @@ function EventCard({ event, user, onAuthNeeded }) {
   // Check event status and bookability
   useEffect(() => {
     if (event) {
-      // Calculate the current status
       const status = determineEventStatus(event.date, event.time);
       setEventStatus(status);
       
       // Reset image error state when event changes
       setImageError(false);
       
-      // Check if event is bookable
       const checkBookability = async () => {
         try {
           const { bookable, reason } = await isEventBookable(event.id);
@@ -103,6 +111,8 @@ function EventCard({ event, user, onAuthNeeded }) {
     if (!user) {
       // If no user is logged in, trigger the auth modal
       if (onAuthNeeded) {
+        // Set flag that auth was requested specifically for this event
+        setAuthRequested(true);
         onAuthNeeded();
       }
       return;
@@ -143,9 +153,7 @@ function EventCard({ event, user, onAuthNeeded }) {
       console.error("Error checking user profile:", error);
     } finally {
       setLoading(false);
-    }
-    
-    // Show the booking form
+    }    
     setShowBookingForm(true);
   };
   
@@ -477,7 +485,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                   : eventStatus === 'past'
                     ? 'Event Ended'
                     : 'Booking Closed'
-                : user ? (event.paymentAmount > 0 ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Sign In to Book'}
+                : user ? (event.paymentAmount > 0 ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Book'}
         </button>
       </div>
     </div>

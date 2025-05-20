@@ -510,7 +510,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                   ? bookingStatus === 'cancelled'
                     ? 'Book Again'
                     : (event.paymentAmount > 0 
-                      ? `Book Now - €${event.paymentAmount}` 
+                      ? `Book Now` 
                       : 'Book Now') 
                   : 'Book'}
         </button>

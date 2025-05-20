@@ -47,6 +47,7 @@ function PaymentsView({ eventId = null }) {
     try {
       // First, try to fetch payments from dedicated payments collection
       let paymentsData = [];
+      let paymentMap = new Map(); // Use a Map to avoid duplicates by paymentId
       
       // Create a query for the payments collection
       let paymentsQuery;
@@ -68,9 +69,11 @@ function PaymentsView({ eventId = null }) {
       if (!paymentsSnapshot.empty) {
         paymentsSnapshot.forEach(doc => {
           const data = doc.data();
-          paymentsData.push({
+          const paymentId = data.paymentId || data.id || 'unknown';
+          
+          const payment = {
             id: doc.id,
-            paymentId: data.paymentId || 'N/A',
+            paymentId: paymentId,
             amount: data.amount || 0,
             currency: data.currency || 'EUR',
             status: data.status || 'PENDING',
@@ -79,13 +82,22 @@ function PaymentsView({ eventId = null }) {
             createdAt: data.createdAt,
             bookingId: data.bookingId || null,
             userEmail: data.payerEmail || 'N/A',
-            // Extract PayPal payer email from various possible locations
-            paypalEmail: data.payerEmail || 
-                         (data.fullDetails?.payer?.email_address) || 
+            // Extract PayPal payer email from various possible locations, prioritizing the payer info
+            paypalEmail: (data.fullDetails?.payer?.email_address) || 
                          (data.payer?.email) || 
+                         // Only use payerEmail if it looks like a PayPal email (contains sandbox or paypal)
+                         (data.payerEmail && (data.payerEmail.includes('sandbox') || data.payerEmail.includes('paypal')) ? data.payerEmail : null) || 
                          'N/A',
             source: 'paymentCollection'
-          });
+          };
+          
+          // Use the paymentId as the key for deduplication
+          if (!paymentMap.has(paymentId) || 
+              // If we already have this ID but the current entry has more info, prefer this one
+              (paymentMap.has(paymentId) && 
+               (payment.bookingId && !paymentMap.get(paymentId).bookingId))) {
+            paymentMap.set(paymentId, payment);
+          }
         });
       }
       
@@ -99,15 +111,30 @@ function PaymentsView({ eventId = null }) {
       bookingsSnapshot.forEach(doc => {
         const booking = doc.data();
         if (booking.payment) {
-          // Check if we already have this payment in our list (to avoid duplicates)
-          const paymentId = booking.payment.id;
-          const existingPayment = paymentId ? 
-            paymentsData.find(p => p.paymentId === paymentId) : null;
+          const paymentId = booking.payment.id || 'unknown';
           
-          if (!existingPayment) {
-            paymentsData.push({
+          // If we already have this payment in our map, merge the info from booking
+          if (paymentMap.has(paymentId)) {
+            const existingPayment = paymentMap.get(paymentId);
+            
+            // Update the existing payment with additional info from the booking
+            const updatedPayment = {
+              ...existingPayment,
+              bookingId: existingPayment.bookingId || doc.id,
+              // Merge user email info, preferring the one from contact info if available
+              userEmail: booking.contactInfo?.email || existingPayment.userEmail,
+              // Keep existing PayPal email or update if we have better info from the booking
+              paypalEmail: existingPayment.paypalEmail !== 'N/A' 
+                ? existingPayment.paypalEmail 
+                : booking.payment?.payer?.email || booking.paymentDetails?.payerEmail || 'N/A'
+            };
+            
+            paymentMap.set(paymentId, updatedPayment);
+          } else {
+            // This is a new payment not found in the payments collection
+            const newPayment = {
               id: doc.id,
-              paymentId: booking.payment.id || 'N/A',
+              paymentId: paymentId,
               amount: booking.payment.amount || 0,
               currency: booking.payment.currency || 'EUR',
               status: booking.payment.status || 'PENDING',
@@ -118,13 +145,18 @@ function PaymentsView({ eventId = null }) {
               userEmail: booking.contactInfo?.email || 'N/A',
               // Extract PayPal payer email from various possible locations
               paypalEmail: booking.payment?.payer?.email || 
-                          (booking.paymentDetails?.payerEmail) || 
+                          booking.paymentDetails?.payerEmail || 
                           'N/A',
               source: 'bookingCollection'
-            });
+            };
+            
+            paymentMap.set(paymentId, newPayment);
           }
         }
       });
+      
+      // Convert the Map back to an array
+      paymentsData = Array.from(paymentMap.values());
       
       // Apply filter
       if (filter === 'completed') {
@@ -297,7 +329,7 @@ function PaymentsView({ eventId = null }) {
             disabled={loading}
           >
             <svg className={`w-4 h-4 mr-2 ${loading || autoRefresh ? 'animate-spin' : ''}`} 
-                 style={(loading || autoRefresh) ? { animationDuration: '3s' } : {}}
+                 style={{animationDuration: '3s'}}
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -455,11 +487,11 @@ function PaymentsView({ eventId = null }) {
                       {payment.userEmail || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {payment.paypalEmail && payment.paypalEmail !== 'N/A' && payment.paypalEmail !== payment.userEmail 
-                        ? payment.paypalEmail 
-                        : payment.paypalEmail === payment.userEmail
-                          ? <span className="italic text-gray-400">Same as user</span>
-                          : 'N/A'}
+                      {payment.paypalEmail && payment.paypalEmail !== 'N/A' ? 
+                        payment.userEmail === payment.paypalEmail ? 
+                          <span className="italic text-gray-400">Same as user</span> : 
+                          payment.paypalEmail : 
+                        'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(payment.createdAt)}

@@ -435,12 +435,21 @@ export const bookEventSimple = async (eventId, userData) => {
       throw new Error("Booking is closed for this event");
     }
     
+    // Check if payment is already completed
+    const paymentCompleted = userData.paymentDetails && 
+                            (userData.paymentDetails.status === 'COMPLETED' || 
+                             userData.paymentDetails.status === 'completed');
+    
     // 4. Create the booking with payment details - safely handling undefined values
     const newBooking = {
       userId: userData.userId,
       eventId: eventId,
-      status: eventData.paymentAmount > 0 ? 'payment-pending' : 'confirmed',
-      paymentStatus: eventData.paymentAmount > 0 ? 'PENDING' : 'NOT_REQUIRED',
+      // If payment is required but not yet completed, set status to payment-pending
+      // Otherwise, set to confirmed
+      status: (eventData.paymentAmount > 0 && !paymentCompleted) ? 'payment-pending' : 'confirmed',
+      // Same logic for payment status
+      paymentStatus: (eventData.paymentAmount > 0 && !paymentCompleted) ? 'PENDING' : 
+                    (eventData.paymentAmount > 0) ? 'COMPLETED' : 'NOT_REQUIRED',
       createdAt: serverTimestamp(),
       contactInfo: {
         email: userData.email || '',
@@ -503,10 +512,15 @@ export const bookEventSimple = async (eventId, userData) => {
     }
     
     // 6. Update available spots count in the event - only reduce if payment not required or already completed
-    if (newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED') {
+    // FIX: Use paymentCompleted variable here to ensure consistency
+    if (newBooking.status === 'confirmed' || paymentCompleted) {
       await updateDoc(eventRef, {
         spotsLeft: eventData.spotsLeft - 1,
-        attendees: arrayUnion(userData.userId)
+        attendees: arrayUnion(userData.userId),
+        // Also remove from pendingBookings if it was there
+        ...(eventData.pendingBookings?.includes(newBookingId) 
+          ? { pendingBookings: arrayRemove(newBookingId) } 
+          : {})
       });
     } else {
       // For pending payments, don't reduce the available spots yet
@@ -525,9 +539,16 @@ export const bookEventSimple = async (eventId, userData) => {
       
       if (userDoc.exists()) {
         const userUpdates = {
-          // Only add event to eventsBooked array if payment is not required or completed
-          ...(newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED' 
-              ? { eventsBooked: arrayUnion(eventId) } 
+          // FIX: Only add event to eventsBooked array if payment is completed or not required
+          // Use paymentCompleted variable for consistency
+          ...(newBooking.status === 'confirmed' || paymentCompleted
+              ? { 
+                  eventsBooked: arrayUnion(eventId),
+                  // Also remove from pendingBookings if payment is completed
+                  ...(userDoc.data().pendingBookings?.includes(newBookingId) 
+                    ? { pendingBookings: arrayRemove(newBookingId) } 
+                    : {})
+                } 
               : { pendingBookings: arrayUnion(newBookingId) }),
           updatedAt: serverTimestamp()
         };
@@ -551,7 +572,7 @@ export const bookEventSimple = async (eventId, userData) => {
       success: true, 
       message: "Booking created successfully",
       bookingId: newBookingId,
-      requiresPayment: eventData.paymentAmount > 0 && newBooking.paymentStatus !== 'COMPLETED',
+      requiresPayment: eventData.paymentAmount > 0 && !paymentCompleted,
       status: newBooking.status
     };
   } catch (error) {

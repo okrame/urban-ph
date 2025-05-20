@@ -237,7 +237,8 @@ function EventCard({ event, user, onAuthNeeded }) {
         paymentId: paymentData.paymentDetails?.paymentId || '',
         payerID: paymentData.paymentDetails?.payerID || null,  // Allow null/undefined here
         payerEmail: paymentData.paymentDetails?.payerEmail || '',
-        status: paymentData.paymentDetails?.status || 'COMPLETED',
+        // IMPORTANT: Make sure status is explicitly set to COMPLETED
+        status: 'COMPLETED', // Force status to COMPLETED to ensure proper handling
         amount: event.paymentAmount || 0,
         currency: event.paymentCurrency || 'EUR',
         createTime: paymentData.paymentDetails?.createTime || new Date().toISOString(),

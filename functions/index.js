@@ -295,12 +295,98 @@ async function updateBookingStatus(db, bookingId, status) {
     const bookingDoc = await bookingRef.get();
     
     if (bookingDoc.exists) {
+      const bookingData = bookingDoc.data();
+      
+      // Update booking status and payment status
       await bookingRef.update({
         paymentStatus: status,
+        // If payment is now completed, also change the main status to confirmed
+        ...(status === "COMPLETED" && bookingData.status === "payment-pending" 
+            ? { status: "confirmed" } 
+            : {}),
         updatedAt: new Date()
       });
       
       console.log(`Updated booking ${bookingId} payment status to ${status}`);
+      
+      // If payment is completed, also update event and user collections
+      if (status === "COMPLETED" && bookingData.eventId && bookingData.userId) {
+        // 1. Update the event (add user to attendees, decrease spots, remove from pendingBookings)
+        try {
+          const eventRef = db.collection("events").doc(bookingData.eventId);
+          const eventDoc = await eventRef.get();
+          
+          if (eventDoc.exists) {
+            const eventData = eventDoc.data();
+            const attendees = eventData.attendees || [];
+            const pendingBookings = eventData.pendingBookings || [];
+            
+            // Only update if needed
+            if (!attendees.includes(bookingData.userId) || pendingBookings.includes(bookingId)) {
+              // Prepare update data
+              const updateData = {};
+              
+              // Add user to attendees if not already there
+              if (!attendees.includes(bookingData.userId)) {
+                updateData.attendees = [...attendees, bookingData.userId];
+                updateData.spotsLeft = Math.max(0, (eventData.spotsLeft || 0) - 1);
+              }
+              
+              // Remove booking from pendingBookings if it's there
+              if (pendingBookings.includes(bookingId)) {
+                updateData.pendingBookings = pendingBookings.filter(id => id !== bookingId);
+              }
+              
+              // Only update if we have changes
+              if (Object.keys(updateData).length > 0) {
+                await eventRef.update(updateData);
+                console.log(`Updated event ${bookingData.eventId} for booking ${bookingId}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error updating event for booking ${bookingId}:`, error);
+        }
+        
+        // 2. Update the user (add event to eventsBooked, remove from pendingBookings)
+        try {
+          const userRef = db.collection("users").doc(bookingData.userId);
+          const userDoc = await userRef.get();
+          
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const eventsBooked = userData.eventsBooked || [];
+            const pendingBookings = userData.pendingBookings || [];
+            
+            // Only update if needed
+            if (!eventsBooked.includes(bookingData.eventId) || pendingBookings.includes(bookingId)) {
+              // Prepare update data
+              const updateData = {
+                updatedAt: new Date()
+              };
+              
+              // Add event to eventsBooked if not already there
+              if (!eventsBooked.includes(bookingData.eventId)) {
+                updateData.eventsBooked = [...eventsBooked, bookingData.eventId];
+              }
+              
+              // Remove booking from pendingBookings if it's there
+              if (pendingBookings.includes(bookingId)) {
+                updateData.pendingBookings = pendingBookings.filter(id => id !== bookingId);
+              }
+              
+              // Only update if we have changes
+              if (Object.keys(updateData).length > 1) { // > 1 because updatedAt is always there
+                await userRef.update(updateData);
+                console.log(`Updated user ${bookingData.userId} for booking ${bookingId}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error updating user for booking ${bookingId}:`, error);
+        }
+      }
+      
       return true;
     } else {
       console.log(`Booking ${bookingId} not found`);
@@ -311,6 +397,7 @@ async function updateBookingStatus(db, bookingId, status) {
     return false;
   }
 }
+
 
 // Helper function to find booking by event and user
 async function updateBookingByEventAndUser(db, eventId, userId, status) {
@@ -329,13 +416,101 @@ async function updateBookingByEventAndUser(db, eventId, userId, status) {
     if (!bookingsSnapshot.empty) {
       // Update the first matching booking
       const bookingDoc = bookingsSnapshot.docs[0];
+      const bookingData = bookingDoc.data();
       
-      await bookingDoc.ref.update({
+      // Update booking status
+      const updateData = {
         paymentStatus: status,
         updatedAt: new Date()
-      });
+      };
+      
+      // If payment is now completed, also change the main status to confirmed
+      if (status === "COMPLETED" && bookingData.status === "payment-pending") {
+        updateData.status = "confirmed";
+      }
+      
+      await bookingDoc.ref.update(updateData);
       
       console.log(`Updated booking ${bookingDoc.id} by event/user match to status ${status}`);
+      
+      // If payment is completed, also update event and user collections
+      if (status === "COMPLETED") {
+        // 1. Update the event (add user to attendees, decrease spots, remove from pendingBookings)
+        try {
+          const eventRef = db.collection("events").doc(eventId);
+          const eventDoc = await eventRef.get();
+          
+          if (eventDoc.exists) {
+            const eventData = eventDoc.data();
+            const attendees = eventData.attendees || [];
+            const pendingBookings = eventData.pendingBookings || [];
+            
+            // Only update if needed
+            if (!attendees.includes(userId) || pendingBookings.includes(bookingDoc.id)) {
+              // Prepare update data
+              const updateData = {};
+              
+              // Add user to attendees if not already there
+              if (!attendees.includes(userId)) {
+                updateData.attendees = [...attendees, userId];
+                updateData.spotsLeft = Math.max(0, (eventData.spotsLeft || 0) - 1);
+              }
+              
+              // Remove booking from pendingBookings if it's there
+              if (pendingBookings.includes(bookingDoc.id)) {
+                updateData.pendingBookings = pendingBookings.filter(id => id !== bookingDoc.id);
+              }
+              
+              // Only update if we have changes
+              if (Object.keys(updateData).length > 0) {
+                await eventRef.update(updateData);
+                console.log(`Updated event ${eventId} for booking ${bookingDoc.id}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error updating event for booking ${bookingDoc.id}:`, error);
+        }
+        
+        // 2. Update the user (add event to eventsBooked, remove from pendingBookings)
+        try {
+          const userRef = db.collection("users").doc(userId);
+          const userDoc = await userRef.get();
+          
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const eventsBooked = userData.eventsBooked || [];
+            const pendingBookings = userData.pendingBookings || [];
+            
+            // Only update if needed
+            if (!eventsBooked.includes(eventId) || pendingBookings.includes(bookingDoc.id)) {
+              // Prepare update data
+              const updateData = {
+                updatedAt: new Date()
+              };
+              
+              // Add event to eventsBooked if not already there
+              if (!eventsBooked.includes(eventId)) {
+                updateData.eventsBooked = [...eventsBooked, eventId];
+              }
+              
+              // Remove booking from pendingBookings if it's there
+              if (pendingBookings.includes(bookingDoc.id)) {
+                updateData.pendingBookings = pendingBookings.filter(id => id !== bookingDoc.id);
+              }
+              
+              // Only update if we have changes
+              if (Object.keys(updateData).length > 1) { // > 1 because updatedAt is always there
+                await userRef.update(updateData);
+                console.log(`Updated user ${userId} for booking ${bookingDoc.id}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error updating user for booking ${bookingDoc.id}:`, error);
+        }
+      }
+      
       return true;
     } else {
       console.log(`No booking found for eventId=${eventId}, userId=${userId}`);

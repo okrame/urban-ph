@@ -46,82 +46,7 @@ export const savePaymentRecord = async (paymentData) => {
   }
 };
 
-// Update payment status (e.g., when receiving webhook from PayPal)
-export const updatePaymentStatus = async (paymentId, newStatus, details = {}) => {
-  try {
-    // Find payment by PayPal payment ID
-    const paymentsQuery = query(
-      collection(db, 'payments'),
-      where('paymentId', '==', paymentId)
-    );
-    
-    const snapshot = await getDocs(paymentsQuery);
-    
-    if (snapshot.empty) {
-      console.log(`Payment with ID ${paymentId} not found, checking order ID...`);
-      
-      // Try finding by order ID if available
-      if (details.orderId) {
-        const orderQuery = query(
-          collection(db, 'payments'),
-          where('orderId', '==', details.orderId)
-        );
-        
-        const orderSnapshot = await getDocs(orderQuery);
-        
-        if (!orderSnapshot.empty) {
-          const paymentDoc = orderSnapshot.docs[0];
-          
-          // Update payment with real PayPal ID and status
-          await updateDoc(doc(db, 'payments', paymentDoc.id), {
-            paymentId: paymentId, // Update with real PayPal transaction ID
-            status: newStatus,
-            updatedAt: serverTimestamp(),
-            updateDetails: details
-          });
-          
-          console.log(`Updated payment by order ID: ${details.orderId}`);
-          
-          // Update booking if needed
-          await updateRelatedBooking(paymentDoc.data(), newStatus, details);
-          
-          return true;
-        }
-      }
-      
-      // No matching payment found - create a new record
-      console.log(`Creating new payment record for ${paymentId}`);
-      
-      await addDoc(collection(db, 'payments'), {
-        paymentId: paymentId,
-        status: newStatus,
-        updateDetails: details,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        source: 'webhook'
-      });
-      
-      return true;
-    }
-    
-    // Update existing payment found by payment ID
-    const paymentDoc = snapshot.docs[0];
-    
-    await updateDoc(doc(db, 'payments', paymentDoc.id), {
-      status: newStatus,
-      updatedAt: serverTimestamp(),
-      updateDetails: details
-    });
-    
-    // Update any related booking
-    await updateRelatedBooking(paymentDoc.data(), newStatus, details);
-    
-    return true;
-  } catch (error) {
-    console.error('Error updating payment status:', error);
-    throw error;
-  }
-};
+
 
 // Helper function to update related booking
 async function updateRelatedBooking(paymentData, newStatus, details) {
@@ -132,14 +57,98 @@ async function updateRelatedBooking(paymentData, newStatus, details) {
       const bookingDoc = await getDoc(bookingRef);
       
       if (bookingDoc.exists()) {
-        await updateDoc(bookingRef, {
+        const bookingData = bookingDoc.data();
+        
+        // Update booking status fields
+        const updateData = {
           paymentStatus: newStatus,
           updatedAt: serverTimestamp(),
           paymentDetails: details
-        });
+        };
+        
+        // If payment is now completed, also update booking status
+        if ((newStatus === 'COMPLETED' || newStatus === 'completed') && 
+            bookingData.status === 'payment-pending') {
+          updateData.status = 'confirmed';
+        }
+        
+        await updateDoc(bookingRef, updateData);
         
         console.log(`Updated booking ${paymentData.bookingId} payment status to ${newStatus}`);
+        
+        // If payment is completed, also update event and user
+        if (newStatus === 'COMPLETED' || newStatus === 'completed') {
+          // 1. Update event - add user to attendees and remove from pendingBookings
+          try {
+            const eventRef = doc(db, 'events', bookingData.eventId);
+            const eventDoc = await getDoc(eventRef);
+            
+            if (eventDoc.exists()) {
+              const eventData = eventDoc.data();
+              const pendingBookings = eventData.pendingBookings || [];
+              const attendees = eventData.attendees || [];
+              
+              // Only update if needed
+              if (!attendees.includes(bookingData.userId) || 
+                  pendingBookings.includes(paymentData.bookingId)) {
+                
+                await updateDoc(eventRef, {
+                  // Add user to attendees if not already there
+                  ...(attendees.includes(bookingData.userId) ? {} : { 
+                    attendees: arrayUnion(bookingData.userId),
+                    // Decrease available spots
+                    spotsLeft: Math.max(0, (eventData.spotsLeft || 0) - 1)
+                  }),
+                  // Remove booking from pendingBookings if it's there
+                  ...(pendingBookings.includes(paymentData.bookingId) ? {
+                    pendingBookings: arrayRemove(paymentData.bookingId)
+                  } : {})
+                });
+                
+                console.log(`Updated event ${bookingData.eventId} for booking ${paymentData.bookingId}`);
+              }
+            }
+          } catch (error) {
+            console.error(`Error updating event for booking ${paymentData.bookingId}:`, error);
+          }
+          
+          // 2. Update user - add event to eventsBooked and remove from pendingBookings
+          try {
+            const userRef = doc(db, 'users', bookingData.userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const eventsBooked = userData.eventsBooked || [];
+              const pendingBookings = userData.pendingBookings || [];
+              
+              // Only update if needed
+              if (!eventsBooked.includes(bookingData.eventId) || 
+                  pendingBookings.includes(paymentData.bookingId)) {
+                
+                await updateDoc(userRef, {
+                  // Add event to eventsBooked if not already there
+                  ...(eventsBooked.includes(bookingData.eventId) ? {} : { 
+                    eventsBooked: arrayUnion(bookingData.eventId) 
+                  }),
+                  // Remove booking from pendingBookings if it's there
+                  ...(pendingBookings.includes(paymentData.bookingId) ? {
+                    pendingBookings: arrayRemove(paymentData.bookingId)
+                  } : {}),
+                  updatedAt: serverTimestamp()
+                });
+                
+                console.log(`Updated user ${bookingData.userId} for booking ${paymentData.bookingId}`);
+              }
+            }
+          } catch (error) {
+            console.error(`Error updating user for booking ${paymentData.bookingId}:`, error);
+          }
+        }
+        
         return true;
+      } else {
+        console.log(`Booking ${paymentData.bookingId} not found`);
       }
     }
     
@@ -156,20 +165,90 @@ async function updateRelatedBooking(paymentData, newStatus, details) {
       if (!bookingsSnapshot.empty) {
         // Update the first matching booking
         const bookingDoc = bookingsSnapshot.docs[0];
+        const bookingData = bookingDoc.data();
         
-        await updateDoc(bookingDoc.ref, {
+        // Update booking status fields
+        const updateData = {
           paymentStatus: newStatus,
           updatedAt: serverTimestamp(),
           paymentDetails: details
-        });
+        };
         
-        console.log(`Updated booking ${bookingDoc.id} by event/user match`);
+        // If payment is now completed, also update booking status
+        if ((newStatus === 'COMPLETED' || newStatus === 'completed') && 
+            bookingData.status === 'payment-pending') {
+          updateData.status = 'confirmed';
+        }
+        
+        await updateDoc(bookingDoc.ref, updateData);
+        
+        console.log(`Updated booking ${bookingDoc.id} by event/user match to status ${newStatus}`);
         
         // Also update the payment record with the booking ID
         if (paymentData.id) {
           await updateDoc(doc(db, 'payments', paymentData.id), {
             bookingId: bookingDoc.id
           });
+        }
+        
+        // If payment is completed, also update event and user (same as above)
+        if (newStatus === 'COMPLETED' || newStatus === 'completed') {
+          // Same implementation as above...
+          // 1. Update event
+          try {
+            const eventRef = doc(db, 'events', bookingData.eventId);
+            const eventDoc = await getDoc(eventRef);
+            
+            if (eventDoc.exists()) {
+              const eventData = eventDoc.data();
+              const pendingBookings = eventData.pendingBookings || [];
+              const attendees = eventData.attendees || [];
+              
+              if (!attendees.includes(bookingData.userId) || 
+                  pendingBookings.includes(bookingDoc.id)) {
+                
+                await updateDoc(eventRef, {
+                  ...(attendees.includes(bookingData.userId) ? {} : { 
+                    attendees: arrayUnion(bookingData.userId),
+                    spotsLeft: Math.max(0, (eventData.spotsLeft || 0) - 1)
+                  }),
+                  ...(pendingBookings.includes(bookingDoc.id) ? {
+                    pendingBookings: arrayRemove(bookingDoc.id)
+                  } : {})
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Error updating event for booking ${bookingDoc.id}:`, error);
+          }
+          
+          // 2. Update user
+          try {
+            const userRef = doc(db, 'users', bookingData.userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const eventsBooked = userData.eventsBooked || [];
+              const pendingBookings = userData.pendingBookings || [];
+              
+              if (!eventsBooked.includes(bookingData.eventId) || 
+                  pendingBookings.includes(bookingDoc.id)) {
+                
+                await updateDoc(userRef, {
+                  ...(eventsBooked.includes(bookingData.eventId) ? {} : { 
+                    eventsBooked: arrayUnion(bookingData.eventId) 
+                  }),
+                  ...(pendingBookings.includes(bookingDoc.id) ? {
+                    pendingBookings: arrayRemove(bookingDoc.id)
+                  } : {}),
+                  updatedAt: serverTimestamp()
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Error updating user for booking ${bookingDoc.id}:`, error);
+          }
         }
         
         return true;
@@ -295,7 +374,11 @@ export const processBookingPayment = async (bookingData, paymentDetails) => {
     // Create booking with payment details
     const bookingResult = await bookEventSimple(bookingData.eventId, {
       ...bookingData.userData,
-      paymentDetails
+      paymentDetails: {
+        ...paymentDetails,
+        // Make sure status is properly passed
+        status: paymentDetails.status || 'COMPLETED' // Default to COMPLETED if not provided
+      }
     });
     
     // Get the booking ID if available
@@ -307,7 +390,7 @@ export const processBookingPayment = async (bookingData, paymentDetails) => {
       payerId: paymentDetails.payerId,
       amount: bookingData.amount,
       currency: 'EUR',
-      status: paymentDetails.status,
+      status: paymentDetails.status || 'COMPLETED', // Ensure status is properly passed
       eventId: bookingData.eventId,
       userId: bookingData.userData.userId,
       payerEmail: bookingData.userData.email,
@@ -323,6 +406,85 @@ export const processBookingPayment = async (bookingData, paymentDetails) => {
     throw error;
   }
 };
+
+// Update payment status (e.g., when receiving webhook from PayPal)
+export const updatePaymentStatus = async (paymentId, newStatus, details = {}) => {
+  try {
+    // Find payment by PayPal payment ID
+    const paymentsQuery = query(
+      collection(db, 'payments'),
+      where('paymentId', '==', paymentId)
+    );
+    
+    const snapshot = await getDocs(paymentsQuery);
+    
+    if (snapshot.empty) {
+      console.log(`Payment with ID ${paymentId} not found, checking order ID...`);
+      
+      // Try finding by order ID if available
+      if (details.orderId) {
+        const orderQuery = query(
+          collection(db, 'payments'),
+          where('orderId', '==', details.orderId)
+        );
+        
+        const orderSnapshot = await getDocs(orderQuery);
+        
+        if (!orderSnapshot.empty) {
+          const paymentDoc = orderSnapshot.docs[0];
+          
+          // Update payment with real PayPal ID and status
+          await updateDoc(doc(db, 'payments', paymentDoc.id), {
+            paymentId: paymentId, // Update with real PayPal transaction ID
+            status: newStatus,
+            updatedAt: serverTimestamp(),
+            updateDetails: details
+          });
+          
+          console.log(`Updated payment by order ID: ${details.orderId}`);
+          
+          // Update booking if needed
+          await updateRelatedBooking(paymentDoc.data(), newStatus, details);
+          
+          return true;
+        }
+      }
+      
+      // No matching payment found - create a new record
+      console.log(`Creating new payment record for ${paymentId}`);
+      
+      await addDoc(collection(db, 'payments'), {
+        paymentId: paymentId,
+        status: newStatus,
+        updateDetails: details,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        source: 'webhook'
+      });
+      
+      return true;
+    }
+    
+    // Update existing payment found by payment ID
+    const paymentDoc = snapshot.docs[0];
+    
+    await updateDoc(doc(db, 'payments', paymentDoc.id), {
+      status: newStatus,
+      updatedAt: serverTimestamp(),
+      updateDetails: details
+    });
+    
+    // Update any related booking
+    await updateRelatedBooking(paymentDoc.data(), newStatus, details);
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    throw error;
+  }
+};
+
+
 
 // Verify payment with PayPal
 export const verifyPayment = async (paymentId, amount, currency) => {

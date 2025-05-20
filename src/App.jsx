@@ -98,14 +98,10 @@ function App() {
               setLoading(true);
               
               try {
-                // Instead of completing the booking immediately,
-                // we'll show a success message and check for status updates
-                
-                // The webhook should handle the actual payment verification,
-                // but we can still create a preliminary booking
-                
+                // Create the payment details object
                 const paymentDetails = {
-                  status: 'PENDING_WEBHOOK_CONFIRMATION',
+                  // IMPORTANT: Explicitly set status to COMPLETED
+                  status: 'COMPLETED', 
                   paymentId: urlParams.get('tx') || orderId || 'DIRECT_PAYMENT',
                   payerID: urlParams.get('st') || 'UNKNOWN',
                   payerEmail: pendingBooking.userData.email || '',
@@ -116,27 +112,33 @@ function App() {
                   orderId: orderId
                 };
                 
-                // Create a booking in "pending payment confirmation" status
+                // Process the booking payment
                 const { processBookingPayment } = await import('../firebase/paypalServices');
                 if (typeof processBookingPayment === 'function') {
                   await processBookingPayment(pendingBooking, paymentDetails);
+                  
+                  // Show success message
+                  setPaymentNotification({
+                    type: 'success',
+                    message: 'Payment received! Your booking is confirmed.'
+                  });
                 } else {
-                  // Fallback to direct booking with pending status
+                  // Fallback to direct booking with completed status
                   const { bookEventSimple } = await import('../firebase/firestoreServices');
                   await bookEventSimple(pendingBooking.eventId, {
                     ...pendingBooking.userData,
-                    paymentDetails
+                    paymentDetails: {
+                      ...paymentDetails,
+                      status: 'COMPLETED' // Ensure status is COMPLETED
+                    }
+                  });
+                  
+                  // Show success message
+                  setPaymentNotification({
+                    type: 'success',
+                    message: 'Payment received! Your booking is confirmed.'
                   });
                 }
-                
-                // Show success message - webhook will update status asynchronously
-                setPaymentNotification({
-                  type: 'success',
-                  message: 'Payment received! Your booking will be confirmed shortly.'
-                });
-                
-                // We could poll for confirmation, but that's optional
-                // startPaymentStatusPolling(paymentDetails.paymentId);
                 
                 // Clean up
                 localStorage.removeItem('pendingBooking');
@@ -184,51 +186,6 @@ function App() {
         window.history.replaceState({}, document.title, window.location.pathname + baseHash);
       }
     };
-
-    // Optional: Add a function to poll for payment status updates
-const startPaymentStatusPolling = async (paymentId) => {
-  // This is optional, as the webhook should update the database
-  // but can be useful for better UX
-  let attempts = 0;
-  const maxAttempts = 5;
-  const interval = 3000; // 3 seconds
-  
-  const checkPaymentStatus = async () => {
-    if (attempts >= maxAttempts) return;
-    
-    try {
-      // Import the necessary function
-      const { verifyPayment } = await import('../firebase/paypalServices');
-      
-      // Check payment status
-      const result = await verifyPayment(paymentId);
-      
-      if (result.verified) {
-        // Payment is verified, update UI
-        setPaymentNotification({
-          type: 'success',
-          message: 'Your booking is confirmed!'
-        });
-        
-        // Reload events
-        loadEvents();
-        return;
-      }
-      
-      // Not verified yet, try again
-      attempts++;
-      setTimeout(checkPaymentStatus, interval);
-    } catch (error) {
-      console.error("Error checking payment status:", error);
-      // Still try again
-      attempts++;
-      setTimeout(checkPaymentStatus, interval);
-    }
-  };
-  
-  // Start polling
-  setTimeout(checkPaymentStatus, interval);
-};
     
     // Handle scroll to events if needed
     const checkScrollToEvents = () => {

@@ -10,13 +10,12 @@ import {
   deleteEvent
 } from '../../firebase/adminServices';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getDoc, doc, collection, query, where, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getDoc, doc, collection, query, where, getDocs, updateDoc, serverTimestamp, arrayRemove } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
 import Navbar from '../components/Navbar';
 import EventForm from '../components/EventForm';
 import UsersDatabase from '../components/UsersDatabase';
 import PaymentsView from '../components/PaymentsView';
-
 
 function AdminPanel() {
   const [stats, setStats] = useState(null);
@@ -26,12 +25,17 @@ function AdminPanel() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [activeTab, setActiveTab] = useState('events'); // 'events' or 'create' or 'db' or 'payments'
   const [eventsTab, setEventsTab] = useState('active'); // 'active', 'upcoming', or 'past'
+  // Track attendance locally (not persisted to Firebase)
+  const [attendance, setAttendance] = useState({});
+  // Track expanded request text fields
+  const [expandedRequests, setExpandedRequests] = useState({});
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -174,7 +178,9 @@ function AdminPanel() {
 
           return {
             ...booking,
-            userFullName
+            userFullName,
+            // Add the specificRequest field from booking data
+            specificRequest: booking.specificRequest || ''
           };
         }));
 
@@ -255,6 +261,143 @@ function AdminPanel() {
       console.error('Error deleting event:', error);
       alert(`Error deleting event: ${error.message}`);
     }
+  };
+
+  // Delete a booking (attendee)
+  const handleDeleteBooking = async (booking, e) => {
+    e.preventDefault();
+    
+    if (!confirm(`Are you sure you want to remove ${booking.userFullName || booking.email} from this event?`)) {
+      return;
+    }
+    
+    if (!selectedEvent || !booking.userId) {
+      alert('Missing event or user information');
+      return;
+    }
+    
+    setDeleteLoading(booking.id);
+    
+    try {
+      // 1. Remove user from event's attendees array
+      const eventRef = doc(db, 'events', selectedEvent.id);
+      await updateDoc(eventRef, {
+        attendees: arrayRemove(booking.userId),
+        // Increase available spots by 1
+        spotsLeft: (selectedEvent.spotsLeft || 0) + 1
+      });
+      
+      // 2. Update user's eventsBooked array to remove this event
+      const userRef = doc(db, 'users', booking.userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        await updateDoc(userRef, {
+          eventsBooked: arrayRemove(selectedEvent.id)
+        });
+      }
+      
+      // 3. Set booking status to 'cancelled'
+      // We don't actually delete the booking record for audit purposes
+      const bookingRef = doc(db, 'bookings', booking.id);
+      await updateDoc(bookingRef, {
+        status: 'cancelled',
+        cancelledAt: serverTimestamp()
+      });
+      
+      // 4. Remove from local attendance tracking
+      if (attendance[booking.id]) {
+        const newAttendance = {...attendance};
+        delete newAttendance[booking.id];
+        setAttendance(newAttendance);
+      }
+      
+      // 5. Update UI
+      // Remove booking from the list
+      setBookings(prev => prev.filter(b => b.id !== booking.id));
+      
+      // 6. Refresh event data
+      await fetchAllEventTypes();
+      if (selectedEvent) {
+        // Re-fetch specific event data
+        const eventRef = doc(db, 'events', selectedEvent.id);
+        const eventDoc = await getDoc(eventRef);
+        if (eventDoc.exists()) {
+          const updatedEventData = eventDoc.data();
+          setSelectedEvent({
+            id: selectedEvent.id,
+            ...updatedEventData,
+            actualStatus: determineEventStatus(updatedEventData.date, updatedEventData.time)
+          });
+        }
+        
+        // Re-fetch bookings to sync bookings list with DB
+        await handleEventSelect(selectedEvent.id); 
+      }
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      alert(`Error removing attendee: ${error.message}`);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handle attendance check
+  const handleAttendanceCheck = (bookingId, checked) => {
+    setAttendance(prev => ({
+      ...prev,
+      [bookingId]: checked
+    }));
+  };
+
+  // Toggle expanded request text
+  const toggleRequestExpand = (bookingId) => {
+    setExpandedRequests(prev => ({
+      ...prev,
+      [bookingId]: !prev[bookingId]
+    }));
+  };
+
+  // Render request text with show more functionality
+  const renderRequestText = (bookingId, text) => {
+    if (!text) return 'None';
+    
+    const isExpanded = expandedRequests[bookingId];
+    const isLong = text.length > 25;
+    
+    if (isLong && !isExpanded) {
+      return (
+        <div>
+          {text.substring(0, 25)}...
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleRequestExpand(bookingId);
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 ml-1 underline"
+          >
+            Show more
+          </button>
+        </div>
+      );
+    } else if (isLong && isExpanded) {
+      return (
+        <div>
+          {text}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleRequestExpand(bookingId);
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 ml-1 underline"
+          >
+            Show less
+          </button>
+        </div>
+      );
+    }
+    
+    return text;
   };
 
   // Edit an event
@@ -550,21 +693,37 @@ function AdminPanel() {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead>
                             <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specific Request</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                              <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {bookings.map(booking => (
-                              <tr key={booking.id}>
+                              <tr key={booking.id} className={attendance[booking.id] ? "bg-green-50" : ""}>
+                                <td className="px-4 py-2 whitespace-nowrap text-center">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={!!attendance[booking.id]} 
+                                    onChange={(e) => handleAttendanceCheck(booking.id, e.target.checked)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                  />
+                                </td>
                                 <td className="px-4 py-2 whitespace-nowrap">
                                   {booking.userFullName || booking.displayName || 'N/A'}
                                 </td>
                                 <td className="px-4 py-2 whitespace-nowrap">{booking.email}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">{booking.phone}</td>
+                                <td className="px-4 py-2 max-w-xs overflow-hidden">
+                                  <div className="text-sm text-gray-700">
+                                    {renderRequestText(booking.id, booking.specificRequest)}
+                                  </div>
+                                </td>
                                 <td className="px-4 py-2 whitespace-nowrap">
                                   <span className={`px-2 py-1 text-xs rounded-full ${booking.status === 'confirmed'
                                     ? 'bg-green-100 text-green-800'
@@ -576,10 +735,33 @@ function AdminPanel() {
                                 <td className="px-4 py-2 whitespace-nowrap">
                                   {booking.createdAt?.toDate().toLocaleDateString() || 'N/A'}
                                 </td>
+                                <td className="px-4 py-2 whitespace-nowrap text-center">
+                                  <button
+                                    onClick={(e) => handleDeleteBooking(booking, e)}
+                                    disabled={deleteLoading === booking.id}
+                                    className={`text-red-600 hover:text-red-900 focus:outline-none ${deleteLoading === booking.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    title="Remove attendee"
+                                  >
+                                    {deleteLoading === booking.id ? (
+                                      <svg className="animate-spin h-5 w-5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                    ) : (
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
+                        <div className="text-xs text-gray-500 mt-4 bg-blue-50 p-2 rounded">
+                          <p>✓ <strong>Attendance tracking:</strong> Checking the attendance box is for your record only and won't be saved to the database.</p>
+                          <p>✓ <strong>Remove attendee:</strong> Clicking the trash icon will permanently remove the attendee from this event and free up a spot.</p>
+                        </div>
                       </div>
                     ) : (
                       <p className="text-center py-4">No bookings found for this event.</p>

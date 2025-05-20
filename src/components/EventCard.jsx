@@ -18,6 +18,7 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [imageError, setImageError] = useState(false);
   const [prevUserState, setPrevUserState] = useState(null);
   const [authRequested, setAuthRequested] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState('none'); // 'none', 'confirmed', 'cancelled'
   
   const [bookingFormData, setBookingFormData] = useState(null);
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
@@ -42,6 +43,7 @@ function EventCard({ event, user, onAuthNeeded }) {
     setAuthError(null);
     setShowBookingForm(false);
     setShowPaymentModal(false);
+    setBookingStatus('none');
   }, [user]);
 
   // Check event status and bookability
@@ -76,22 +78,30 @@ function EventCard({ event, user, onAuthNeeded }) {
       if (!user || !event.id) {
         setIsBooked(false);
         setBookingSuccess(false);
+        setBookingStatus('none');
         return;
       }
       
       try {
-        const isAlreadyBooked = await checkUserBooking(user.uid, event.id);
-        setIsBooked(isAlreadyBooked);
+        // Modified to return both the booking existence and status
+        const { isBooked: hasBooking, status } = await checkUserBooking(user.uid, event.id, true);
         
-        if (isAlreadyBooked) {
+        // Check if booking exists and is not cancelled
+        if (hasBooking && status !== 'cancelled') {
+          setIsBooked(true);
           setBookingSuccess(true);
+          setBookingStatus(status || 'confirmed');
         } else {
+          // If booking doesn't exist or was cancelled, user can book again
+          setIsBooked(false);
           setBookingSuccess(false);
+          setBookingStatus(status || 'none');
         }
       } catch (error) {
         console.error("Error checking booking status:", error);
         setIsBooked(false);
         setBookingSuccess(false);
+        setBookingStatus('none');
       }
     };
     
@@ -118,7 +128,8 @@ function EventCard({ event, user, onAuthNeeded }) {
       return;
     }
     
-    if (isBooked) {
+    // Only block if the booking is confirmed (not cancelled)
+    if (isBooked && bookingStatus !== 'cancelled') {
       setAuthError("You've already booked this event!");
       return;
     }
@@ -200,6 +211,7 @@ function EventCard({ event, user, onAuthNeeded }) {
         if (result.success) {
           setIsBooked(true);
           setBookingSuccess(true);
+          setBookingStatus('confirmed');
           setShowBookingForm(false);
         } else {
           setAuthError(result.message || "Booking failed. Please try again.");
@@ -242,6 +254,7 @@ function EventCard({ event, user, onAuthNeeded }) {
       if (result && result.success) {
         setIsBooked(true);
         setBookingSuccess(true);
+        setBookingStatus('confirmed');
         setShowPaymentModal(false);
       } else {
         throw new Error(result.message || "Unknown error during booking");
@@ -431,8 +444,16 @@ function EventCard({ event, user, onAuthNeeded }) {
           </div>
         )}
         
+        {/* Cancelled booking notification */}
+        {bookingStatus === 'cancelled' && (
+          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
+            <p className="font-bold">Your previous booking was cancelled</p>
+            <p className="mt-1">Your reservation was cancelled by the organizer. You can book again if you wish.</p>
+          </div>
+        )}
+        
         {/* Fully Booked Message with contact info */}
-        {isFullyBooked && (
+        {isFullyBooked && bookingStatus !== 'cancelled' && (
           <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
             <p className="font-bold">This event is fully booked!</p>
             <p className="mt-1">If you'd like to be notified if a spot becomes available, please email:</p>
@@ -451,7 +472,7 @@ function EventCard({ event, user, onAuthNeeded }) {
         )}
         
         {/* If event is active but booking window closed */}
-        {isClosedForBooking && (
+        {isClosedForBooking && bookingStatus !== 'cancelled' && (
           <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
             <p className="font-bold">Booking for this event is now closed</p>
             <p className="mt-1">Booking closes 1 hour after the event start time.</p>
@@ -464,28 +485,34 @@ function EventCard({ event, user, onAuthNeeded }) {
             e.stopPropagation();
             handleBookEvent();
           }}
-          disabled={isBooked || loading || !isBookable}
+          disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
           className={`w-full px-4 py-2 rounded font-bold text-white ${
-            isBooked || bookingSuccess
+            (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
               ? 'bg-green-500 cursor-not-allowed' 
-              : !isBookable
+              : (!isBookable && bookingStatus !== 'cancelled')
                 ? 'bg-gray-400 cursor-not-allowed'
                 : loading 
                   ? 'bg-gray-400 cursor-wait' 
                   : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {isBooked || bookingSuccess
+          {isBooked && bookingStatus !== 'cancelled'
             ? '✓ Booking Confirmed' 
             : loading 
               ? 'Processing...' 
-              : !isBookable
+              : (!isBookable && bookingStatus !== 'cancelled')
                 ? isFullyBooked 
                   ? 'Fully Booked'
                   : eventStatus === 'past'
                     ? 'Event Ended'
                     : 'Booking Closed'
-                : user ? (event.paymentAmount > 0 ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Book'}
+                : user 
+                  ? bookingStatus === 'cancelled'
+                    ? 'Book Again'
+                    : (event.paymentAmount > 0 
+                      ? `Book Now - €${event.paymentAmount}` 
+                      : 'Book Now') 
+                  : 'Book'}
         </button>
       </div>
     </div>

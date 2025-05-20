@@ -247,11 +247,11 @@ export const getActiveEventsByType = async (type) => {
   }
 };
 
-// Check if user is already booked for an event
-export const checkUserBooking = async (userId, eventId) => {
+// Check if user is already booked for an event, with optional status info
+export const checkUserBooking = async (userId, eventId, includeStatus = false) => {
   try {
     if (!userId || !eventId) {
-      return false;
+      return includeStatus ? { isBooked: false, status: 'none', bookingId: null } : false;
     }
     
     const bookingsQuery = query(
@@ -261,10 +261,27 @@ export const checkUserBooking = async (userId, eventId) => {
     );
     
     const bookingsSnapshot = await getDocs(bookingsQuery);
-    return !bookingsSnapshot.empty;
+    
+    if (bookingsSnapshot.empty) {
+      return includeStatus ? { isBooked: false, status: 'none', bookingId: null } : false;
+    }
+    
+    // If includeStatus is true, return the booking status as well
+    if (includeStatus) {
+      const bookingDoc = bookingsSnapshot.docs[0];
+      const bookingData = bookingDoc.data();
+      
+      return {
+        isBooked: true,
+        status: bookingData.status || 'confirmed',
+        bookingId: bookingDoc.id
+      };
+    }
+    
+    return true; // User has a booking
   } catch (error) {
     console.error("Error checking user booking status:", error);
-    return false; // Default to not booked if there's an error
+    return includeStatus ? { isBooked: false, status: 'error', bookingId: null } : false;
   }
 };
 
@@ -300,12 +317,95 @@ export const isEventBookable = async (eventId) => {
   }
 };
 
-// Create a booking with improved payment handling
+// Create a booking with improved payment handling or reactivate if cancelled
 export const bookEventSimple = async (eventId, userData) => {
   try {
-    // 1. Check if the user has already booked this event
-    const isAlreadyBooked = await checkUserBooking(userData.userId, eventId);
-    if (isAlreadyBooked) {
+    // 1. Check if the user already has a booking for this event
+    const bookingCheck = await checkUserBooking(userData.userId, eventId, true);
+    const { isBooked, status, bookingId: existingBookingId } = bookingCheck;
+    
+    // If booking exists but was cancelled, reactivate it instead of creating a new one
+    if (isBooked && status === 'cancelled' && existingBookingId) {
+      console.log("Reactivating cancelled booking:", existingBookingId);
+      
+      // Update the existing booking
+      const bookingRef = doc(db, 'bookings', existingBookingId);
+      await updateDoc(bookingRef, {
+        status: 'confirmed',
+        paymentStatus: userData.paymentDetails ? 'COMPLETED' : 'NOT_REQUIRED',
+        updatedAt: serverTimestamp(),
+        // Update contact info if provided
+        contactInfo: {
+          email: userData.email || '',
+          phone: userData.phone || '',
+          displayName: userData.displayName || ''
+        },
+        // Update specific request if provided
+        ...(userData.requests && { specificRequest: userData.requests }),
+        // Add payment details if provided
+        ...(userData.paymentDetails && { payment: {
+          id: userData.paymentDetails.paymentId || null,
+          amount: userData.paymentDetails.amount || 0,
+          currency: userData.paymentDetails.currency || 'EUR',
+          status: userData.paymentDetails.status || 'PENDING',
+          payer: {
+            id: userData.paymentDetails.payerID || null,
+            email: userData.paymentDetails.payerEmail || ''
+          },
+          createdAt: userData.paymentDetails.createTime || new Date().toISOString(),
+          updatedAt: userData.paymentDetails.updateTime || new Date().toISOString(),
+          orderId: userData.paymentDetails.orderId || null
+        }}),
+        reactivatedAt: serverTimestamp()
+      });
+      
+      // Update event's attendees and available spots
+      const eventRef = doc(db, 'events', eventId);
+      const eventDoc = await getDoc(eventRef);
+      
+      if (eventDoc.exists()) {
+        const eventData = eventDoc.data();
+        // Only add to attendees if not already there
+        const attendees = eventData.attendees || [];
+        if (!attendees.includes(userData.userId)) {
+          await updateDoc(eventRef, {
+            attendees: arrayUnion(userData.userId),
+            spotsLeft: Math.max(0, (eventData.spotsLeft || 0) - 1)
+          });
+        }
+      }
+      
+      // Update user eventsBooked array
+      try {
+        const userRef = doc(db, 'users', userData.userId);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          // Only add event if not already in eventsBooked
+          const eventsBooked = userData.eventsBooked || [];
+          if (!eventsBooked.includes(eventId)) {
+            await updateDoc(userRef, {
+              eventsBooked: arrayUnion(eventId),
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
+      } catch (userErr) {
+        console.warn("Could not update user profile:", userErr);
+      }
+      
+      return { 
+        success: true, 
+        message: "Booking reactivated successfully",
+        bookingId: existingBookingId,
+        requiresPayment: false,
+        status: 'confirmed'
+      };
+    }
+    
+    // Regular flow for new bookings
+    if (isBooked && status !== 'cancelled') {
       return { success: true, message: "You have already booked this event" };
     }
     
@@ -373,9 +473,8 @@ export const bookEventSimple = async (eventId, userData) => {
       newBooking.payment = payment;
     }
     
-    // Create the booking document
     const bookingRef = await addDoc(collection(db, 'bookings'), newBooking);
-    const bookingId = bookingRef.id;
+    const newBookingId = bookingRef.id;
     
     // 5. If payment details exist, create separate payment record linked to this booking
     if (userData.paymentDetails && userData.paymentDetails.paymentId) {
@@ -387,7 +486,7 @@ export const bookEventSimple = async (eventId, userData) => {
           status: userData.paymentDetails.status || 'PENDING',
           eventId: eventId,
           userId: userData.userId,
-          bookingId: bookingId, // This is the important link
+          bookingId: newBookingId, // This is the important link
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           orderId: userData.paymentDetails.orderId || null,
@@ -396,7 +495,7 @@ export const bookEventSimple = async (eventId, userData) => {
         };
         
         await addDoc(collection(db, 'payments'), paymentRecord);
-        console.log("Created payment record linked to booking:", bookingId);
+        console.log("Created payment record linked to booking:", newBookingId);
       } catch (err) {
         console.warn("Error creating payment record:", err);
         // Don't block the booking creation if payment record fails
@@ -415,7 +514,7 @@ export const bookEventSimple = async (eventId, userData) => {
       
       // But we should still add a "pendingBookings" array to track these
       await updateDoc(eventRef, {
-        pendingBookings: arrayUnion(bookingId)
+        pendingBookings: arrayUnion(newBookingId)
       });
     }
     
@@ -429,7 +528,7 @@ export const bookEventSimple = async (eventId, userData) => {
           // Only add event to eventsBooked array if payment is not required or completed
           ...(newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED' 
               ? { eventsBooked: arrayUnion(eventId) } 
-              : { pendingBookings: arrayUnion(bookingId) }),
+              : { pendingBookings: arrayUnion(newBookingId) }),
           updatedAt: serverTimestamp()
         };
         
@@ -451,7 +550,7 @@ export const bookEventSimple = async (eventId, userData) => {
     return { 
       success: true, 
       message: "Booking created successfully",
-      bookingId: bookingId,
+      bookingId: newBookingId,
       requiresPayment: eventData.paymentAmount > 0 && newBooking.paymentStatus !== 'COMPLETED',
       status: newBooking.status
     };
@@ -568,16 +667,21 @@ export const getEventBookings = async (eventId) => {
     const bookings = [];
     snapshot.forEach(doc => {
       const data = doc.data();
-      bookings.push({
-        id: doc.id,
-        userId: data.userId, // Include userId to fetch user profile data
-        email: data.contactInfo?.email || 'N/A',
-        phone: data.contactInfo?.phone || 'N/A',
-        displayName: data.contactInfo?.displayName || 'N/A',
-        status: data.status,
-        paymentStatus: data.paymentStatus || 'N/A',
-        createdAt: data.createdAt
-      });
+      
+      // Only include active bookings (not cancelled)
+      if (data.status !== 'cancelled') {
+        bookings.push({
+          id: doc.id,
+          userId: data.userId, // Include userId to fetch user profile data
+          email: data.contactInfo?.email || 'N/A',
+          phone: data.contactInfo?.phone || 'N/A',
+          displayName: data.contactInfo?.displayName || 'N/A',
+          status: data.status,
+          paymentStatus: data.paymentStatus || 'N/A',
+          createdAt: data.createdAt,
+          specificRequest: data.specificRequest || ''
+        });
+      }
     });
     
     return bookings;
@@ -635,7 +739,8 @@ export const getEventBookingsCount = async (eventId) => {
   try {
     const bookingsQuery = query(
       collection(db, 'bookings'),
-      where('eventId', '==', eventId)
+      where('eventId', '==', eventId),
+      where('status', '!=', 'cancelled') // Only count non-cancelled bookings
     );
     
     const snapshot = await getDocs(bookingsQuery);

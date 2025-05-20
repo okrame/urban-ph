@@ -1,15 +1,15 @@
 import { 
-  doc, 
-  getDoc, 
-  updateDoc, 
   collection, 
-  serverTimestamp,
+  doc, 
   addDoc,
-  query, 
-  where, 
+  getDoc, 
   getDocs, 
-  arrayUnion,
-  runTransaction
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where,  
+  serverTimestamp,
+  arrayUnion 
 } from 'firebase/firestore';
 import { db } from './config';
 
@@ -300,7 +300,7 @@ export const isEventBookable = async (eventId) => {
   }
 };
 
-
+// Create a booking with improved payment handling
 export const bookEventSimple = async (eventId, userData) => {
   try {
     // 1. Check if the user has already booked this event
@@ -335,37 +335,101 @@ export const bookEventSimple = async (eventId, userData) => {
       throw new Error("Booking is closed for this event");
     }
     
-    // 4. Create the booking with only necessary contact info
+    // 4. Create the booking with payment details - safely handling undefined values
     const newBooking = {
       userId: userData.userId,
       eventId: eventId,
-      status: 'confirmed',
+      status: eventData.paymentAmount > 0 ? 'payment-pending' : 'confirmed',
+      paymentStatus: eventData.paymentAmount > 0 ? 'PENDING' : 'NOT_REQUIRED',
       createdAt: serverTimestamp(),
       contactInfo: {
-        email: userData.email,
-        phone: userData.phone,
-        displayName: userData.displayName
+        email: userData.email || '',
+        phone: userData.phone || '',
+        displayName: userData.displayName || ''
       },
       // Include optional specific request if provided
-      specificRequest: userData.requests || null
+      specificRequest: userData.requests || null,
     };
     
-    await addDoc(collection(db, 'bookings'), newBooking);
+    // Safely add payment information if it exists
+    if (userData.paymentDetails) {
+      // Create a sanitized payment object with proper null checks
+      const payment = {
+        id: userData.paymentDetails.paymentId || null,
+        amount: userData.paymentDetails.amount || 0,
+        currency: userData.paymentDetails.currency || 'EUR',
+        status: userData.paymentDetails.status || 'PENDING',
+        payer: {
+          // Only include id if it exists
+          ...(userData.paymentDetails.payerID && { id: userData.paymentDetails.payerID }),
+          email: userData.paymentDetails.payerEmail || ''
+        },
+        createdAt: userData.paymentDetails.createTime || new Date().toISOString(),
+        updatedAt: userData.paymentDetails.updateTime || new Date().toISOString(),
+        orderId: userData.paymentDetails.orderId || null
+      };
+      
+      // Add the payment object to the booking
+      newBooking.payment = payment;
+    }
     
-    // 5. Update available spots count in the event
-    await updateDoc(eventRef, {
-      spotsLeft: eventData.spotsLeft - 1,
-      attendees: arrayUnion(userData.userId)
-    });
+    // Create the booking document
+    const bookingRef = await addDoc(collection(db, 'bookings'), newBooking);
+    const bookingId = bookingRef.id;
     
-    // 6. Update user profile with all the new fields
+    // 5. If payment details exist, create separate payment record linked to this booking
+    if (userData.paymentDetails && userData.paymentDetails.paymentId) {
+      try {
+        const paymentRecord = {
+          paymentId: userData.paymentDetails.paymentId,
+          amount: userData.paymentDetails.amount || eventData.paymentAmount || 0,
+          currency: userData.paymentDetails.currency || 'EUR',
+          status: userData.paymentDetails.status || 'PENDING',
+          eventId: eventId,
+          userId: userData.userId,
+          bookingId: bookingId, // This is the important link
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          orderId: userData.paymentDetails.orderId || null,
+          payerEmail: userData.email || userData.paymentDetails.payerEmail || '',
+          payerId: userData.paymentDetails.payerID || null
+        };
+        
+        await addDoc(collection(db, 'payments'), paymentRecord);
+        console.log("Created payment record linked to booking:", bookingId);
+      } catch (err) {
+        console.warn("Error creating payment record:", err);
+        // Don't block the booking creation if payment record fails
+      }
+    }
+    
+    // 6. Update available spots count in the event - only reduce if payment not required or already completed
+    if (newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED') {
+      await updateDoc(eventRef, {
+        spotsLeft: eventData.spotsLeft - 1,
+        attendees: arrayUnion(userData.userId)
+      });
+    } else {
+      // For pending payments, don't reduce the available spots yet
+      console.log("Payment is pending - not reducing available spots yet");
+      
+      // But we should still add a "pendingBookings" array to track these
+      await updateDoc(eventRef, {
+        pendingBookings: arrayUnion(bookingId)
+      });
+    }
+    
+    // 7. Update user profile with all the new fields
     try {
       const userRef = doc(db, 'users', userData.userId);
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
         const userUpdates = {
-          eventsBooked: arrayUnion(eventId),
+          // Only add event to eventsBooked array if payment is not required or completed
+          ...(newBooking.status === 'confirmed' || newBooking.paymentStatus === 'COMPLETED' 
+              ? { eventsBooked: arrayUnion(eventId) } 
+              : { pendingBookings: arrayUnion(bookingId) }),
           updatedAt: serverTimestamp()
         };
         
@@ -384,7 +448,13 @@ export const bookEventSimple = async (eventId, userData) => {
       // Don't block booking if user update fails
     }
     
-    return { success: true, message: "Booking completed successfully" };
+    return { 
+      success: true, 
+      message: "Booking created successfully",
+      bookingId: bookingId,
+      requiresPayment: eventData.paymentAmount > 0 && newBooking.paymentStatus !== 'COMPLETED',
+      status: newBooking.status
+    };
   } catch (error) {
     console.error("Error booking event:", error);
     throw error;
@@ -489,7 +559,6 @@ export const getEventsStats = async () => {
   }
 };
 
-
 // Get bookings for a specific event
 export const getEventBookings = async (eventId) => {
   try {
@@ -506,6 +575,7 @@ export const getEventBookings = async (eventId) => {
         phone: data.contactInfo?.phone || 'N/A',
         displayName: data.contactInfo?.displayName || 'N/A',
         status: data.status,
+        paymentStatus: data.paymentStatus || 'N/A',
         createdAt: data.createdAt
       });
     });

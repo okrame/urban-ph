@@ -87,14 +87,14 @@ function Navbar({ user, onSignInClick }) {
   return (
     <nav className="bg-white shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20">
+      <div className="flex h-20 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img 
                 src={UPHLogo} 
                 alt="Urban Photo Hunts Logo" 
-                className="h-14 w-auto"
+                className="h-20 w-auto"
               />
             </Link>
           </div>
@@ -136,7 +136,7 @@ function Navbar({ user, onSignInClick }) {
           </div>
           
           {/* User Authentication - pushed to the right */}
-          <div className="hidden md:flex items-center ml-auto">
+          <div className="hidden md:flex items-center">
             {user ? (
               <div className="flex items-center space-x-2">
                 {user.photoURL ? (

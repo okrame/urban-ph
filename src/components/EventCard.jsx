@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable, getUserContactInfo } from '../../firebase/firestoreServices';
 import { getUserProfile, checkUserProfileComplete } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
+import PaymentModal from './PaymentModal';
 
 function EventCard({ event, user, onAuthNeeded }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -14,11 +16,24 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [isBookable, setIsBookable] = useState(true);
   const [bookableReason, setBookableReason] = useState('');
   const [imageError, setImageError] = useState(false);
+  const [prevUserState, setPrevUserState] = useState(null);
+  const [authRequested, setAuthRequested] = useState(false);
   
-  // New state variables for enhanced booking form
+  const [bookingFormData, setBookingFormData] = useState(null);
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
   const [existingUserData, setExistingUserData] = useState({});
   
+  // Track previous user state to detect sign-in, but only for requested auth
+  useEffect(() => {
+    if (!prevUserState && user && authRequested && !isBooked) {
+      handleBookEvent();
+      // Reset the auth requested flag to prevent reopening on subsequent renders
+      setAuthRequested(false);
+    }
+    
+    setPrevUserState(user);
+  }, [user, authRequested, isBooked]);
+
   // Reset booking states when user changes (signs in or out)
   useEffect(() => {
     // Reset booking states when user changes
@@ -26,19 +41,18 @@ function EventCard({ event, user, onAuthNeeded }) {
     setBookingSuccess(false);
     setAuthError(null);
     setShowBookingForm(false);
+    setShowPaymentModal(false);
   }, [user]);
 
   // Check event status and bookability
   useEffect(() => {
     if (event) {
-      // Calculate the current status
       const status = determineEventStatus(event.date, event.time);
       setEventStatus(status);
       
       // Reset image error state when event changes
       setImageError(false);
       
-      // Check if event is bookable
       const checkBookability = async () => {
         try {
           const { bookable, reason } = await isEventBookable(event.id);
@@ -97,6 +111,8 @@ function EventCard({ event, user, onAuthNeeded }) {
     if (!user) {
       // If no user is logged in, trigger the auth modal
       if (onAuthNeeded) {
+        // Set flag that auth was requested specifically for this event
+        setAuthRequested(true);
         onAuthNeeded();
       }
       return;
@@ -137,9 +153,7 @@ function EventCard({ event, user, onAuthNeeded }) {
       console.error("Error checking user profile:", error);
     } finally {
       setLoading(false);
-    }
-    
-    // Show the booking form
+    }    
     setShowBookingForm(true);
   };
   
@@ -156,6 +170,7 @@ function EventCard({ event, user, onAuthNeeded }) {
         return;
       }
       
+      // Store form data for payment processing
       const userData = {
         userId: user.uid,
         email: formData.email,
@@ -171,32 +186,77 @@ function EventCard({ event, user, onAuthNeeded }) {
         requests: formData.requests
       };
       
-      const result = await bookEventSimple(event.id, userData);
+      // Store form data for payment
+      setBookingFormData(userData);
+      
+      // If event requires payment, show payment modal
+      if (event.paymentAmount > 0) {
+        setShowBookingForm(false);
+        setShowPaymentModal(true);
+      } else {
+        // For free events, complete booking directly
+        const result = await bookEventSimple(event.id, userData);
+        
+        if (result.success) {
+          setIsBooked(true);
+          setBookingSuccess(true);
+          setShowBookingForm(false);
+        } else {
+          setAuthError(result.message || "Booking failed. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Error preparing for booking:", error);
+      setAuthError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handlePaymentSuccess = async (paymentData) => {
+    setLoading(true);
+    setAuthError(null);
+    
+    try {
+      console.log("Payment approved:", paymentData);
+      
+      // Ensure paymentDetails has all needed properties with fallbacks for missing values
+      const sanitizedPaymentDetails = {
+        paymentId: paymentData.paymentDetails?.paymentId || '',
+        payerID: paymentData.paymentDetails?.payerID || null,  // Allow null/undefined here
+        payerEmail: paymentData.paymentDetails?.payerEmail || '',
+        status: paymentData.paymentDetails?.status || 'COMPLETED',
+        amount: event.paymentAmount || 0,
+        currency: event.paymentCurrency || 'EUR',
+        createTime: paymentData.paymentDetails?.createTime || new Date().toISOString(),
+        updateTime: paymentData.paymentDetails?.updateTime || new Date().toISOString(),
+        orderId: paymentData.paymentDetails?.orderId || null
+      };
+      
+      // Complete booking with payment details
+      const result = await bookEventSimple(event.id, {
+        ...bookingFormData,
+        paymentDetails: sanitizedPaymentDetails
+      });
       
       if (result && result.success) {
         setIsBooked(true);
         setBookingSuccess(true);
-        setShowBookingForm(false);
+        setShowPaymentModal(false);
       } else {
         throw new Error(result.message || "Unknown error during booking");
       }
     } catch (error) {
-      console.error("Error booking event:", error);
-      
-      if (error.message.includes("No spots left")) {
-        setAuthError("No spots left for this event.");
-      } else if (error.message.includes("already booked")) {
-        setIsBooked(true);
-        setBookingSuccess(true);
-        setShowBookingForm(false);
-      } else if (error.message.includes("Booking is closed")) {
-        setAuthError("Booking is now closed for this event.");
-      } else {
-        setAuthError("An error occurred during booking. Please try again.");
-      }
+      console.error("Error completing booking:", error);
+      setAuthError("An error occurred during booking. Please contact support with your payment ID.");
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handlePaymentCancel = () => {
+    setShowPaymentModal(false);
+    setAuthError("Payment was cancelled.");
   };
   
   const handleCancelForm = () => {
@@ -237,10 +297,7 @@ function EventCard({ event, user, onAuthNeeded }) {
   
   // Determine if event is fully booked
   const isFullyBooked = bookableReason === "No spots left";
-  
-  // We no longer need a special success state view
-  // Instead we'll just show the normal view with the booking button status
-  
+
   // Booking form state
   if (showBookingForm) {
     return (
@@ -257,8 +314,37 @@ function EventCard({ event, user, onAuthNeeded }) {
           loading={loading}
           isFirstTime={isFirstTimeBooking}
           existingData={existingUserData}
+          event={event}
         />
       </div>
+    );
+  }
+  
+  // Payment modal
+  if (showPaymentModal) {
+    return (
+      <>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
+          <h3 className="text-xl font-bold mb-3">{event.title}</h3>
+          <p className="text-center text-gray-600">
+            Please complete the payment to confirm your booking.
+          </p>
+          {authError && (
+            <div className="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
+              {authError}
+            </div>
+          )}
+        </div>
+        
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentCancel}
+          event={event}
+          userData={bookingFormData}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentCancel={handlePaymentCancel}
+        />
+      </>
     );
   }
   
@@ -303,6 +389,11 @@ function EventCard({ event, user, onAuthNeeded }) {
                 {eventStatus === 'active' ? 'Active' : 
                  eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
               </span>
+              {event.paymentAmount > 0 && (
+                <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700">
+                  €{event.paymentAmount}
+                </span>
+              )}
             </div>
             
             <p className="text-sm text-gray-600">
@@ -325,6 +416,11 @@ function EventCard({ event, user, onAuthNeeded }) {
           <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
             📍 {event.location}
           </span>
+          {event.paymentAmount > 0 && (
+            <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
+              Cost: €{event.paymentAmount}
+            </span>
+          )}
         </div>
         
         <p className="text-gray-700 mb-4 text-sm">{event.description}</p>
@@ -389,7 +485,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                   : eventStatus === 'past'
                     ? 'Event Ended'
                     : 'Booking Closed'
-                : user ? 'Book Now' : 'Book'}
+                : user ? (event.paymentAmount > 0 ? `Book Now - €${event.paymentAmount}` : 'Book Now') : 'Book'}
         </button>
       </div>
     </div>

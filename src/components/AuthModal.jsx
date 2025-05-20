@@ -21,6 +21,13 @@ function AuthModal({ isOpen, onClose, event }) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
 
+  // Reset error and useMagicLink when modal opens or closes
+  useEffect(() => {
+    // Reset error state when modal opens or closes
+    setError('');
+    setUseMagicLink(false);
+  }, [isOpen]);
+
   useEffect(() => {
     // Controlla se l'URL contiene un link di sign-in email
     if (isSignInWithEmailLink(auth, window.location.href)) {
@@ -98,6 +105,14 @@ function AuthModal({ isOpen, onClose, event }) {
       url.searchParams.delete(param);
     });
     window.history.replaceState({}, document.title, url.pathname + url.hash);
+  };
+
+  // Function to handle modal close with cleanup
+  const handleClose = () => {
+    setError('');
+    setLoading(false);
+    setUseMagicLink(false);
+    onClose();
   };
 
   // Non renderizzare se si sta processando il sign-in
@@ -179,7 +194,7 @@ function AuthModal({ isOpen, onClose, event }) {
       
       // Crea o aggiorna il profilo utente nel database
       await createUserProfile(result.user);
-      onClose();
+      handleClose();
     } catch (error) {
       console.error("Google sign-in error:", error);
       setError('Google sign-in failed. Please try again.');
@@ -201,7 +216,7 @@ function AuthModal({ isOpen, onClose, event }) {
       
       // Crea o aggiorna il profilo utente nel database
       await createUserProfile(result.user);
-      onClose();
+      handleClose();
     } catch (error) {
       console.error("Facebook sign-in error:", error);
       setError('Facebook sign-in failed. Please try again.');
@@ -218,7 +233,7 @@ function AuthModal({ isOpen, onClose, event }) {
         </h2>
         
         <button 
-          onClick={onClose}
+          onClick={handleClose}
           style={{position: 'absolute', right: '16px', top: '16px', cursor: 'pointer'}}
         >
           Close

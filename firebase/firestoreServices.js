@@ -760,12 +760,22 @@ export const getEventBookingsCount = async (eventId) => {
   try {
     const bookingsQuery = query(
       collection(db, 'bookings'),
-      where('eventId', '==', eventId),
-      where('status', '!=', 'cancelled') // Only count non-cancelled bookings
+      where('eventId', '==', eventId)
+      // Rimuoviamo il filtro status per evitare l'indice composito
     );
     
     const snapshot = await getDocs(bookingsQuery);
-    return snapshot.size;
+    
+    // Filtra in memoria solo i booking non cancellati
+    let count = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.status !== 'cancelled') {
+        count++;
+      }
+    });
+    
+    return count;
   } catch (error) {
     console.error("Error counting event bookings:", error);
     return 0;

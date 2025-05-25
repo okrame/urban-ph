@@ -16,7 +16,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     description: '',
     spots: 10,
     image: '',
-    imageBase64: '',
     status: 'active',
     // Add payment fields
     isPaid: initialValues.paymentAmount ? true : false,
@@ -46,9 +45,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const [error, setError] = useState('');
   const [bookingsCount, setBookingsCount] = useState(0);
   const [calculatedStatus, setCalculatedStatus] = useState('');
-  const [imageFile, setImageFile] = useState(null);
   const [isImageChanged, setIsImageChanged] = useState(false);
-  const [isUsingBase64, setIsUsingBase64] = useState(false);
+
+  // Image state for Storage
+  const [imageUrl, setImageUrl] = useState(initialValues.image || '');
 
   // Parse and set initial date/time values
   useEffect(() => {
@@ -62,7 +62,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       description: '',
       spots: 10,
       image: '',
-      imageBase64: '',
       status: 'active',
       // Initialize payment fields
       isPaid: initialValues.paymentAmount ? true : false,
@@ -99,16 +98,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             const status = determineEventStatus(initialValues.date, initialValues.time);
             setCalculatedStatus(status);
           }
-
-          // Detect if we're using base64 for the image
-          setIsUsingBase64(!!initialValues.imageBase64);
         } catch (error) {
           console.error("Error fetching bookings count:", error);
         }
       } else {
         setBookingsCount(0);
         setCalculatedStatus('');
-        setIsUsingBase64(false);
       }
     };
 
@@ -116,6 +111,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
     // Reset image change tracking when form is initialized/reset
     setIsImageChanged(false);
+    setImageUrl(initialValues.image || '');
   }, [initialValues]);
 
   // Handle clicking outside of emoji picker
@@ -306,27 +302,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     });
   };
 
-  const handleImageSelected = (file) => {
-    setImageFile(file);
-    setIsImageChanged(true);
-
-    // If file is null (user cleared the image), reset the image URL
-    if (!file && !initialValues.id) {
-      setFormData({
-        ...formData,
-        image: '',
-        imageBase64: ''
-      });
-    }
-  };
-
-  const handleBase64Generated = (base64Data) => {
-    setFormData(prev => ({
-      ...prev,
-      imageBase64: base64Data
-    }));
-
-    setIsUsingBase64(!!base64Data);
+  // Handle image upload callback
+  const handleImageUploaded = (url) => {
+    setImageUrl(url);
     setIsImageChanged(true);
   };
 
@@ -368,9 +346,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
-      // Check if we have an image (either file or URL or base64)
-      if (!formData.imageBase64 && !formData.image && !initialValues.id) {
-        setError('Please upload an image or provide an image URL');
+      // Check if we have an image URL
+      if (!imageUrl && !initialValues.id) {
+        setError('Please upload an image');
         setLoading(false);
         return;
       }
@@ -387,7 +365,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         ...formData,
         // Set payment amount only if isPaid is true
         paymentAmount: formData.isPaid ? formData.paymentAmount : null,
-        paymentCurrency: formData.isPaid ? formData.paymentCurrency : null
+        paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
+        // Use uploaded image URL
+        image: imageUrl
       };
 
       // Remove isPaid as it's not needed in the database
@@ -408,14 +388,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         // Keep existing spots availability data
         const currentData = eventDoc.data();
 
-        // FIXED: Calculate spotsLeft correctly as total spots minus bookings
-        // This ensures spotsLeft is always (total spots - bookings)
+        // Calculate spotsLeft correctly as total spots minus bookings
         const spotsLeft = updatedFormData.spots - bookingsCount;
 
-        // If the image wasn't changed, keep the existing image data
+        // If the image wasn't changed, keep the existing image URL
         if (!isImageChanged) {
           updatedFormData.image = currentData.image;
-          updatedFormData.imageBase64 = currentData.imageBase64;
         }
 
         // Update event with new data but preserve some fields
@@ -887,12 +865,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             Event Image
           </label>
           <ImageUploader
-            initialImage={formData.imageBase64 || formData.image}
-            onImageSelected={handleImageSelected}
-            onBase64Generated={handleBase64Generated}
+            initialImage={imageUrl}
+            onImageUploaded={handleImageUploaded}
+            eventId={initialValues.id || 'temp-' + Date.now()}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Upload an image for the event card (PNG, JPG, GIF up to 3MB)
+            Upload an image for the event card (PNG, JPG, GIF up to 5MB)
           </p>
         </div>
 

@@ -38,4 +38,5 @@ export const setupFirebase = async () => {
   }
 };
 
-export { auth, db };
+// Export app, auth, and db
+export { app, auth, db };

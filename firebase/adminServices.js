@@ -75,9 +75,8 @@ export const createNewEvent = async (eventData) => {
       }
     }
     
-    // Validazione specifica per le immagini: richiediamo o image o imageBase64
-    if (!newEvent.image && !newEvent.imageBase64) {
-      throw new Error('Missing required image: Please provide either an image URL or upload an image');
+    if (!newEvent.image) {
+      throw new Error('Missing required image: Please upload an image');
     }
     
     // Validazione del tipo

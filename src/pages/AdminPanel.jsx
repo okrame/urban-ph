@@ -495,18 +495,7 @@ function AdminPanel() {
           >
             Manage Events
           </button>
-          <button
-            className={`px-4 py-2 mr-2 ${activeTab === 'create'
-              ? 'border-b-2 border-blue-500 font-bold'
-              : 'text-gray-500 hover:text-gray-700'
-              }`}
-            onClick={() => {
-              setEditingEvent(null);
-              setActiveTab('create');
-            }}
-          >
-            Create New Event
-          </button>
+
           <button
             className={`px-4 py-2 ${activeTab === 'database'
               ? 'border-b-2 border-blue-500 font-bold'

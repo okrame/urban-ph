@@ -23,6 +23,8 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [bookingFormData, setBookingFormData] = useState(null);
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
   const [existingUserData, setExistingUserData] = useState({});
+  const [userMembershipStatus, setUserMembershipStatus] = useState(null);
+  const [applicablePrice, setApplicablePrice] = useState(0);
   
   // Track previous user state to detect sign-in, but only for requested auth
   useEffect(() => {
@@ -70,6 +72,37 @@ function EventCard({ event, user, onAuthNeeded }) {
       checkBookability();
     }
   }, [event]);
+
+  // Check membership status and set applicable price
+  useEffect(() => {
+    const checkMembershipStatus = async () => {
+      if (user && event) {
+        try {
+          const { getUserProfile } = await import('../../firebase/userServices');
+          const userProfile = await getUserProfile(user.uid);
+          const isMember = userProfile?.currentYearMember || false;
+          setUserMembershipStatus(isMember);
+          
+          // Set applicable price based on membership
+          if (event.memberPrice && event.nonMemberPrice) {
+            setApplicablePrice(isMember ? event.memberPrice : event.nonMemberPrice);
+          } else {
+            // Fallback for old events with single paymentAmount
+            setApplicablePrice(event.paymentAmount || 0);
+          }
+        } catch (error) {
+          console.error('Error checking membership status:', error);
+          setUserMembershipStatus(false);
+          setApplicablePrice(event.nonMemberPrice || event.paymentAmount || 0);
+        }
+      } else {
+        setUserMembershipStatus(null);
+        setApplicablePrice(event?.nonMemberPrice || event?.paymentAmount || 0);
+      }
+    };
+
+    checkMembershipStatus();
+  }, [user, event]);
   
   // Check booking status when user or event changes
   useEffect(() => {
@@ -221,8 +254,8 @@ function EventCard({ event, user, onAuthNeeded }) {
       // Store form data for payment
       setBookingFormData(userData);
       
-      // If event requires payment, show payment modal
-      if (event.paymentAmount > 0) {
+      // If event requires payment, show payment modal with applicable price
+      if (applicablePrice > 0) {
         setShowBookingForm(false);
         setShowPaymentModal(true);
       } else {
@@ -260,7 +293,7 @@ function EventCard({ event, user, onAuthNeeded }) {
         payerEmail: paymentData.paymentDetails?.payerEmail || '',
         // IMPORTANT: Make sure status is explicitly set to COMPLETED
         status: 'COMPLETED', // Force status to COMPLETED to ensure proper handling
-        amount: event.paymentAmount || 0,
+        amount: applicablePrice, // Use the member-specific price
         currency: event.paymentCurrency || 'EUR',
         createTime: paymentData.paymentDetails?.createTime || new Date().toISOString(),
         updateTime: paymentData.paymentDetails?.updateTime || new Date().toISOString(),
@@ -349,7 +382,11 @@ function EventCard({ event, user, onAuthNeeded }) {
           loading={loading}
           isFirstTime={isFirstTimeBooking}
           existingData={existingUserData}
-          event={event}
+          event={{
+            ...event,
+            paymentAmount: applicablePrice,
+            userMembershipStatus: userMembershipStatus
+          }}
         />
       </div>
     );
@@ -357,6 +394,12 @@ function EventCard({ event, user, onAuthNeeded }) {
   
   // Payment modal
   if (showPaymentModal) {
+    // Create event object with applicable price for PaymentModal
+    const eventForPayment = {
+      ...event,
+      paymentAmount: applicablePrice // Use the member-specific price
+    };
+
     return (
       <>
         <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
@@ -374,7 +417,7 @@ function EventCard({ event, user, onAuthNeeded }) {
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={handlePaymentCancel}
-          event={event}
+          event={eventForPayment}
           userData={bookingFormData}
           onPaymentSuccess={handlePaymentSuccess}
           onPaymentCancel={handlePaymentCancel}
@@ -424,9 +467,18 @@ function EventCard({ event, user, onAuthNeeded }) {
                 {eventStatus === 'active' ? 'Active' : 
                  eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
               </span>
-              {event.paymentAmount > 0 && (
+              {/* Updated pricing badge */}
+              {(event.memberPrice > 0 || event.nonMemberPrice > 0 || event.paymentAmount > 0) && (
                 <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700">
-                  €{event.paymentAmount}
+                  {event.memberPrice && event.nonMemberPrice ? (
+                    user ? (
+                      userMembershipStatus !== null ? (
+                        userMembershipStatus ? `€${event.memberPrice} (member)` : `€${event.nonMemberPrice}`
+                      ) : `€${event.memberPrice}/${event.nonMemberPrice}`
+                    ) : `€${event.memberPrice}/${event.nonMemberPrice}`
+                  ) : (
+                    `€${event.paymentAmount || 0}`
+                  )}
                 </span>
               )}
             </div>
@@ -451,10 +503,26 @@ function EventCard({ event, user, onAuthNeeded }) {
           <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
             📍 {event.location}
           </span>
-          {event.paymentAmount > 0 && (
-            <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
-              Cost: €{event.paymentAmount}
-            </span>
+          {/* Updated pricing display in expanded content */}
+          {(event.memberPrice > 0 || event.nonMemberPrice > 0 || event.paymentAmount > 0) && (
+            <div className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
+              {event.memberPrice && event.nonMemberPrice ? (
+                <div>
+                  {user && userMembershipStatus !== null ? (
+                    <span>
+                      Your price: €{userMembershipStatus ? event.memberPrice : event.nonMemberPrice}
+                      {userMembershipStatus && (
+                        <span className="text-green-700 ml-1">(member discount!)</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span>Members: €{event.memberPrice} | Non-members: €{event.nonMemberPrice}</span>
+                  )}
+                </div>
+              ) : (
+                <span>Cost: €{event.paymentAmount || 0}</span>
+              )}
+            </div>
           )}
         </div>
         
@@ -531,7 +599,7 @@ function EventCard({ event, user, onAuthNeeded }) {
                 : user 
                   ? bookingStatus === 'cancelled'
                     ? 'Book Again'
-                    : (event.paymentAmount > 0 
+                    : (applicablePrice > 0 
                       ? `Book Now` 
                       : 'Book Now') 
                   : 'Book'}

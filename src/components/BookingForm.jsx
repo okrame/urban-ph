@@ -161,6 +161,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           <p className="font-medium text-blue-700">
             Payment required: €{event.paymentAmount} {event.paymentCurrency || 'EUR'}
           </p>
+
           <p className="text-sm text-blue-600 mt-1">
             You'll be redirected to a secure payment page after completing this form.
           </p>

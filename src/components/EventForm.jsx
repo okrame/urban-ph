@@ -17,9 +17,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     spots: 10,
     image: '',
     status: 'active',
-    // Add payment fields
-    isPaid: initialValues.paymentAmount ? true : false,
-    paymentAmount: initialValues.paymentAmount || 0,
+    // Updated payment fields for member pricing
+    isPaid: initialValues.memberPrice ? true : false,
+    memberPrice: initialValues.memberPrice || 0,
+    nonMemberPrice: initialValues.nonMemberPrice || 0,
     paymentCurrency: initialValues.paymentCurrency || 'EUR',
     ...initialValues
   });
@@ -63,9 +64,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       spots: 10,
       image: '',
       status: 'active',
-      // Initialize payment fields
-      isPaid: initialValues.paymentAmount ? true : false,
-      paymentAmount: initialValues.paymentAmount || 0,
+      // Initialize payment fields with member pricing
+      isPaid: initialValues.memberPrice || initialValues.nonMemberPrice ? true : false,
+      memberPrice: initialValues.memberPrice || 0,
+      nonMemberPrice: initialValues.nonMemberPrice || 0,
       paymentCurrency: initialValues.paymentCurrency || 'EUR',
       ...initialValues
     });
@@ -261,44 +263,46 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     setFormData({
       ...formData,
       isPaid,
-      // Reset payment amount to 0 if toggling to free
-      paymentAmount: isPaid ? formData.paymentAmount : 0
+      // Reset prices to 0 if toggling to free
+      memberPrice: isPaid ? formData.memberPrice : 0,
+      nonMemberPrice: isPaid ? formData.nonMemberPrice : 0
     });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
+  
     // Special handling for spots field
     if (name === 'spots') {
       const spotsValue = parseInt(value, 10);
-
+  
       // When editing existing event, ensure spots is >= bookings count
       if (initialValues.id && spotsValue < bookingsCount) {
         setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
         return;
       }
-
+  
       setError(''); // Clear error if validation passes
     }
-
+  
     // For description field, update cursor position
     if (name === 'description') {
       setCursorPosition(e.target.selectionStart);
     }
-
-    // Special handling for payment amount
-    if (name === 'paymentAmount') {
+  
+    // Special handling for payment amounts
+    if (name === 'memberPrice' || name === 'nonMemberPrice') {
       // Ensure it's a positive number with at most 2 decimal places
       const numValue = parseFloat(value);
       if (isNaN(numValue) || numValue < 0) {
         return; // Don't update invalid amounts
       }
     }
-
+  
     setFormData({
       ...formData,
-      [name]: name === 'spots' || name === 'paymentAmount' ? parseFloat(value) : value
+      [name]: name === 'spots' || name === 'memberPrice' || name === 'nonMemberPrice' 
+        ? parseFloat(value) : value
     });
   };
 
@@ -353,23 +357,31 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
-      // Validate payment amount if event is paid
-      if (formData.isPaid && (formData.paymentAmount <= 0 || isNaN(formData.paymentAmount))) {
-        setError('Please enter a valid payment amount greater than 0');
-        setLoading(false);
-        return;
+      if (formData.isPaid) {
+        if (!formData.memberPrice || formData.memberPrice <= 0 || isNaN(formData.memberPrice)) {
+          setError('Please enter a valid member price greater than 0');
+          setLoading(false);
+          return;
+        }
+        
+        if (!formData.nonMemberPrice || formData.nonMemberPrice <= 0 || isNaN(formData.nonMemberPrice)) {
+          setError('Please enter a valid non-member price greater than 0');
+          setLoading(false);
+          return;
+        }
       }
 
       // Prepare the form data
       let updatedFormData = {
         ...formData,
-        // Set payment amount only if isPaid is true
-        paymentAmount: formData.isPaid ? formData.paymentAmount : null,
+        // Set pricing fields only if isPaid is true
+        memberPrice: formData.isPaid ? formData.memberPrice : null,
+        nonMemberPrice: formData.isPaid ? formData.nonMemberPrice : null,
         paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
         // Use uploaded image URL
         image: imageUrl
       };
-
+      
       // Remove isPaid as it's not needed in the database
       delete updatedFormData.isPaid;
 
@@ -599,10 +611,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                         type="button"
                         onClick={() => handleDateSelect(date)}
                         className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${isSelected
-                            ? 'bg-blue-600 text-white'
-                            : isToday
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'hover:bg-gray-100'
+                          ? 'bg-blue-600 text-white'
+                          : isToday
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'hover:bg-gray-100'
                           }`}
                       >
                         {date.getDate()}
@@ -786,29 +798,65 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
               </div>
 
               {formData.isPaid && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="paymentAmount">
-                      Price
-                    </label>
-                    <div className="relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">€</span>
+                <div className="space-y-4">
+                  {/* Member vs Non-Member Pricing */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="memberPrice">
+                        Member Price *
+                      </label>
+                      <div className="relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">€</span>
+                        </div>
+                        <input
+                          type="number"
+                          name="memberPrice"
+                          id="memberPrice"
+                          value={formData.memberPrice || ''}
+                          onChange={handleChange}
+                          step="0.01"
+                          min="0"
+                          className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                          placeholder="0.00"
+                          required={formData.isPaid}
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">EUR</span>
+                        </div>
                       </div>
-                      <input
-                        type="number"
-                        name="paymentAmount"
-                        id="paymentAmount"
-                        value={formData.paymentAmount}
-                        onChange={handleChange}
-                        step="0.01"
-                        min="0"
-                        className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                        placeholder="0.00"
-                      />
-                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">EUR</span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Price for current year members
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="nonMemberPrice">
+                        Non-Member Price *
+                      </label>
+                      <div className="relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">€</span>
+                        </div>
+                        <input
+                          type="number"
+                          name="nonMemberPrice"
+                          id="nonMemberPrice"
+                          value={formData.nonMemberPrice || ''}
+                          onChange={handleChange}
+                          step="0.01"
+                          min="0"
+                          className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                          placeholder="0.00"
+                          required={formData.isPaid}
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">EUR</span>
+                        </div>
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Price for new/past year members
+                      </p>
                     </div>
                   </div>
 
@@ -827,17 +875,19 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                       <option value="EUR">EUR - Euro</option>
                     </select>
                   </div>
+
+                  <div className="mt-3 text-xs text-gray-500 space-y-1">
+                    <p>Payment will be processed securely via PayPal during the booking process.</p>
+                    {formData.isPaid && formData.memberPrice && formData.nonMemberPrice && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded text-blue-800 font-medium text-sm">
+                        <p>Current pricing:</p>
+                        <p>• Members: €{parseFloat(formData.memberPrice).toFixed(2)} EUR</p>
+                        <p>• Non-members: €{parseFloat(formData.nonMemberPrice).toFixed(2)} EUR</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-
-              <div className="mt-3 text-xs text-gray-500">
-                <p>Payment will be processed securely via PayPal during the booking process.</p>
-                {formData.isPaid && (
-                  <p className="mt-1 font-medium">
-                    Current price: €{formData.paymentAmount.toFixed(2)} {formData.paymentCurrency}
-                  </p>
-                )}
-              </div>
             </div>
           </div>
 

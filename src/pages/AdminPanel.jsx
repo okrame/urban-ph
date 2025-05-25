@@ -88,7 +88,7 @@ function AdminPanel() {
       eventsSnapshot.forEach(eventDoc => {
         const eventData = eventDoc.data();
         const actualStatus = determineEventStatus(eventData.date, eventData.time);
-        
+
         // Only update if status has changed
         if (actualStatus !== eventData.status) {
           const updatePromise = updateDoc(eventDoc.ref, {
@@ -96,7 +96,7 @@ function AdminPanel() {
             updatedAt: serverTimestamp()
           });
           updatePromises.push(updatePromise);
-          
+
           console.log(`Syncing event ${eventDoc.id}: ${eventData.status} → ${actualStatus}`);
         }
       });
@@ -111,7 +111,7 @@ function AdminPanel() {
 
       // Refresh event lists after sync
       await fetchAllEventTypes();
-      
+
     } catch (error) {
       console.error('Error syncing event statuses:', error);
     } finally {
@@ -276,18 +276,18 @@ function AdminPanel() {
   // Delete a booking (attendee)
   const handleDeleteBooking = async (booking, e) => {
     e.preventDefault();
-    
+
     if (!confirm(`Are you sure you want to remove ${booking.userFullName || booking.email} from this event?`)) {
       return;
     }
-    
+
     if (!selectedEvent || !booking.userId) {
       alert('Missing event or user information');
       return;
     }
-    
+
     setDeleteLoading(booking.id);
-    
+
     try {
       // 1. Remove user from event's attendees array
       const eventRef = doc(db, 'events', selectedEvent.id);
@@ -296,17 +296,17 @@ function AdminPanel() {
         // Increase available spots by 1
         spotsLeft: (selectedEvent.spotsLeft || 0) + 1
       });
-      
+
       // 2. Update user's eventsBooked array to remove this event
       const userRef = doc(db, 'users', booking.userId);
       const userDoc = await getDoc(userRef);
-      
+
       if (userDoc.exists()) {
         await updateDoc(userRef, {
           eventsBooked: arrayRemove(selectedEvent.id)
         });
       }
-      
+
       // 3. Set booking status to 'cancelled'
       // We don't actually delete the booking record for audit purposes
       const bookingRef = doc(db, 'bookings', booking.id);
@@ -314,18 +314,18 @@ function AdminPanel() {
         status: 'cancelled',
         cancelledAt: serverTimestamp()
       });
-      
+
       // 4. Remove from local attendance tracking
       if (attendance[booking.id]) {
-        const newAttendance = {...attendance};
+        const newAttendance = { ...attendance };
         delete newAttendance[booking.id];
         setAttendance(newAttendance);
       }
-      
+
       // 5. Update UI
       // Remove booking from the list
       setBookings(prev => prev.filter(b => b.id !== booking.id));
-      
+
       // 6. Refresh event data
       await fetchAllEventTypes();
       if (selectedEvent) {
@@ -340,9 +340,9 @@ function AdminPanel() {
             actualStatus: determineEventStatus(updatedEventData.date, updatedEventData.time)
           });
         }
-        
+
         // Re-fetch bookings to sync bookings list with DB
-        await handleEventSelect(selectedEvent.id); 
+        await handleEventSelect(selectedEvent.id);
       }
     } catch (error) {
       console.error('Error deleting booking:', error);
@@ -371,15 +371,15 @@ function AdminPanel() {
   // Render request text with show more functionality
   const renderRequestText = (bookingId, text) => {
     if (!text) return 'None';
-    
+
     const isExpanded = expandedRequests[bookingId];
     const isLong = text.length > 25;
-    
+
     if (isLong && !isExpanded) {
       return (
         <div>
           {text.substring(0, 25)}...
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               toggleRequestExpand(bookingId);
@@ -394,7 +394,7 @@ function AdminPanel() {
       return (
         <div>
           {text}
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               toggleRequestExpand(bookingId);
@@ -406,7 +406,7 @@ function AdminPanel() {
         </div>
       );
     }
-    
+
     return text;
   };
 
@@ -644,6 +644,7 @@ function AdminPanel() {
                               Will sync to: {event.actualStatus}
                             </div>
                           )}
+
                         </div>
                       ))}
                     </div>
@@ -676,6 +677,25 @@ function AdminPanel() {
                           selectedEvent.actualStatus === 'upcoming' ? 'text-blue-700' : 'text-gray-700'
                           }`}>{selectedEvent.actualStatus}</span></p>
                       </div>
+                      {/* Add pricing information row */}
+                      {(selectedEvent.memberPrice > 0 || selectedEvent.nonMemberPrice > 0 || selectedEvent.paymentAmount > 0) && (
+                        <div className="md:col-span-2 p-3 bg-yellow-50 rounded border border-yellow-200">
+                          <p className="text-sm font-medium text-yellow-800">Event Pricing:</p>
+                          {selectedEvent.memberPrice && selectedEvent.nonMemberPrice ? (
+                            <div className="mt-1 text-sm text-yellow-700">
+                              <span>Members: €{selectedEvent.memberPrice} | Non-members: €{selectedEvent.nonMemberPrice}</span>
+                            </div>
+                          ) : selectedEvent.paymentAmount > 0 ? (
+                            <div className="mt-1 text-sm text-yellow-700">
+                              <span>Fixed price: €{selectedEvent.paymentAmount}</span>
+                            </div>
+                          ) : (
+                            <div className="mt-1 text-sm text-yellow-700">
+                              <span>Free event</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {bookings.length > 0 ? (
@@ -697,9 +717,9 @@ function AdminPanel() {
                             {bookings.map(booking => (
                               <tr key={booking.id} className={attendance[booking.id] ? "bg-green-50" : ""}>
                                 <td className="px-4 py-2 whitespace-nowrap text-center">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={!!attendance[booking.id]} 
+                                  <input
+                                    type="checkbox"
+                                    checked={!!attendance[booking.id]}
                                     onChange={(e) => handleAttendanceCheck(booking.id, e.target.checked)}
                                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                   />

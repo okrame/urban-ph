@@ -306,11 +306,11 @@ function UsersDatabase() {
     }
   };
 
-  // Render cell content with truncation and expand/collapse
+  // Render cell content with proper truncation for long text
   const renderCellContent = (rowId, columnId, content) => {
     if (!content) return '';
 
-    // Handle array content (like eventsBooked)
+    // Handle array content (like eventsBooked) - keep existing behavior
     if (Array.isArray(content)) {
       const expanded = isCellExpanded(rowId, columnId);
       
@@ -358,42 +358,18 @@ function UsersDatabase() {
       }
     } 
     
-    // Handle string content that might be long
+    // Handle string content - use ellipsis for very long text
     if (typeof content === 'string') {
-      const expanded = isCellExpanded(rowId, columnId);
-      const isLong = content.length > 30;
-      
-      if (isLong && !expanded) {
-        return (
-          <div>
-            {content.substring(0, 30)}...
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleCellExpand(rowId, columnId);
-              }}
-              className="text-xs text-blue-600 hover:text-blue-800 ml-1 underline"
-            >
-              Show more
-            </button>
-          </div>
-        );
-      } else if (isLong && expanded) {
-        return (
-          <div>
-            {content}
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleCellExpand(rowId, columnId);
-              }}
-              className="text-xs text-blue-600 hover:text-blue-800 ml-1 underline"
-            >
-              Show less
-            </button>
-          </div>
-        );
-      }
+      // For address and other long fields, show with ellipsis but allow full text on hover
+      return (
+        <div 
+          className="truncate" 
+          title={content}
+          style={{ maxWidth: '100%' }}
+        >
+          {content}
+        </div>
+      );
     }
     
     return content;
@@ -462,29 +438,29 @@ function UsersDatabase() {
           <table className="min-w-full text-sm divide-y divide-gray-200">
             <thead>
               <tr>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">ID</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Email</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Codice Fiscale</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Full Name</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Data di nascita</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Phone</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Residenza</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Instagram</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Role</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Created At</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Events Booked</th>
-                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium">Actions</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-24">ID</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '200px' }}>Email</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '130px' }}>Codice Fiscale</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '120px' }}>Full Name</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '120px' }}>Data di nascita</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '130px' }}>Phone</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '250px' }}>Residenza</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-28">Instagram</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-20">Role</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-36">Created At</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '320px' }}>Events Booked</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.map(row => (
                 <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <div className="p-1 rounded max-w-[100px] truncate" title={row.id}>
+                  <td className="px-4 py-2 w-24">
+                    <div className="truncate" title={row.id}>
                       {row.id}
                     </div>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2" style={{ minWidth: '320px' }}>
                     {editingCell && editingCell.rowId === row.id && editingCell.columnId === 'email' ? (
                       <input
                         type="text"
@@ -496,14 +472,14 @@ function UsersDatabase() {
                     ) : (
                       <div 
                         onClick={() => handleEdit(row.id, 'email', row.email)}
-                        className="p-1 rounded cursor-pointer hover:bg-gray-100 max-w-[150px] truncate"
+                        className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.email}
                       >
                         {row.email}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-32">
                     {editingCell && editingCell.rowId === row.id && editingCell.columnId === 'taxId' ? (
                       <input
                         type="text"
@@ -515,13 +491,14 @@ function UsersDatabase() {
                     ) : (
                       <div 
                         onClick={() => handleEdit(row.id, 'taxId', row.taxId)}
-                        className="p-1 rounded cursor-pointer hover:bg-gray-100"
+                        className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
+                        title={row.taxId}
                       >
                         {row.taxId}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-40">
                     {editingCell && editingCell.rowId === row.id && editingCell.columnId === 'fullName' ? (
                       <input
                         type="text"
@@ -533,13 +510,14 @@ function UsersDatabase() {
                     ) : (
                       <div 
                         onClick={() => handleEdit(row.id, 'fullName', row.fullName)}
-                        className="p-1 rounded cursor-pointer hover:bg-gray-100"
+                        className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
+                        title={row.fullName}
                       >
                         {renderCellContent(row.id, 'fullName', row.fullName)}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-28">
                     {editingCell && editingCell.rowId === row.id && editingCell.columnId === 'birthDate' ? (
                       <input
                         type="text"
@@ -551,18 +529,19 @@ function UsersDatabase() {
                     ) : (
                       <div 
                         onClick={() => handleEdit(row.id, 'birthDate', row.birthDate)}
-                        className="p-1 rounded cursor-pointer hover:bg-gray-100"
+                        className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
+                        title={row.birthDate}
                       >
                         {row.birthDate}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
-                    <div className="p-1 rounded">
+                  <td className="px-4 py-2 w-32">
+                    <div className="p-1 rounded truncate" title={row.phone}>
                       {renderCellContent(row.id, 'phone', row.phone)}
                     </div>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-64">
                     {editingCell && editingCell.rowId === row.id && editingCell.columnId === 'address' ? (
                       <input
                         type="text"
@@ -574,13 +553,14 @@ function UsersDatabase() {
                     ) : (
                       <div 
                         onClick={() => handleEdit(row.id, 'address', row.address)}
-                        className="p-1 rounded cursor-pointer hover:bg-gray-100"
+                        className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
+                        title={row.address}
                       >
                         {renderCellContent(row.id, 'address', row.address)}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-28">
                     {editingCell && editingCell.rowId === row.id && editingCell.columnId === 'instagram' ? (
                       <input
                         type="text"
@@ -592,34 +572,35 @@ function UsersDatabase() {
                     ) : (
                       <div 
                         onClick={() => handleEdit(row.id, 'instagram', row.instagram)}
-                        className="p-1 rounded cursor-pointer hover:bg-gray-100"
+                        className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
+                        title={row.instagram}
                       >
                         {row.instagram}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-20">
                     <div className="p-1 rounded">
                       {row.role === 'admin' ? (
                         <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
                           {row.role}
                         </span>
                       ) : (
-                        row.role
+                        <span className="truncate" title={row.role}>{row.role}</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-2">
-                    <div className="p-1 rounded">
+                  <td className="px-4 py-2 w-36">
+                    <div className="p-1 rounded truncate" title={row.createdAt}>
                       {renderCellContent(row.id, 'createdAt', row.createdAt)}
                     </div>
                   </td>
-                  <td className="px-4 py-2 min-w-[200px]">
+                  <td className="px-4 py-2 w-48">
                     <div className="p-1 rounded">
                       {renderCellContent(row.id, 'eventsBooked', row.eventsBooked)}
                     </div>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 w-24">
                     <button
                       onClick={(e) => handleDeleteUser(row.id, e)}
                       disabled={deleting === row.id}

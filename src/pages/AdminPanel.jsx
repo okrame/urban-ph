@@ -26,6 +26,7 @@ function AdminPanel() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncingStatuses, setSyncingStatuses] = useState(false); // New state for sync loading
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -75,6 +76,48 @@ function AdminPanel() {
 
     fetchData();
   }, [isAdmin]);
+
+  // Auto-sync all event statuses when needed
+  const syncAllEventStatuses = async () => {
+    setSyncingStatuses(true);
+    try {
+      // Get all events
+      const eventsSnapshot = await getDocs(collection(db, 'events'));
+      const updatePromises = [];
+
+      eventsSnapshot.forEach(eventDoc => {
+        const eventData = eventDoc.data();
+        const actualStatus = determineEventStatus(eventData.date, eventData.time);
+        
+        // Only update if status has changed
+        if (actualStatus !== eventData.status) {
+          const updatePromise = updateDoc(eventDoc.ref, {
+            status: actualStatus,
+            updatedAt: serverTimestamp()
+          });
+          updatePromises.push(updatePromise);
+          
+          console.log(`Syncing event ${eventDoc.id}: ${eventData.status} → ${actualStatus}`);
+        }
+      });
+
+      // Wait for all updates to complete
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        console.log(`Synced ${updatePromises.length} event statuses`);
+      } else {
+        console.log('All event statuses are already up to date');
+      }
+
+      // Refresh event lists after sync
+      await fetchAllEventTypes();
+      
+    } catch (error) {
+      console.error('Error syncing event statuses:', error);
+    } finally {
+      setSyncingStatuses(false);
+    }
+  };
 
   // Fetch all event types and categorize by actual status
   const fetchAllEventTypes = async () => {
@@ -126,6 +169,16 @@ function AdminPanel() {
     } catch (error) {
       console.error('Error fetching events by type:', error);
     }
+  };
+
+  // Enhanced tab switching with auto-sync
+  const handleEventsTabChange = async (newTab) => {
+    setEventsTab(newTab);
+    setSelectedEvent(null);
+    setBookings([]);
+
+    // Auto-sync statuses when switching tabs
+    await syncAllEventStatuses();
   };
 
   // Load bookings for a specific event
@@ -192,49 +245,6 @@ function AdminPanel() {
       }
     } catch (error) {
       console.error('Error fetching event bookings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sync database event status with computed status
-  const handleSyncEventStatus = async (eventId, e) => {
-    e.stopPropagation(); // Prevent event propagation to parent
-
-    try {
-      setLoading(true);
-      const eventRef = doc(db, 'events', eventId);
-      const eventDoc = await getDoc(eventRef);
-
-      if (!eventDoc.exists()) {
-        throw new Error('Event not found');
-      }
-
-      const eventData = eventDoc.data();
-      const actualStatus = determineEventStatus(eventData.date, eventData.time);
-
-      // Update only if status has changed
-      if (actualStatus !== eventData.status) {
-        await updateDoc(eventRef, {
-          status: actualStatus,
-          updatedAt: serverTimestamp()
-        });
-
-        console.log(`Event status updated from ${eventData.status} to ${actualStatus}`);
-
-        // Refresh all event lists and update selected event
-        await fetchAllEventTypes();
-
-        // If this was the selected event, refresh its details
-        if (selectedEvent && selectedEvent.id === eventId) {
-          handleEventSelect(eventId);
-        }
-      } else {
-        console.log('Event status is already up to date');
-      }
-    } catch (error) {
-      console.error('Error syncing event status:', error);
-      alert(`Error updating event status: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -528,18 +538,15 @@ function AdminPanel() {
           <UsersDatabase />
         ) : (
           <>
-            {/* Event Type Tabs */}
-            <div className="flex mb-6 border-b">
+            {/* Event Type Tabs with sync indicator */}
+            <div className="flex mb-6 border-b items-center">
               <button
                 className={`px-4 py-2 ${eventsTab === 'active'
                   ? 'border-b-2 border-green-500 font-semibold text-green-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
-                onClick={() => {
-                  setEventsTab('active');
-                  setSelectedEvent(null);
-                  setBookings([]);
-                }}
+                onClick={() => handleEventsTabChange('active')}
+                disabled={syncingStatuses}
               >
                 Active Events ({activeEvents.length})
               </button>
@@ -548,11 +555,8 @@ function AdminPanel() {
                   ? 'border-b-2 border-blue-500 font-semibold text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
-                onClick={() => {
-                  setEventsTab('upcoming');
-                  setSelectedEvent(null);
-                  setBookings([]);
-                }}
+                onClick={() => handleEventsTabChange('upcoming')}
+                disabled={syncingStatuses}
               >
                 Upcoming Events ({upcomingEvents.length})
               </button>
@@ -561,14 +565,22 @@ function AdminPanel() {
                   ? 'border-b-2 border-gray-500 font-semibold text-gray-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
-                onClick={() => {
-                  setEventsTab('past');
-                  setSelectedEvent(null);
-                  setBookings([]);
-                }}
+                onClick={() => handleEventsTabChange('past')}
+                disabled={syncingStatuses}
               >
                 Past Events ({pastEvents.length})
               </button>
+
+              {/* Sync indicator */}
+              {syncingStatuses && (
+                <div className="ml-4 flex items-center text-sm text-blue-600">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Syncing statuses...
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col lg:flex-row gap-8">
@@ -589,10 +601,6 @@ function AdminPanel() {
                     >
                       + New Event
                     </button>
-                  </div>
-
-                  <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded">
-                    <p>Event status is automatically calculated from date and time.</p>
                   </div>
 
                   {loading ? (
@@ -616,13 +624,6 @@ function AdminPanel() {
                                 Edit
                               </button>
                               <button
-                                onClick={(e) => handleSyncEventStatus(event.id, e)}
-                                className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200 mb-1"
-                                title="Sync database status with actual status"
-                              >
-                                Sync Status
-                              </button>
-                              <button
                                 onClick={(e) => handleDeleteEvent(event.id, e)}
                                 className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 mb-1"
                               >
@@ -635,12 +636,12 @@ function AdminPanel() {
                             <p className="text-sm">Spots: {event.spotsLeft || 0}/{event.spots}</p>
                             {/* Status badge */}
                             <span className={`inline-block text-xs px-2 py-1 rounded-full ${getStatusStyle(event.status)}`}>
-                              DB Status: {event.status}
+                              {event.status}
                             </span>
                           </div>
                           {event.status !== event.actualStatus && (
                             <div className="mt-1 p-1 bg-yellow-50 text-yellow-700 text-xs rounded">
-                              Status mismatch! Actual: {event.actualStatus}
+                              Will sync to: {event.actualStatus}
                             </div>
                           )}
                         </div>

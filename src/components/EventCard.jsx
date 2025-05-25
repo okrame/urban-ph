@@ -83,24 +83,34 @@ function EventCard({ event, user, onAuthNeeded }) {
           const isMember = userProfile?.currentYearMember || false;
           setUserMembershipStatus(isMember);
           
-          // Set applicable price based on membership
-          if (event.memberPrice && event.nonMemberPrice) {
+          // FIXED: Determine if this is a paid event and set applicable price
+          const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
+          
+          if (isPaidEvent) {
             setApplicablePrice(isMember ? event.memberPrice : event.nonMemberPrice);
-          } else {
+          } else if (event.paymentAmount) {
             // Fallback for old events with single paymentAmount
-            setApplicablePrice(event.paymentAmount || 0);
+            setApplicablePrice(event.paymentAmount);
+          } else {
+            setApplicablePrice(0);
           }
         } catch (error) {
           console.error('Error checking membership status:', error);
           setUserMembershipStatus(false);
-          setApplicablePrice(event.nonMemberPrice || event.paymentAmount || 0);
+          
+          // Set price based on event structure
+          const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
+          setApplicablePrice(isPaidEvent ? event.nonMemberPrice : (event.paymentAmount || 0));
         }
       } else {
         setUserMembershipStatus(null);
-        setApplicablePrice(event?.nonMemberPrice || event?.paymentAmount || 0);
+        
+        // Set price for non-logged in users
+        const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
+        setApplicablePrice(isPaidEvent ? event.nonMemberPrice : (event.paymentAmount || 0));
       }
     };
-
+  
     checkMembershipStatus();
   }, [user, event]);
   
@@ -254,12 +264,15 @@ function EventCard({ event, user, onAuthNeeded }) {
       // Store form data for payment
       setBookingFormData(userData);
       
-      // If event requires payment, show payment modal with applicable price
-      if (applicablePrice > 0) {
+      // FIXED: Check if event requires payment based on applicable price (not just > 0)
+      const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
+      const requiresPayment = isPaidEvent && applicablePrice > 0;
+      
+      if (requiresPayment) {
         setShowBookingForm(false);
         setShowPaymentModal(true);
       } else {
-        // For free events, complete booking directly
+        // For free events or free member access, complete booking directly
         const result = await bookEventSimple(event.id, userData);
         
         if (result.success) {
@@ -467,10 +480,10 @@ function EventCard({ event, user, onAuthNeeded }) {
                 {eventStatus === 'active' ? 'Active' : 
                  eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
               </span>
-              {/* Updated pricing badge */}
-              {(event.memberPrice > 0 || event.nonMemberPrice > 0 || event.paymentAmount > 0) && (
+              {/* FIXED: Updated pricing badge logic */}
+              {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
                 <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700">
-                  {event.memberPrice && event.nonMemberPrice ? (
+                  {event.memberPrice !== null && event.nonMemberPrice !== null ? (
                     user ? (
                       userMembershipStatus !== null ? (
                         userMembershipStatus ? `€${event.memberPrice} (member)` : `€${event.nonMemberPrice}`
@@ -503,15 +516,15 @@ function EventCard({ event, user, onAuthNeeded }) {
           <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
             📍 {event.location}
           </span>
-          {/* Updated pricing display in expanded content */}
-          {(event.memberPrice > 0 || event.nonMemberPrice > 0 || event.paymentAmount > 0) && (
+          {/* FIXED: Updated pricing display in expanded content */}
+          {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
             <div className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
-              {event.memberPrice && event.nonMemberPrice ? (
+              {event.memberPrice !== null && event.nonMemberPrice !== null ? (
                 <div>
                   {user && userMembershipStatus !== null ? (
                     <span>
                       Your price: €{userMembershipStatus ? event.memberPrice : event.nonMemberPrice}
-                      {userMembershipStatus && (
+                      {userMembershipStatus && event.memberPrice < event.nonMemberPrice && (
                         <span className="text-green-700 ml-1">(member discount!)</span>
                       )}
                     </span>

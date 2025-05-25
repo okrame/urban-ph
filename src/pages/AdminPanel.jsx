@@ -678,12 +678,13 @@ function AdminPanel() {
                           }`}>{selectedEvent.actualStatus}</span></p>
                       </div>
                       {/* Add pricing information row */}
-                      {(selectedEvent.memberPrice > 0 || selectedEvent.nonMemberPrice > 0 || selectedEvent.paymentAmount > 0) && (
+                      {(selectedEvent.memberPrice !== null || selectedEvent.nonMemberPrice !== null || selectedEvent.paymentAmount > 0) && (
                         <div className="md:col-span-2 p-3 bg-yellow-50 rounded border border-yellow-200">
                           <p className="text-sm font-medium text-yellow-800">Event Pricing:</p>
-                          {selectedEvent.memberPrice && selectedEvent.nonMemberPrice ? (
+                          {selectedEvent.memberPrice !== null && selectedEvent.nonMemberPrice !== null ? (
                             <div className="mt-1 text-sm text-yellow-700">
                               <span>Members: €{selectedEvent.memberPrice} | Non-members: €{selectedEvent.nonMemberPrice}</span>
+              
                             </div>
                           ) : selectedEvent.paymentAmount > 0 ? (
                             <div className="mt-1 text-sm text-yellow-700">

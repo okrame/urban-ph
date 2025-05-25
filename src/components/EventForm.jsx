@@ -18,9 +18,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     image: '',
     status: 'active',
     // Updated payment fields for member pricing
-    isPaid: initialValues.memberPrice ? true : false,
-    memberPrice: initialValues.memberPrice || 0,
-    nonMemberPrice: initialValues.nonMemberPrice || 0,
+    isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
+    memberPrice: initialValues.memberPrice !== undefined ? initialValues.memberPrice : 0,
+    nonMemberPrice: initialValues.nonMemberPrice !== undefined ? initialValues.nonMemberPrice : 0,
     paymentCurrency: initialValues.paymentCurrency || 'EUR',
     ...initialValues
   });
@@ -65,9 +65,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       image: '',
       status: 'active',
       // Initialize payment fields with member pricing
-      isPaid: initialValues.memberPrice || initialValues.nonMemberPrice ? true : false,
-      memberPrice: initialValues.memberPrice || 0,
-      nonMemberPrice: initialValues.nonMemberPrice || 0,
+      isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
+      memberPrice: initialValues.memberPrice !== undefined ? initialValues.memberPrice : 0,
+      nonMemberPrice: initialValues.nonMemberPrice !== undefined ? initialValues.nonMemberPrice : 0,
       paymentCurrency: initialValues.paymentCurrency || 'EUR',
       ...initialValues
     });
@@ -271,38 +271,63 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-  
+
     // Special handling for spots field
     if (name === 'spots') {
       const spotsValue = parseInt(value, 10);
-  
+
       // When editing existing event, ensure spots is >= bookings count
       if (initialValues.id && spotsValue < bookingsCount) {
         setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
         return;
       }
-  
+
       setError(''); // Clear error if validation passes
     }
-  
+
     // For description field, update cursor position
     if (name === 'description') {
       setCursorPosition(e.target.selectionStart);
     }
-  
-    // Special handling for payment amounts
+
+    // FIXED: Special handling for payment amounts - allow 0 and empty values
     if (name === 'memberPrice' || name === 'nonMemberPrice') {
-      // Ensure it's a positive number with at most 2 decimal places
-      const numValue = parseFloat(value);
-      if (isNaN(numValue) || numValue < 0) {
-        return; // Don't update invalid amounts
+      // Allow empty string (user is typing)
+      if (value === '') {
+        setFormData({
+          ...formData,
+          [name]: ''
+        });
+        return;
       }
+      
+      const numValue = parseFloat(value);
+      
+      // For member price: allow 0 or positive numbers
+      if (name === 'memberPrice') {
+        if (isNaN(numValue) || numValue < 0) {
+          return; // Don't update invalid amounts
+        }
+      }
+      
+      // For non-member price: must be positive (> 0) when not empty
+      if (name === 'nonMemberPrice') {
+        if (isNaN(numValue) || numValue < 0) {
+          return; // Don't update invalid amounts
+        }
+      }
+      
+      // Update with the numeric value
+      setFormData({
+        ...formData,
+        [name]: numValue
+      });
+      return;
     }
-  
+
     setFormData({
       ...formData,
-      [name]: name === 'spots' || name === 'memberPrice' || name === 'nonMemberPrice' 
-        ? parseFloat(value) : value
+      [name]: name === 'spots' ? parseFloat(value) : value
     });
   };
 
@@ -357,14 +382,25 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
+      // FIXED: Updated payment validation to allow €0 for members
       if (formData.isPaid) {
-        if (!formData.memberPrice || formData.memberPrice <= 0 || isNaN(formData.memberPrice)) {
-          setError('Please enter a valid member price greater than 0');
+        // Member price can be 0 or greater, but must be a valid number (not empty string)
+        const memberPrice = typeof formData.memberPrice === 'string' ? 
+          parseFloat(formData.memberPrice) : formData.memberPrice;
+          
+        if (formData.memberPrice === '' || formData.memberPrice === null || 
+            formData.memberPrice === undefined || isNaN(memberPrice) || memberPrice < 0) {
+          setError('Please enter a valid member price (can be 0 for free member access)');
           setLoading(false);
           return;
         }
         
-        if (!formData.nonMemberPrice || formData.nonMemberPrice <= 0 || isNaN(formData.nonMemberPrice)) {
+        // Non-member price must be greater than 0
+        const nonMemberPrice = typeof formData.nonMemberPrice === 'string' ? 
+          parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice;
+          
+        if (formData.nonMemberPrice === '' || !formData.nonMemberPrice || 
+            nonMemberPrice <= 0 || isNaN(nonMemberPrice)) {
           setError('Please enter a valid non-member price greater than 0');
           setLoading(false);
           return;
@@ -374,9 +410,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       // Prepare the form data
       let updatedFormData = {
         ...formData,
-        // Set pricing fields only if isPaid is true
-        memberPrice: formData.isPaid ? formData.memberPrice : null,
-        nonMemberPrice: formData.isPaid ? formData.nonMemberPrice : null,
+        // FIXED: Set pricing fields only if isPaid is true, ensuring numbers are properly converted
+        // Store the actual pricing values, even if one is 0 (as long as isPaid is true)
+        memberPrice: formData.isPaid ? (typeof formData.memberPrice === 'string' ? parseFloat(formData.memberPrice) : formData.memberPrice) : null,
+        nonMemberPrice: formData.isPaid ? (typeof formData.nonMemberPrice === 'string' ? parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice) : null,
         paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
         // Use uploaded image URL
         image: imageUrl
@@ -813,7 +850,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                           type="number"
                           name="memberPrice"
                           id="memberPrice"
-                          value={formData.memberPrice || ''}
+                          value={formData.memberPrice === '' ? '' : formData.memberPrice}
                           onChange={handleChange}
                           step="0.01"
                           min="0"
@@ -826,7 +863,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Price for current year members
+                        Price for current year members (can be €0 for free member access)
                       </p>
                     </div>
 
@@ -842,12 +879,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                           type="number"
                           name="nonMemberPrice"
                           id="nonMemberPrice"
-                          value={formData.nonMemberPrice || ''}
+                          value={formData.nonMemberPrice === '' ? '' : formData.nonMemberPrice}
                           onChange={handleChange}
                           step="0.01"
-                          min="0"
+                          min="0.01"
                           className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                          placeholder="0.00"
+                          placeholder="0.01"
                           required={formData.isPaid}
                         />
                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -855,7 +892,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Price for new/past year members
+                        Price for new/past year members (must be greater than €0)
                       </p>
                     </div>
                   </div>
@@ -878,11 +915,11 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
                   <div className="mt-3 text-xs text-gray-500 space-y-1">
                     <p>Payment will be processed securely via PayPal during the booking process.</p>
-                    {formData.isPaid && formData.memberPrice && formData.nonMemberPrice && (
+                    {formData.isPaid && formData.memberPrice !== '' && formData.nonMemberPrice !== '' && (
                       <div className="mt-2 p-2 bg-blue-50 rounded text-blue-800 font-medium text-sm">
                         <p>Current pricing:</p>
-                        <p>• Members: €{parseFloat(formData.memberPrice).toFixed(2)} EUR</p>
-                        <p>• Non-members: €{parseFloat(formData.nonMemberPrice).toFixed(2)} EUR</p>
+                        <p>• Members: €{parseFloat(formData.memberPrice || 0).toFixed(2)} EUR</p>
+                        <p>• Non-members: €{parseFloat(formData.nonMemberPrice || 0).toFixed(2)} EUR</p>
                       </div>
                     )}
                   </div>

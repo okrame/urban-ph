@@ -91,6 +91,16 @@ function UsersDatabase() {
           console.error('Error formatting created at date', error);
         }
 
+        // Format membership years
+        const membershipYears = userData.membershipYears || [];
+        const membershipYearsDisplay = membershipYears.length > 0 
+          ? membershipYears.sort((a, b) => b - a) // Sort descending (newest first)
+          : ['none'];
+
+        // Current year member status
+        const currentYearMember = userData.currentYearMember || false;
+        const currentYear = new Date().getFullYear();
+
         users.push({
           id: userDoc.id,
           email: userData.email || '',
@@ -104,7 +114,12 @@ function UsersDatabase() {
           instagram: userData.instagram || '',
           role: userData.role || '',
           createdAt: createdAtString,
-          eventsBooked: eventsDetails.length > 0 ? eventsDetails : ['No events booked']
+          eventsBooked: eventsDetails.length > 0 ? eventsDetails : ['No events booked'],
+          membershipYears: membershipYearsDisplay,
+          currentYearMember: currentYearMember,
+          // Store additional data for reference
+          lastBookingYear: userData.lastBookingYear || null,
+          personalDetailsLastConfirmed: userData.personalDetailsLastConfirmed || null
         });
       }
 
@@ -142,7 +157,8 @@ function UsersDatabase() {
   const handleEdit = (rowId, columnId, value) => {
     if (columnId === 'id' || columnId === 'role' || 
         columnId === 'eventsBooked' || columnId === 'createdAt' ||
-        columnId === 'phone') {
+        columnId === 'phone' || columnId === 'membershipYears' || 
+        columnId === 'currentYearMember') {
       return; // Prevent editing these columns
     }
     setEditingCell({ rowId, columnId, value });
@@ -279,7 +295,7 @@ function UsersDatabase() {
 
   const downloadCSV = () => {
     try {
-      const header = ['id', 'email', 'taxId', 'fullName', 'birthDate', 'phone', 'address', 'instagram', 'role', 'createdAt', 'eventsBooked'];
+      const header = ['id', 'email', 'taxId', 'fullName', 'birthDate', 'phone', 'address', 'instagram', 'role', 'createdAt', 'eventsBooked', 'membershipYears', 'currentYearMember', 'lastBookingYear'];
       const csv = [
         header.join(','),
         ...data.map(row => header.map(field => {
@@ -287,6 +303,10 @@ function UsersDatabase() {
           // Handle array values and escape special characters
           if (Array.isArray(value)) {
             return JSON.stringify(value.join('; '));
+          }
+          // Handle boolean values
+          if (typeof value === 'boolean') {
+            return value.toString();
           }
           return JSON.stringify(value || '');
         }).join(','))
@@ -310,13 +330,17 @@ function UsersDatabase() {
   const renderCellContent = (rowId, columnId, content) => {
     if (!content) return '';
 
-    // Handle array content (like eventsBooked) - keep existing behavior
+    // Handle array content (like eventsBooked or membershipYears) - keep existing behavior
     if (Array.isArray(content)) {
       const expanded = isCellExpanded(rowId, columnId);
       
-      // If nothing or just "No events booked", don't need expand/collapse
-      if (content.length <= 1 && content[0] === 'No events booked') {
-        return content[0];
+      // If nothing or just default message, don't need expand/collapse
+      if (content.length <= 1 && (content[0] === 'No events booked' || content[0] === 'none')) {
+        return (
+          <span className="text-gray-500 italic">
+            {content[0]}
+          </span>
+        );
       }
       
       if (!expanded && content.length > 1) {
@@ -357,6 +381,19 @@ function UsersDatabase() {
         );
       }
     } 
+    
+    // Handle boolean content (for currentYearMember)
+    if (typeof content === 'boolean') {
+      return (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          content 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-gray-100 text-gray-600'
+        }`}>
+          {content ? 'Yes' : 'No'}
+        </span>
+      );
+    }
     
     // Handle string content - use ellipsis for very long text
     if (typeof content === 'string') {
@@ -448,6 +485,8 @@ function UsersDatabase() {
                 <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-28">Instagram</th>
                 <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-20">Role</th>
                 <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-36">Created At</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '150px' }}>Memberships</th>
+                <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-20">Member {new Date().getFullYear()}</th>
                 <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium" style={{ minWidth: '320px' }}>Events Booked</th>
                 <th className="px-4 py-2 text-left bg-gray-50 text-gray-600 font-medium w-24">Actions</th>
               </tr>
@@ -595,6 +634,16 @@ function UsersDatabase() {
                       {renderCellContent(row.id, 'createdAt', row.createdAt)}
                     </div>
                   </td>
+                  <td className="px-4 py-2" style={{ minWidth: '150px' }}>
+                    <div className="p-1 rounded">
+                      {renderCellContent(row.id, 'membershipYears', row.membershipYears)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 w-20 text-center">
+                    <div className="p-1 rounded">
+                      {renderCellContent(row.id, 'currentYearMember', row.currentYearMember)}
+                    </div>
+                  </td>
                   <td className="px-4 py-2 w-48">
                     <div className="p-1 rounded">
                       {renderCellContent(row.id, 'eventsBooked', row.eventsBooked)}
@@ -624,7 +673,6 @@ function UsersDatabase() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                           </svg>
-                          Delete
                         </>
                       )}
                     </button>

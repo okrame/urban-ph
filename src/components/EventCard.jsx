@@ -134,37 +134,58 @@ function EventCard({ event, user, onAuthNeeded }) {
       return;
     }
     
-    // Check if this is user's first time booking
+    // Check booking requirements using the new year-based system
     try {
       setLoading(true);
-      const isProfileComplete = await checkUserProfileComplete(user.uid);
-      setIsFirstTimeBooking(!isProfileComplete);
       
-      // Get user profile data
-      const userProfile = await getUserProfile(user.uid);
+      // Import the new function
+      const { checkUserBookingRequirements } = await import('../../firebase/firestoreServices');
+      const requirements = await checkUserBookingRequirements(user.uid);
       
-      if (!isProfileComplete) {
-        // First time booking - use whatever profile data is available
-        setExistingUserData(userProfile || {});
-      } else {
-        // Not first time - already has complete profile
-        // Get contact info from previous bookings
-        const contactInfo = await getUserContactInfo(user.uid);
-        if (contactInfo) {
-          setExistingUserData({
-            ...userProfile,
-            email: contactInfo.email || userProfile.email,
-            phone: contactInfo.phone || ''
-          });
+      setIsFirstTimeBooking(requirements.needsPersonalDetails);
+      
+      // Set appropriate existing data based on requirements
+      if (requirements.needsPersonalDetails) {
+        if (requirements.isFirstTime) {
+          // True first time - minimal data
+          setExistingUserData(requirements.existingData || {});
         } else {
-          setExistingUserData(userProfile || {});
+          // Year confirmation - pre-fill with existing data
+          setExistingUserData({
+            ...requirements.existingData,
+            // Ensure we have email and phone for contact
+            email: requirements.existingData.email || user.email || '',
+            phone: '' // Will be filled from previous bookings if available
+          });
+          
+          // Try to get contact info from previous bookings
+          const contactInfo = await getUserContactInfo(user.uid);
+          if (contactInfo) {
+            setExistingUserData(prev => ({
+              ...prev,
+              email: contactInfo.email || prev.email,
+              phone: contactInfo.phone || ''
+            }));
+          }
         }
+      } else {
+        // No confirmation needed - get contact info only
+        const contactInfo = await getUserContactInfo(user.uid);
+        setExistingUserData({
+          ...requirements.existingData,
+          email: contactInfo?.email || requirements.existingData.email || user.email || '',
+          phone: contactInfo?.phone || ''
+        });
       }
     } catch (error) {
-      console.error("Error checking user profile:", error);
+      console.error("Error checking booking requirements:", error);
+      setAuthError("Error checking user information. Please try again.");
+      setLoading(false);
+      return;
     } finally {
       setLoading(false);
-    }    
+    }
+    
     setShowBookingForm(true);
   };
   

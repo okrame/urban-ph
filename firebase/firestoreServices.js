@@ -317,7 +317,43 @@ export const isEventBookable = async (eventId) => {
   }
 };
 
-// Create a booking with improved payment handling or reactivate if cancelled
+// Check if user needs personal details confirmation for current year booking
+export const checkUserBookingRequirements = async (userId) => {
+  try {
+    if (!userId) {
+      return { 
+        needsPersonalDetails: true, 
+        isFirstTime: true, 
+        existingData: {},
+        reason: 'no_user_id'
+      };
+    }
+    
+    // Import the function from userServices
+    const { checkPersonalDetailsConfirmationNeeded, getUserProfile } = await import('./userServices');
+    
+    const confirmationCheck = await checkPersonalDetailsConfirmationNeeded(userId);
+    const userProfile = await getUserProfile(userId);
+    
+    return {
+      needsPersonalDetails: confirmationCheck.needed,
+      isFirstTime: confirmationCheck.isFirstTime || confirmationCheck.reason === 'first_time_user',
+      existingData: userProfile || {},
+      reason: confirmationCheck.reason,
+      lastConfirmedYear: confirmationCheck.lastConfirmedYear
+    };
+  } catch (error) {
+    console.error('Error checking user booking requirements:', error);
+    return { 
+      needsPersonalDetails: true, 
+      isFirstTime: true, 
+      existingData: {},
+      reason: 'error'
+    };
+  }
+};
+
+// Updated bookEventSimple function to include year membership logic
 export const bookEventSimple = async (eventId, userData) => {
   try {
     // 1. Check if the user already has a booking for this event
@@ -359,6 +395,18 @@ export const bookEventSimple = async (eventId, userData) => {
         reactivatedAt: serverTimestamp()
       });
       
+      // Update user membership and personal details
+      const { updateUserMembership } = await import('./userServices');
+      await updateUserMembership(userData.userId, {
+        name: userData.name,
+        surname: userData.surname,
+        birthDate: userData.birthDate,
+        address: userData.address,
+        taxId: userData.taxId,
+        instagram: userData.instagram,
+        email: userData.email
+      });
+      
       // Update event's attendees and available spots
       const eventRef = doc(db, 'events', eventId);
       const eventDoc = await getDoc(eventRef);
@@ -381,9 +429,9 @@ export const bookEventSimple = async (eventId, userData) => {
         const userDoc = await getDoc(userRef);
         
         if (userDoc.exists()) {
-          const userData = userDoc.data();
+          const userDataDoc = userDoc.data();
           // Only add event if not already in eventsBooked
-          const eventsBooked = userData.eventsBooked || [];
+          const eventsBooked = userDataDoc.eventsBooked || [];
           if (!eventsBooked.includes(eventId)) {
             await updateDoc(userRef, {
               eventsBooked: arrayUnion(eventId),
@@ -485,7 +533,24 @@ export const bookEventSimple = async (eventId, userData) => {
     const bookingRef = await addDoc(collection(db, 'bookings'), newBooking);
     const newBookingId = bookingRef.id;
     
-    // 5. If payment details exist, create separate payment record linked to this booking
+    // 5. Update user membership and personal details
+    try {
+      const { updateUserMembership } = await import('./userServices');
+      await updateUserMembership(userData.userId, {
+        name: userData.name,
+        surname: userData.surname,
+        birthDate: userData.birthDate,
+        address: userData.address,
+        taxId: userData.taxId,
+        instagram: userData.instagram,
+        email: userData.email
+      });
+    } catch (membershipErr) {
+      console.warn("Could not update user membership:", membershipErr);
+      // Don't block booking if membership update fails
+    }
+    
+    // 6. If payment details exist, create separate payment record linked to this booking
     if (userData.paymentDetails && userData.paymentDetails.paymentId) {
       try {
         const paymentRecord = {
@@ -511,7 +576,7 @@ export const bookEventSimple = async (eventId, userData) => {
       }
     }
     
-    // 6. Update available spots count in the event - only reduce if payment not required or already completed
+    // 7. Update available spots count in the event - only reduce if payment not required or already completed
     // FIX: Use paymentCompleted variable here to ensure consistency
     if (newBooking.status === 'confirmed' || paymentCompleted) {
       await updateDoc(eventRef, {
@@ -532,7 +597,7 @@ export const bookEventSimple = async (eventId, userData) => {
       });
     }
     
-    // 7. Update user profile with all the new fields
+    // 8. Update user profile with events booked array
     try {
       const userRef = doc(db, 'users', userData.userId);
       const userDoc = await getDoc(userRef);
@@ -553,18 +618,10 @@ export const bookEventSimple = async (eventId, userData) => {
           updatedAt: serverTimestamp()
         };
         
-        // Add user personal data if provided (only first time)
-        if (userData.name) userUpdates.name = userData.name;
-        if (userData.surname) userUpdates.surname = userData.surname;
-        if (userData.birthDate) userUpdates.birthDate = userData.birthDate;
-        if (userData.address) userUpdates.address = userData.address;
-        if (userData.taxId) userUpdates.taxId = userData.taxId;
-        if (userData.instagram) userUpdates.instagram = userData.instagram;
-        
         await updateDoc(userRef, userUpdates);
       }
     } catch (userErr) {
-      console.warn("Could not update user profile:", userErr);
+      console.warn("Could not update user profile events:", userErr);
       // Don't block booking if user update fails
     }
     

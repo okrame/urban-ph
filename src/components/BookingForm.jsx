@@ -33,10 +33,36 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     setInstagram(existingData.instagram || '');
   }, [existingData]);
 
+  const getIntroMessage = () => {
+    const currentYear = new Date().getFullYear();
+    const hasPersonalDetails = existingData.name && existingData.surname && existingData.taxId;
+
+    if (isFirstTime && !hasPersonalDetails) {
+      return `Welcome! This is your first time booking with us. We need some information to register you for ${currentYear}.`;
+    } else if (isFirstTime && hasPersonalDetails) {
+      return `Welcome back! Please confirm your personal details are still correct for ${currentYear}.`;
+    } else {
+      return "Please provide your contact details to complete your booking.";
+    }
+  };
+
   const validateTaxId = (id) => {
     // Italian Codice Fiscale validation - basic format check
     const regex = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/i;
     return id ? regex.test(id.toUpperCase()) : false;
+  };
+
+  const getFormTitle = () => {
+    const currentYear = new Date().getFullYear();
+    const hasPersonalDetails = existingData.name && existingData.surname && existingData.taxId;
+
+    if (isFirstTime && hasPersonalDetails) {
+      return `Confirm Your Details for ${currentYear}`;
+    } else if (isFirstTime) {
+      return `Registration for ${currentYear}`;
+    } else {
+      return "Booking Details";
+    }
   };
 
   const validateEmail = (email) => {
@@ -57,16 +83,16 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Reset previous errors
     setError('');
-    
+
     // Basic validation
     if (!email.trim() || !validateEmail(email)) {
       setError('Please enter a valid email address');
       return;
     }
-    
+
     if (!phone.trim() || !validatePhone(phone)) {
       setError('Please enter a valid phone number');
       return;
@@ -78,22 +104,22 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
         setError('Name is required');
         return;
       }
-      
+
       if (!surname.trim()) {
         setError('Surname is required');
         return;
       }
-      
+
       if (!birthDate) {
         setError('Birth date is required');
         return;
       }
-      
+
       if (!address.trim()) {
         setError('Home address is required');
         return;
       }
-      
+
       if (!taxId.trim() || !validateTaxId(taxId)) {
         setError('Valid Tax ID/Codice Fiscale is required (16 characters)');
         return;
@@ -105,13 +131,13 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
       setError('You must accept the terms and conditions and privacy policy to proceed');
       return;
     }
-    
+
     // Submit the form data
-    onSubmit({ 
-      email, 
-      phone, 
-      name, 
-      surname, 
+    onSubmit({
+      email,
+      phone,
+      name,
+      surname,
       birthDate,
       address,
       taxId,
@@ -124,16 +150,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
   return (
     <div className="bg-white p-4 rounded-lg max-w-md mx-auto">
-      {isFirstTime ? (
-        <p className="text-sm text-gray-600 mb-3">
-          First time you're joining us for an event! We need some data to register you.
-        </p>
-      ) : (
-        <p className="text-sm text-gray-600 mb-3">
-          Please provide your contact details to complete your booking.
-        </p>
-      )}
-      
+      <h3 className="font-semibold text-lg mb-2">{getFormTitle()}</h3>
+
+      <p className="text-sm text-gray-600 mb-3">
+        {getIntroMessage()}
+      </p>
+
       {event?.paymentAmount > 0 && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="font-medium text-blue-700">
@@ -144,13 +166,23 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           </p>
         </div>
       )}
-      
+
+      {/* Add a notice for year confirmations */}
+      {isFirstTime && existingData.name && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>Please review and update your information if needed.</strong>
+            This helps us keep our records current and ensures we can contact you about events.
+          </p>
+        </div>
+      )}
+
       {error && (
         <div className="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
           {error}
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {isFirstTime && (
           <>
@@ -168,7 +200,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                   required={isFirstTime}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname">
                   Surname *
@@ -183,7 +215,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate">
                 Birth Date * <span className="text-xs text-gray-500">(must be 18+)</span>
@@ -198,7 +230,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 max={minDate}
               />
             </div>
-            
+
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address">
                 Home Address *
@@ -213,7 +245,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 placeholder="Street, number, city, zip code"
               />
             </div>
-            
+
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId">
                 Tax ID/Codice Fiscale *
@@ -223,9 +255,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 id="taxId"
                 value={taxId}
                 onChange={handleTaxIdChange}
-                className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${
-                  taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 required={isFirstTime}
                 maxLength={16}
                 placeholder="16 characters"
@@ -238,7 +269,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             </div>
           </>
         )}
-        
+
         <div>
           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="email">
             Email Address *
@@ -248,9 +279,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${
-              email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`}
+            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
             placeholder="your@email.com"
             required
           />
@@ -260,7 +290,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             </p>
           )}
         </div>
-        
+
         <div>
           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="phone">
             Phone Number *
@@ -270,9 +300,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             id="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${
-              phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`}
+            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
             placeholder="+39 123 456 7890"
             required
           />
@@ -282,7 +311,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             </p>
           )}
         </div>
-        
+
         <div>
           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="instagram">
             Instagram Name (optional)
@@ -299,7 +328,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             />
           </div>
         </div>
-        
+
         <div>
           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="requests">
             Any Specific Request (optional)
@@ -313,7 +342,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             placeholder="Any special requirements or requests..."
           />
         </div>
-        
+
         {/* Terms and Privacy Policy checkboxes */}
         <div className="space-y-2">
           <div className="flex items-start">
@@ -328,7 +357,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
               I accept the <a href="#" className="text-blue-600 hover:underline">Terms and Conditions</a> *
             </label>
           </div>
-          
+
           <div className="flex items-start">
             <input
               type="checkbox"
@@ -342,7 +371,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             </label>
           </div>
         </div>
-        
+
         <div className="flex justify-end space-x-2">
           <button
             type="button"
@@ -354,9 +383,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           <button
             type="submit"
             disabled={loading}
-            className={`px-4 py-1.5 bg-blue-600 text-white rounded font-medium text-sm ${
-              loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
-            }`}
+            className={`px-4 py-1.5 bg-blue-600 text-white rounded font-medium text-sm ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
+              }`}
           >
             {loading ? 'Processing...' : event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'}
           </button>

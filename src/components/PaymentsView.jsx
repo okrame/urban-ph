@@ -69,7 +69,22 @@ function PaymentsView({ eventId = null }) {
       if (!paymentsSnapshot.empty) {
         paymentsSnapshot.forEach(doc => {
           const data = doc.data();
-          const paymentId = data.paymentId || data.id || 'unknown';
+          
+          // CORRECTED: Proper PayPal transaction ID extraction
+          let paymentId = 'unknown';
+          
+          // Priority 1: Use fullDetails.id (the actual PayPal order/transaction ID)
+          if (data.fullDetails?.id) {
+            paymentId = data.fullDetails.id;
+          }
+          // Priority 2: Use the stored paymentId field (but only if it looks like a PayPal order ID)
+          else if (data.paymentId && data.paymentId !== 'unknown' && data.paymentId.length > 10) {
+            paymentId = data.paymentId;
+          }
+          // Priority 3: Use document id as fallback
+          else {
+            paymentId = doc.id;
+          }
           
           const payment = {
             id: doc.id,
@@ -91,12 +106,14 @@ function PaymentsView({ eventId = null }) {
             source: 'paymentCollection'
           };
           
-          // Use the paymentId as the key for deduplication
-          if (!paymentMap.has(paymentId) || 
-              // If we already have this ID but the current entry has more info, prefer this one
-              (paymentMap.has(paymentId) && 
-               (payment.bookingId && !paymentMap.get(paymentId).bookingId))) {
-            paymentMap.set(paymentId, payment);
+          // Use the actual PayPal order ID as the key for deduplication
+          const deduplicationKey = paymentId;
+          
+          if (!paymentMap.has(deduplicationKey) || 
+              // If we already have this payment but the current entry has more complete info, prefer this one
+              (paymentMap.has(deduplicationKey) && 
+               (payment.bookingId && !paymentMap.get(deduplicationKey).bookingId))) {
+            paymentMap.set(deduplicationKey, payment);
           }
         });
       }
@@ -111,11 +128,23 @@ function PaymentsView({ eventId = null }) {
       bookingsSnapshot.forEach(doc => {
         const booking = doc.data();
         if (booking.payment) {
-          const paymentId = booking.payment.id || 'unknown';
+          // CORRECTED: Better paymentId extraction for bookings too
+          let paymentId = 'unknown';
+          
+          // Priority 1: Extract from payment details structure
+          if (booking.payment.id && booking.payment.id !== 'unknown') {
+            paymentId = booking.payment.id;
+          } else if (booking.paymentDetails?.paymentId) {
+            paymentId = booking.paymentDetails.paymentId;
+          } else {
+            paymentId = doc.id; // Use booking ID as fallback
+          }
+          
+          const deduplicationKey = paymentId;
           
           // If we already have this payment in our map, merge the info from booking
-          if (paymentMap.has(paymentId)) {
-            const existingPayment = paymentMap.get(paymentId);
+          if (paymentMap.has(deduplicationKey)) {
+            const existingPayment = paymentMap.get(deduplicationKey);
             
             // Update the existing payment with additional info from the booking
             const updatedPayment = {
@@ -129,7 +158,7 @@ function PaymentsView({ eventId = null }) {
                 : booking.payment?.payer?.email || booking.paymentDetails?.payerEmail || 'N/A'
             };
             
-            paymentMap.set(paymentId, updatedPayment);
+            paymentMap.set(deduplicationKey, updatedPayment);
           } else {
             // This is a new payment not found in the payments collection
             const newPayment = {
@@ -150,13 +179,20 @@ function PaymentsView({ eventId = null }) {
               source: 'bookingCollection'
             };
             
-            paymentMap.set(paymentId, newPayment);
+            paymentMap.set(deduplicationKey, newPayment);
           }
         }
       });
       
       // Convert the Map back to an array
       paymentsData = Array.from(paymentMap.values());
+      
+      // IMPROVED: Filter out any entries that have invalid payment IDs
+      paymentsData = paymentsData.filter(payment => 
+        payment.paymentId && 
+        payment.paymentId !== 'unknown' && 
+        payment.paymentId.length > 8 // PayPal IDs are typically longer than 8 chars
+      );
       
       // Apply filter
       if (filter === 'completed') {

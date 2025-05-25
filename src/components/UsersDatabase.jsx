@@ -97,8 +97,8 @@ function UsersDatabase() {
           ? membershipYears.sort((a, b) => b - a) // Sort descending (newest first)
           : ['none'];
 
-        // Current year member status
-        const currentYearMember = userData.currentYearMember || false;
+        // Current year member status - explicitly handle boolean
+        const currentYearMember = userData.currentYearMember === true;
         const currentYear = new Date().getFullYear();
 
         users.push({
@@ -328,7 +328,19 @@ function UsersDatabase() {
 
   // Render cell content with proper truncation for long text
   const renderCellContent = (rowId, columnId, content) => {
-    if (!content) return '';
+    console.log(`Rendering ${columnId}:`, content, typeof content); // Debug log
+    
+    if (content === null || content === undefined) {
+      if (columnId === 'currentYearMember') {
+        // Explicitly handle null/undefined for currentYearMember
+        return (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            No
+          </span>
+        );
+      }
+      return '';
+    }
 
     // Handle array content (like eventsBooked or membershipYears) - keep existing behavior
     if (Array.isArray(content)) {
@@ -382,7 +394,22 @@ function UsersDatabase() {
       }
     } 
     
-    // Handle boolean content (for currentYearMember)
+    // Handle boolean content specifically for currentYearMember column
+    if (columnId === 'currentYearMember') {
+      const boolValue = content === true;
+      console.log(`CurrentYearMember - content: ${content}, boolValue: ${boolValue}`); // Debug log
+      return (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          boolValue 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-gray-100 text-gray-600'
+        }`}>
+          {boolValue ? 'Yes' : 'No'}
+        </span>
+      );
+    }
+    
+    // Handle other boolean content
     if (typeof content === 'boolean') {
       return (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${

@@ -26,8 +26,8 @@ try {
       displayName: user.displayName || null,
       photoURL: user.photoURL || null,
       role: 'user', // Keep role separate from membership
-      membershipYears: [currentYear], // Track years when user was active
-      currentYearMember: true, // Quick flag for current year
+      membershipYears: [], // Empty until they actually book something
+      currentYearMember: false, // False until they book in current year
       lastBookingYear: null, // Track last booking year
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

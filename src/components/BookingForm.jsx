@@ -38,11 +38,11 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     const hasPersonalDetails = existingData.name && existingData.surname && existingData.taxId;
 
     if (isFirstTime && !hasPersonalDetails) {
-      return `Welcome! This is your first time booking with us. We need some information to register you for ${currentYear}.`;
+      return `Welcome to Urban pH! We need some information to register you for ${currentYear}.`;
     } else if (isFirstTime && hasPersonalDetails) {
-      return `Welcome back! Please confirm your personal details are still correct for ${currentYear}.`;
+      return `Welcome back Urban pH! Please confirm your personal details are still correct for ${currentYear}.`;
     } else {
-      return "Please provide your contact details to complete your booking.";
+      return "Please check your contact details to complete your booking.";
     }
   };
 
@@ -57,9 +57,9 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     const hasPersonalDetails = existingData.name && existingData.surname && existingData.taxId;
 
     if (isFirstTime && hasPersonalDetails) {
-      return `Confirm Your Details for ${currentYear}`;
+      return `Confirm Membership for ${currentYear}`;
     } else if (isFirstTime) {
-      return `Registration for ${currentYear}`;
+      return `Membership for ${currentYear}`;
     } else {
       return "Booking Details";
     }

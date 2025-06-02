@@ -87,14 +87,14 @@ function Navbar({ user, onSignInClick }) {
   return (
     <nav className="bg-white shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex h-20 items-center justify-between">
+      <div className="flex h-28 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img 
                 src={UPHLogo} 
                 alt="Urban Photo Hunts Logo" 
-                className="h-20 w-auto"
+                className="h-24 w-auto"
               />
             </Link>
           </div>
@@ -103,7 +103,7 @@ function Navbar({ user, onSignInClick }) {
           <div className="hidden md:flex items-center ml-6 space-x-4">
             <Link 
               to="/" 
-              className={isActive('/') ? 'text-blue-600 border-b-2 border-blue-500 px-3 py-2' : 'text-gray-600 hover:text-blue-600 px-3 py-2'}
+              className={isActive('/') ? 'text-[#AFACFB] border-b-2 border-[#AFACFB] px-4 py-3' : 'text-gray-600 hover:text-[#AFACFB] px-4 py-3'}
             >
               Home
             </Link>
@@ -115,20 +115,20 @@ function Navbar({ user, onSignInClick }) {
                   scrollToCurrentEvents(e);
                 }
               }}
-              className={isActive('/events') ? 'text-blue-600 border-b-2 border-blue-500 px-3 py-2' : 'text-gray-600 hover:text-blue-600 px-3 py-2'}
+              className={isActive('/events') ? 'text-[#AFACFB] border-b-2 border-[#AFACFB] px-4 py-3' : 'text-gray-600 hover:text-[#AFACFB] px-4 py-3'}
             >
               .ourEvents
             </Link>
             <Link 
               to="/about" 
-              className={isActive('/about') ? 'text-blue-600 border-b-2 border-blue-500 px-3 py-2' : 'text-gray-600 hover:text-blue-600 px-3 py-2'}
+              className={isActive('/about') ? 'text-[#AFACFB] border-b-2 border-[#AFACFB] px-4 py-3' : 'text-gray-600 hover:text-[#AFACFB] px-4 py-3'}
             >
               .aboutUs
             </Link>
             {user && isAdmin && (
               <Link 
                 to="/admin" 
-                className={isActive('/admin') ? 'text-blue-600 border-b-2 border-blue-500 px-3 py-2' : 'text-gray-600 hover:text-blue-600 px-3 py-2'}
+                className={isActive('/admin') ? 'text-[#AFACFB] border-b-2 border-[#AFACFB] px-4 py-3' : 'text-gray-600 hover:text-[#AFACFB] px-4 py-3'}
               >
                 Admin
               </Link>
@@ -159,7 +159,7 @@ function Navbar({ user, onSignInClick }) {
                 <span className="text-gray-700 text-sm hidden lg:inline-block">{user.displayName || user.email}</span>
                 <button 
                   onClick={handleSignOut}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                  className="bg-[#FFFADE] hover:bg-[#FFF9C8] text-gray-800 px-4 py-1.5 rounded text-sm"
                 >
                   Sign Out
                 </button>
@@ -168,7 +168,7 @@ function Navbar({ user, onSignInClick }) {
               <button 
                 onClick={handleSignIn}
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center"
+                className="bg-[#AFACFB] hover:bg-[#9B97F5] text-white px-5 py-2.5 rounded text-sm flex items-center"
               >
                 {loading ? (
                   <>
@@ -189,7 +189,7 @@ function Navbar({ user, onSignInClick }) {
           <div className="md:hidden flex items-center ml-auto">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-600 hover:text-blue-600"
+              className="text-gray-600 hover:text-[#AFACFB]"
             >
               {isMenuOpen ? (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -211,14 +211,14 @@ function Navbar({ user, onSignInClick }) {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <Link
               to="/"
-              className={`block px-3 py-2 rounded ${isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`}
+              className={`block px-3 py-2 rounded ${isActive('/') ? 'bg-[#AFACFB]/10 text-[#AFACFB]' : 'text-gray-700 hover:bg-[#AFACFB]/10 hover:text-[#AFACFB]'}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to={location.pathname === '/' ? '/' : '/#/?scrollToEvents=true'}
-              className={`block px-3 py-2 rounded ${isActive('/events') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`}
+              className={`block px-3 py-2 rounded ${isActive('/events') ? 'bg-[#AFACFB]/10 text-[#AFACFB]' : 'text-gray-700 hover:bg-[#AFACFB]/10 hover:text-[#AFACFB]'}`}
               onClick={(e) => {
                 if (location.pathname === '/') {
                   e.preventDefault();
@@ -231,7 +231,7 @@ function Navbar({ user, onSignInClick }) {
             </Link>
             <Link
               to="/about"
-              className={`block px-3 py-2 rounded ${isActive('/about') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`}
+              className={`block px-3 py-2 rounded ${isActive('/about') ? 'bg-[#AFACFB]/10 text-[#AFACFB]' : 'text-gray-700 hover:bg-[#AFACFB]/10 hover:text-[#AFACFB]'}`}
               onClick={() => setIsMenuOpen(false)}
             >
               About Us
@@ -239,7 +239,7 @@ function Navbar({ user, onSignInClick }) {
             {user && isAdmin && (
               <Link
                 to="/admin"
-                className={`block px-3 py-2 rounded ${isActive('/admin') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`}
+                className={`block px-3 py-2 rounded ${isActive('/admin') ? 'bg-[#AFACFB]/10 text-[#AFACFB]' : 'text-gray-700 hover:bg-[#AFACFB]/10 hover:text-[#AFACFB]'}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Admin
@@ -276,7 +276,7 @@ function Navbar({ user, onSignInClick }) {
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="ml-auto bg-red-600 flex-shrink-0 p-1 rounded-full text-white hover:bg-red-700"
+                  className="ml-auto bg-[#FFFADE] hover:bg-[#FFF9C8] flex-shrink-0 p-1 rounded-full text-gray-800"
                 >
                   <span className="sr-only">Sign out</span>
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -289,7 +289,7 @@ function Navbar({ user, onSignInClick }) {
                 <button
                   onClick={handleSignIn}
                   disabled={loading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#AFACFB] hover:bg-[#9B97F5]"
                 >
                   {loading ? 'Signing in...' : 'Sign In'}
                 </button>

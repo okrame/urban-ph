@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable, getUserContactInfo } from '../../firebase/firestoreServices';
 import { getUserProfile, checkUserProfileComplete } from '../../firebase/userServices';
 import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
+import LocationMap from './LocationMap';
 
-function EventCard({ event, user, onAuthNeeded }) {
+function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const [eventStatus, setEventStatus] = useState('');
   const [isBookable, setIsBookable] = useState(true);
   const [bookableReason, setBookableReason] = useState('');
   const [imageError, setImageError] = useState(false);
   const [prevUserState, setPrevUserState] = useState(null);
   const [authRequested, setAuthRequested] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState('none'); // 'none', 'confirmed', 'cancelled'
+  const [bookingStatus, setBookingStatus] = useState('none');
   
   const [bookingFormData, setBookingFormData] = useState(null);
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
@@ -26,20 +28,67 @@ function EventCard({ event, user, onAuthNeeded }) {
   const [userMembershipStatus, setUserMembershipStatus] = useState(null);
   const [applicablePrice, setApplicablePrice] = useState(0);
   
-  // Track previous user state to detect sign-in, but only for requested auth
+  // State to track if we should show animations (only for main card view)
+  const [shouldAnimate, setShouldAnimate] = useState(true);
+  
+  // Determine if image should be on left or right based on index
+  const isImageLeft = index % 2 === 0;
+  
+  // Character limit for description
+  const DESCRIPTION_LIMIT = 200;
+  const shouldTruncate = event.description && event.description.length > DESCRIPTION_LIMIT;
+  
+  // Animation variants for slide-in effects
+  const imageVariants = {
+    hidden: {
+      x: isImageLeft ? -100 : 100,
+      opacity: 0
+    },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.8,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  const contentVariants = {
+    hidden: {
+      x: isImageLeft ? 100 : -100,
+      opacity: 0
+    },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.8,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  // Container animation to orchestrate the simultaneous animation
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0 // Simultaneous animation
+      }
+    }
+  };
+  
+  // [Keep all existing useEffect hooks - unchanged]
   useEffect(() => {
     if (!prevUserState && user && authRequested && !isBooked) {
       handleBookEvent();
-      // Reset the auth requested flag to prevent reopening on subsequent renders
       setAuthRequested(false);
     }
-    
     setPrevUserState(user);
   }, [user, authRequested, isBooked]);
 
-  // Reset booking states when user changes (signs in or out)
   useEffect(() => {
-    // Reset booking states when user changes
     setIsBooked(false);
     setBookingSuccess(false);
     setAuthError(null);
@@ -48,13 +97,10 @@ function EventCard({ event, user, onAuthNeeded }) {
     setBookingStatus('none');
   }, [user]);
 
-  // Check event status and bookability
   useEffect(() => {
     if (event) {
       const status = determineEventStatus(event.date, event.time);
       setEventStatus(status);
-      
-      // Reset image error state when event changes
       setImageError(false);
       
       const checkBookability = async () => {
@@ -73,7 +119,6 @@ function EventCard({ event, user, onAuthNeeded }) {
     }
   }, [event]);
 
-  // Check membership status and set applicable price
   useEffect(() => {
     const checkMembershipStatus = async () => {
       if (user && event) {
@@ -83,13 +128,11 @@ function EventCard({ event, user, onAuthNeeded }) {
           const isMember = userProfile?.currentYearMember || false;
           setUserMembershipStatus(isMember);
           
-          // FIXED: Determine if this is a paid event and set applicable price
           const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
           
           if (isPaidEvent) {
             setApplicablePrice(isMember ? event.memberPrice : event.nonMemberPrice);
           } else if (event.paymentAmount) {
-            // Fallback for old events with single paymentAmount
             setApplicablePrice(event.paymentAmount);
           } else {
             setApplicablePrice(0);
@@ -98,14 +141,11 @@ function EventCard({ event, user, onAuthNeeded }) {
           console.error('Error checking membership status:', error);
           setUserMembershipStatus(false);
           
-          // Set price based on event structure
           const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
           setApplicablePrice(isPaidEvent ? event.nonMemberPrice : (event.paymentAmount || 0));
         }
       } else {
         setUserMembershipStatus(null);
-        
-        // Set price for non-logged in users
         const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
         setApplicablePrice(isPaidEvent ? event.nonMemberPrice : (event.paymentAmount || 0));
       }
@@ -114,10 +154,8 @@ function EventCard({ event, user, onAuthNeeded }) {
     checkMembershipStatus();
   }, [user, event]);
   
-  // Check booking status when user or event changes
   useEffect(() => {
     const checkBookingStatus = async () => {
-      // Reset the booking state if there's no user
       if (!user || !event.id) {
         setIsBooked(false);
         setBookingSuccess(false);
@@ -126,16 +164,13 @@ function EventCard({ event, user, onAuthNeeded }) {
       }
       
       try {
-        // Modified to return both the booking existence and status
         const { isBooked: hasBooking, status } = await checkUserBooking(user.uid, event.id, true);
         
-        // Check if booking exists and is not cancelled
         if (hasBooking && status !== 'cancelled') {
           setIsBooked(true);
           setBookingSuccess(true);
           setBookingStatus(status || 'confirmed');
         } else {
-          // If booking doesn't exist or was cancelled, user can book again
           setIsBooked(false);
           setBookingSuccess(false);
           setBookingStatus(status || 'none');
@@ -151,57 +186,46 @@ function EventCard({ event, user, onAuthNeeded }) {
     checkBookingStatus();
   }, [user, event.id]);
   
+  // [Keep all handler functions - unchanged]
   const handleBookEvent = async () => {
-    // Clear any previous errors
     setAuthError(null);
     
-    // Check if event is bookable first
     if (!isBookable) {
       setAuthError(bookableReason);
       return;
     }
     
     if (!user) {
-      // If no user is logged in, trigger the auth modal
       if (onAuthNeeded) {
-        // Set flag that auth was requested specifically for this event
         setAuthRequested(true);
         onAuthNeeded();
       }
       return;
     }
     
-    // Only block if the booking is confirmed (not cancelled)
     if (isBooked && bookingStatus !== 'cancelled') {
       setAuthError("You've already booked this event!");
       return;
     }
     
-    // Check booking requirements using the new year-based system
     try {
       setLoading(true);
       
-      // Import the new function
       const { checkUserBookingRequirements } = await import('../../firebase/firestoreServices');
       const requirements = await checkUserBookingRequirements(user.uid);
       
       setIsFirstTimeBooking(requirements.needsPersonalDetails);
       
-      // Set appropriate existing data based on requirements
       if (requirements.needsPersonalDetails) {
         if (requirements.isFirstTime) {
-          // True first time - minimal data
           setExistingUserData(requirements.existingData || {});
         } else {
-          // Year confirmation - pre-fill with existing data
           setExistingUserData({
             ...requirements.existingData,
-            // Ensure we have email and phone for contact
             email: requirements.existingData.email || user.email || '',
-            phone: '' // Will be filled from previous bookings if available
+            phone: ''
           });
           
-          // Try to get contact info from previous bookings
           const contactInfo = await getUserContactInfo(user.uid);
           if (contactInfo) {
             setExistingUserData(prev => ({
@@ -212,7 +236,6 @@ function EventCard({ event, user, onAuthNeeded }) {
           }
         }
       } else {
-        // No confirmation needed - get contact info only
         const contactInfo = await getUserContactInfo(user.uid);
         setExistingUserData({
           ...requirements.existingData,
@@ -237,7 +260,6 @@ function EventCard({ event, user, onAuthNeeded }) {
     setAuthError(null);
     
     try {
-      // Check bookability again just before submission
       const { bookable, reason } = await isEventBookable(event.id);
       if (!bookable) {
         setAuthError(reason);
@@ -245,13 +267,11 @@ function EventCard({ event, user, onAuthNeeded }) {
         return;
       }
       
-      // Store form data for payment processing
       const userData = {
         userId: user.uid,
         email: formData.email,
         phone: formData.phone,
         displayName: user.displayName || null,
-        // Include additional user data for profile
         name: formData.name,
         surname: formData.surname,
         birthDate: formData.birthDate,
@@ -261,10 +281,8 @@ function EventCard({ event, user, onAuthNeeded }) {
         requests: formData.requests
       };
       
-      // Store form data for payment
       setBookingFormData(userData);
       
-      // FIXED: Check if event requires payment based on applicable price (not just > 0)
       const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
       const requiresPayment = isPaidEvent && applicablePrice > 0;
       
@@ -272,7 +290,6 @@ function EventCard({ event, user, onAuthNeeded }) {
         setShowBookingForm(false);
         setShowPaymentModal(true);
       } else {
-        // For free events or free member access, complete booking directly
         const result = await bookEventSimple(event.id, userData);
         
         if (result.success) {
@@ -299,21 +316,18 @@ function EventCard({ event, user, onAuthNeeded }) {
     try {
       console.log("Payment approved:", paymentData);
       
-      // Ensure paymentDetails has all needed properties with fallbacks for missing values
       const sanitizedPaymentDetails = {
         paymentId: paymentData.paymentDetails?.paymentId || '',
-        payerID: paymentData.paymentDetails?.payerID || null,  // Allow null/undefined here
+        payerID: paymentData.paymentDetails?.payerID || null,
         payerEmail: paymentData.paymentDetails?.payerEmail || '',
-        // IMPORTANT: Make sure status is explicitly set to COMPLETED
-        status: 'COMPLETED', // Force status to COMPLETED to ensure proper handling
-        amount: applicablePrice, // Use the member-specific price
+        status: 'COMPLETED',
+        amount: applicablePrice,
         currency: event.paymentCurrency || 'EUR',
         createTime: paymentData.paymentDetails?.createTime || new Date().toISOString(),
         updateTime: paymentData.paymentDetails?.updateTime || new Date().toISOString(),
         orderId: paymentData.paymentDetails?.orderId || null
       };
       
-      // Complete booking with payment details
       const result = await bookEventSimple(event.id, {
         ...bookingFormData,
         paymentDetails: sanitizedPaymentDetails
@@ -343,49 +357,45 @@ function EventCard({ event, user, onAuthNeeded }) {
   const handleCancelForm = () => {
     setShowBookingForm(false);
     setAuthError(null);
-  };
-  
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
+    // Disable animation since card has already been viewed
+    setShouldAnimate(false);
   };
   
   const handleImageError = () => {
     setImageError(true);
   };
   
-  // Get appropriate image source with fallback
   const getImageSource = () => {
     if (imageError) {
       return 'https://via.placeholder.com/600x400?text=No+Image+Available';
     }
     
-    // Use base64 image if available
     if (event.imageBase64) {
       return event.imageBase64;
     }
     
-    // Fall back to URL if provided
     if (event.image) {
       return event.image;
     }
     
-    // Default fallback
     return 'https://via.placeholder.com/600x400?text=No+Image+Available';
   };
   
-  // Determine if event is closed for booking but still active
   const isClosedForBooking = !isBookable && eventStatus === 'active';
-  
-  // Determine if event is fully booked
   const isFullyBooked = bookableReason === "No spots left";
 
-  // Booking form state
+  // Show booking form
   if (showBookingForm) {
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
-        <h3 className="text-xl font-bold mb-3">{event.title}</h3>
+      <motion.div 
+        className="bg-white border border-black rounded-none overflow-hidden p-6 my-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
         {authError && (
-          <div className="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
             {authError}
           </div>
         )}
@@ -401,31 +411,35 @@ function EventCard({ event, user, onAuthNeeded }) {
             userMembershipStatus: userMembershipStatus
           }}
         />
-      </div>
+      </motion.div>
     );
   }
   
-  // Payment modal
+  // Show payment modal
   if (showPaymentModal) {
-    // Create event object with applicable price for PaymentModal
     const eventForPayment = {
       ...event,
-      paymentAmount: applicablePrice // Use the member-specific price
+      paymentAmount: applicablePrice
     };
 
     return (
       <>
-        <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
-          <h3 className="text-xl font-bold mb-3">{event.title}</h3>
-          <p className="text-center text-gray-600">
+        <motion.div 
+          className="bg-white border border-black rounded-none overflow-hidden p-6 my-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
+          <p className="text-center text-gray-600 text-sm">
             Please complete the payment to confirm your booking.
           </p>
           {authError && (
-            <div className="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
               {authError}
             </div>
           )}
-        </div>
+        </motion.div>
         
         <PaymentModal
           isOpen={showPaymentModal}
@@ -439,54 +453,103 @@ function EventCard({ event, user, onAuthNeeded }) {
     );
   }
   
-  // Default state with accordion
+  // Main event card with alternating layout and animations
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300">
-      <div className="cursor-pointer" onClick={toggleExpand}>
-        <div className="md:flex">
-          <div className="md:w-1/4">
+    <motion.div 
+      className="bg-white border border-black my-8 overflow-hidden"
+      variants={containerVariants}
+      initial={shouldAnimate ? "hidden" : "static"}
+      animate={shouldAnimate ? undefined : "static"}
+      whileInView={shouldAnimate ? "visible" : undefined}
+      viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
+    >
+      <div className={`flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
+        {/* Image section - 50% width with animation */}
+        <motion.div 
+          className="w-1/2 flex flex-col"
+          variants={imageVariants}
+        >
+          {/* Main image */}
+          <div className="h-96">
             <img 
               src={getImageSource()}
               alt={event.title}
-              className="h-40 w-full object-cover md:h-32"
+              className="w-full h-full object-cover"
               onError={handleImageError}
             />
           </div>
-          <div className="p-4 md:w-3/4">
-            <div className="flex justify-between items-start">
-              <h3 className="font-semibold">{event.title}</h3>
-              <span className="text-blue-600">
-                {isExpanded ? 
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path>
-                  </svg> : 
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                }
-              </span>
+          
+          {/* Map section appears below the image when expanded */}
+          {showFullDescription && (
+            <motion.div 
+              className="border-t border-black"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="p-4">
+                <h4 className="text-sm font-light text-black mb-3">Event Location</h4>
+                <LocationMap location={event.location} isVisible={showFullDescription} />
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+        
+        {/* Content section - 50% width with animation */}
+        <motion.div 
+          className="w-1/2 p-8 flex flex-col justify-between"
+          variants={contentVariants}
+        >
+          <div>
+            <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
+            
+            <div className="flex items-center text-sm text-black opacity-70 mb-4">
+              <span>{event.date}</span>
+              <span className="mx-2">·</span>
+              <span>{event.time}</span>
+              <span className="mx-2">·</span>
+              <span>{event.venueName || event.location}</span>
             </div>
             
-            <div className="flex gap-2 mb-2 flex-wrap">
-              <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
-                📅 {event.date}
+            <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+              {shouldTruncate && !showFullDescription ? (
+                <>
+                  {event.description.substring(0, DESCRIPTION_LIMIT)}...
+                  <button 
+                    onClick={() => setShowFullDescription(true)}
+                    className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                  >
+                    Show more
+                  </button>
+                </>
+              ) : (
+                <>
+                  {event.description}
+                  {shouldTruncate && (
+                    <button 
+                      onClick={() => setShowFullDescription(false)}
+                      className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                    >
+                      Show less
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            
+            {/* Event meta info */}
+            <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
+              <span className="border border-black px-2 py-1">{event.type}</span>
+              <span className="border border-black px-2 py-1">
+                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
               </span>
-              <span className="inline-block bg-blue-200 rounded-full px-2 py-1 text-xs font-semibold text-blue-700">
-                {event.type}
-              </span>
-              <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold
-                ${eventStatus === 'active' ? 'bg-green-200 text-green-700' : 
-                  eventStatus === 'upcoming' ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-700'}`}>
-                {eventStatus === 'active' ? 'Active' : 
-                 eventStatus === 'upcoming' ? 'Upcoming' : 'Past'}
-              </span>
-              {/* FIXED: Updated pricing badge logic */}
               {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
-                <span className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700">
+                <span className="border border-purple-600 text-purple-600 px-2 py-1">
                   {event.memberPrice !== null && event.nonMemberPrice !== null ? (
                     user ? (
                       userMembershipStatus !== null ? (
-                        userMembershipStatus ? `€${event.memberPrice} (member)` : `€${event.nonMemberPrice}`
+                        userMembershipStatus ? `€${event.memberPrice}` : `€${event.nonMemberPrice}`
                       ) : `€${event.memberPrice}/${event.nonMemberPrice}`
                     ) : `€${event.memberPrice}/${event.nonMemberPrice}`
                   ) : (
@@ -496,129 +559,75 @@ function EventCard({ event, user, onAuthNeeded }) {
               )}
             </div>
             
-            <p className="text-sm text-gray-600">
-              {event.spotsLeft > 0 
-                ? `${event.spotsLeft} spots left out of ${event.spots}` 
-                : "No spots left"}
-            </p>
+            {/* Status messages */}
+            {authError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+                {authError}
+              </div>
+            )}
+            
+            {bookingStatus === 'cancelled' && (
+              <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+                <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
+                <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
+              </div>
+            )}
+            
+            {isFullyBooked && bookingStatus !== 'cancelled' && (
+              <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+                <p className="font-medium text-black text-sm">This event is fully booked</p>
+              </div>
+            )}
+            
+            {eventStatus === 'past' && (
+              <div className="mb-4 p-3 bg-gray-50 border border-gray-200">
+                <p className="font-medium text-black text-sm">This event has ended</p>
+              </div>
+            )}
+            
+            {isClosedForBooking && bookingStatus !== 'cancelled' && (
+              <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+                <p className="font-medium text-black text-sm">Booking closed</p>
+              </div>
+            )}
           </div>
-        </div>
+          
+          {/* Book button with hover animation */}
+          <motion.button 
+            onClick={handleBookEvent}
+            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
+            className={`w-full py-3 px-4 border text-sm font-light transition-colors ${
+              (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
+                ? 'border-black bg-black text-white cursor-not-allowed' 
+                : (!isBookable && bookingStatus !== 'cancelled')
+                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : loading 
+                    ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-wait' 
+                    : 'border-black bg-white text-black hover:bg-black hover:text-white'
+            }`}
+            whileHover={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 1.02 }}
+            whileTap={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 0.98 }}
+            transition={{ duration: 0.2 }}
+          >
+            {isBooked && bookingStatus !== 'cancelled'
+              ? 'Booking Confirmed' 
+              : loading 
+                ? 'Processing...' 
+                : (!isBookable && bookingStatus !== 'cancelled')
+                  ? isFullyBooked 
+                    ? 'Fully Booked'
+                    : eventStatus === 'past'
+                      ? 'Event Ended'
+                      : 'Booking Closed'
+                  : user 
+                    ? bookingStatus === 'cancelled'
+                      ? 'Book Again'
+                      : 'Book Now'
+                    : 'Sign In to Book'}
+          </motion.button>
+        </motion.div>
       </div>
-      
-      {/* Expanded content */}
-      <div className={`px-4 pb-4 ${isExpanded ? 'block' : 'hidden'}`}>
-        <hr className="my-3" />
-        
-        <div className="mb-2">
-          <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700 mr-2">
-            🕒 {event.time}
-          </span>
-          <span className="inline-block bg-gray-200 rounded-full px-2 py-1 text-xs font-semibold text-gray-700">
-            📍 {event.location}
-          </span>
-          {/* FIXED: Updated pricing display in expanded content */}
-          {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
-            <div className="inline-block bg-yellow-200 rounded-full px-2 py-1 text-xs font-semibold text-yellow-700 ml-2">
-              {event.memberPrice !== null && event.nonMemberPrice !== null ? (
-                <div>
-                  {user && userMembershipStatus !== null ? (
-                    <span>
-                      Your price: €{userMembershipStatus ? event.memberPrice : event.nonMemberPrice}
-                      {userMembershipStatus && event.memberPrice < event.nonMemberPrice && (
-                        <span className="text-green-700 ml-1">(member discount!)</span>
-                      )}
-                    </span>
-                  ) : (
-                    <span>Members: €{event.memberPrice} | Non-members: €{event.nonMemberPrice}</span>
-                  )}
-                </div>
-              ) : (
-                <span>Cost: €{event.paymentAmount || 0}</span>
-              )}
-            </div>
-          )}
-        </div>
-        
-        <p className="text-gray-700 mb-4 text-sm">{event.description}</p>
-        
-        {authError && (
-          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">
-            {authError}
-          </div>
-        )}
-        
-        {/* Cancelled booking notification */}
-        {bookingStatus === 'cancelled' && (
-          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
-            <p className="font-bold">Your previous booking was cancelled</p>
-            <p className="mt-1">Your reservation was cancelled by the organizer. You can book again if you wish.</p>
-          </div>
-        )}
-        
-        {/* Fully Booked Message with contact info */}
-        {isFullyBooked && bookingStatus !== 'cancelled' && (
-          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
-            <p className="font-bold">This event is fully booked!</p>
-            <p className="mt-1">If you'd like to be notified if a spot becomes available, please email:</p>
-            <a href="mailto:urbanphotohunts@example.com" className="text-blue-600 hover:underline block mt-1">
-              urbanphotohunts@example.com
-            </a>
-          </div>
-        )}
-        
-        {/* Past event message */}
-        {eventStatus === 'past' && (
-          <div className="mb-4 p-3 bg-gray-100 text-gray-700 rounded text-sm">
-            <p className="font-bold">This event has ended</p>
-            <p className="mt-1">Please check our upcoming events.</p>
-          </div>
-        )}
-        
-        {/* If event is active but booking window closed */}
-        {isClosedForBooking && bookingStatus !== 'cancelled' && (
-          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded text-sm">
-            <p className="font-bold">Booking for this event is now closed</p>
-            <p className="mt-1">Booking closes 1 hour after the event start time.</p>
-          </div>
-        )}
-        
-        {/* Book button with appropriate state */}
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            handleBookEvent();
-          }}
-          disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-          className={`w-full px-4 py-2 rounded font-bold text-white ${
-            (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-              ? 'bg-green-500 cursor-not-allowed' 
-              : (!isBookable && bookingStatus !== 'cancelled')
-                ? 'bg-gray-400 cursor-not-allowed'
-                : loading 
-                  ? 'bg-gray-400 cursor-wait' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          {isBooked && bookingStatus !== 'cancelled'
-            ? '✓ Booking Confirmed' 
-            : loading 
-              ? 'Processing...' 
-              : (!isBookable && bookingStatus !== 'cancelled')
-                ? isFullyBooked 
-                  ? 'Fully Booked'
-                  : eventStatus === 'past'
-                    ? 'Event Ended'
-                    : 'Booking Closed'
-                : user 
-                  ? bookingStatus === 'cancelled'
-                    ? 'Book Again'
-                    : (applicablePrice > 0 
-                      ? `Book Now` 
-                      : 'Book Now') 
-                  : 'Book'}
-        </button>
-      </div>
-    </div>
+    </motion.div>
   );
 }
 

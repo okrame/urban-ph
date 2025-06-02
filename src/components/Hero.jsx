@@ -1,70 +1,49 @@
-import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase/config';
+import { getUserProfile } from '../../firebase/userServices';
 import gianicolo from '../assets/gianicolo.jpg';
 
-function Hero() {
-  const [path, setPath] = useState('');
-  const svgRef = useRef(null);
-  const containerRef = useRef(null);
-  const startLetterRef = useRef(null);
-  const endTextRef = useRef(null);
+function Hero({ user, onSignInClick }) {
+  const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const location = useLocation();
 
-  // Generate the path on mount and resize
+  // Check if user is admin
   useEffect(() => {
-    const handleResize = () => generatePath();
-    generatePath();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const userProfile = await getUserProfile(user.uid);
+          setIsAdmin(userProfile?.role === 'admin');
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
 
-  const generatePath = () => {
-    if (!containerRef.current || !startLetterRef.current || !endTextRef.current) return;
+    checkAdminStatus();
+  }, [user]);
 
-    const container = containerRef.current.getBoundingClientRect();
-    const startRect = startLetterRef.current.getBoundingClientRect();
-    const endRect = endTextRef.current.getBoundingClientRect();
-
-    // Start from bottom-right of the "O"
-    const startX = startRect.right - container.left;
-    const startY = startRect.bottom - container.top;
-
-    // Underline position: further below the end text to emphasize it
-    const underlineY = endRect.bottom - container.top + 20; // 20px below text
-    const underlineStartX = endRect.left - container.left;
-    const underlineEndX = underlineStartX + endRect.width;
-
-    // Loop circle center adjusted lower
-    const centerX = container.width / 2.025;
-    const centerY = container.height * 0.6; // lowered on the photo to center vertically
-    // Halved radius for the central loop
-    const loopRadius = Math.min(80, container.width * 0.08) / 1.5;
-
-    let d = `M${startX},${startY}`;
-
-    // Pre-loop smooth sinusoidal curve
-    const amplitude = Math.min(30, container.height * 0.05);
-    const wavelength = Math.min(150, container.width * 0.15);
-    const step = Math.min(10, container.width * 0.01);
-    const preLoopEndX = centerX - loopRadius;
-    for (let x = startX; x <= preLoopEndX; x += step) {
-      const phase = ((x - startX) / wavelength) * (Math.PI * 2);
-      const y = startY + Math.sin(phase) * amplitude;
-      d += ` L${x},${y}`;
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
+  };
 
-    // Perfect circle around center
-    const loopStartX = preLoopEndX;
-    const loopStartY = startY + Math.sin(((loopStartX - startX) / wavelength) * (Math.PI * 2)) * amplitude;
-    d += ` L${loopStartX},${loopStartY}`;
-    // Two arcs for full circle
-    d += ` A${loopRadius},${loopRadius} 0 1 0 ${centerX + loopRadius},${centerY}`;
-    d += ` A${loopRadius},${loopRadius} 0 1 0 ${loopStartX},${loopStartY}`;
-
-    // From loop back to underline start with a gentle bend placed below the text
-    d += ` Q${centerX + loopRadius / 2},${centerY + 100} ${underlineStartX},${underlineY}`;
-    // Straight line underline
-    d += ` L${underlineEndX},${underlineY}`;
-
-    setPath(d);
+  const handleSignIn = () => {
+    setLoading(true);
+    if (onSignInClick) {
+      onSignInClick();
+    }
+    setLoading(false);
   };
 
   const scrollToCurrentEvents = (e) => {
@@ -74,56 +53,137 @@ function Hero() {
   };
 
   return (
-    <section
-      ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center text-white overflow-hidden pt-16"
-    >
+    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
+      {/* Background Image */}
       <div className="absolute inset-0 z-0">
-        <img src={gianicolo} alt="Panorama dal Gianicolo a Roma" className="w-full h-full object-cover" />
+        <img 
+          src={gianicolo} 
+          alt="Panorama dal Gianicolo a Roma" 
+          className="w-full h-full object-cover"
+        />
       </div>
-      <div className="absolute inset-0 z-10 pointer-events-none">
-        <svg ref={svgRef} width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
-          <path d={path} fill="none" stroke="#FFFADE" strokeWidth="3" strokeOpacity="0.7" className="animate-path" />
-        </svg>
-      </div>
-      <div className="z-20 p-4 w-full">
-        <div className="absolute sm:top-5 md:top-10 left-10 text-left">
-          <h1 className="font-bold leading-tight" style={{ color: '#FFFADE' }}>
-            <div className="text-4xl md:text-6xl">ESPLORARE</div>
-            <div className="text-4xl md:text-6xl">IL CORPO</div>
-            <div className="text-4xl md:text-6xl">
-              URBAN<span ref={startLetterRef}>O</span>
-            </div>
-          </h1>
-        </div>
-        <div className="flex justify-end mr-8 mt-56">
-          <div className="max-w-md text-right">
-            <p className="text-xl md:text-2xl mb-4" style={{ color: '#FFFADE' }}>
-              Disegniamo esperienze<br />Creiamo Workshop, Cacce & Mostre
-            </p>
-            <p ref={endTextRef} className="text-lg md:text-xl opacity-90 mb-8" style={{ color: '#FFFADE' }}>
-              La città è di tuttə, così come la fotografia.
-            </p>
+
+      {/* Navigation Overlay */}
+      <div className="absolute top-0 left-0 right-0 z-30 p-8">
+        <div className="flex justify-between items-start">
+          {/* Left side navigation */}
+          <div className="flex space-x-8">
+            <button 
+              onClick={scrollToCurrentEvents}
+              className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
+            >
+              .ourEvents
+            </button>
+            <Link 
+              to="/about"
+              className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
+            >
+              .aboutUs
+            </Link>
+            {user && isAdmin && (
+              <Link 
+                to="/admin"
+                className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
+              >
+                Admin
+              </Link>
+            )}
+          </div>
+
+          {/* Right side authentication */}
+          <div className="flex items-center">
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-[#FFFADE] text-sm">
+                  {user.displayName || user.email}
+                </span>
+                <button 
+                  onClick={handleSignOut}
+                  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={handleSignIn}
+                disabled={loading}
+                className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium flex items-center"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-[#FFFADE]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-20">
-        <button onClick={scrollToCurrentEvents} className="text-white focus:outline-none" aria-label="Scroll to current events">
+
+      {/* Main Content */}
+      <div className="z-20 p-4 w-full">
+        <div className="absolute sm:top-32 md:top-40 left-10 text-left">
+          <motion.h1 
+            className="font-bold leading-tight" 
+            style={{ color: '#FFFADE' }}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 1 }}
+          >
+            <div className="text-4xl md:text-5xl">ESPLORARE</div>
+            <div className="text-4xl md:text-5xl">IL CORPO</div>
+            <div className="text-4xl md:text-5xl">URBANO</div>
+          </motion.h1>
+        </div>
+
+        {/* <div className="flex justify-end mr-8 mt-56">
+          <div className="max-w-md text-right">
+            <motion.p 
+              className="text-xl md:text-2xl mb-4" 
+              style={{ color: '#FFFADE' }}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 1.5 }}
+            >
+              Disegniamo esperienze<br />Creiamo Workshop, Cacce & Mostre
+            </motion.p>
+            <motion.p 
+              className="text-lg md:text-xl opacity-90 mb-8" 
+              style={{ color: '#FFFADE' }}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 2 }}
+            >
+              La città è di tuttə, così come la fotografia.
+            </motion.p>
+          </div>
+        </div> */}
+      </div>
+
+      {/* Scroll Arrow */}
+      <motion.div 
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 2.5 }}
+      >
+        <button 
+          onClick={scrollToCurrentEvents} 
+          className="text-white focus:outline-none animate-bounce" 
+          aria-label="Scroll to current events"
+        >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </button>
-      </div>
-      <style jsx>{`
-        .animate-path {
-          stroke-dasharray: 5000;
-          stroke-dashoffset: 5000;
-          animation: drawPath 6s ease-out forwards;
-        }
-        @keyframes drawPath {
-          to { stroke-dashoffset: 0; }
-        }
-      `}</style>
+      </motion.div>
     </section>
   );
 }

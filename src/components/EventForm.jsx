@@ -13,17 +13,26 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     date: '',
     time: '',
     location: '',
+    venueName: '', // New field for custom venue name
     description: '',
     spots: 10,
     image: '',
     status: 'active',
-    // Updated payment fields for member pricing
     isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
     memberPrice: initialValues.memberPrice !== undefined ? initialValues.memberPrice : 0,
     nonMemberPrice: initialValues.nonMemberPrice !== undefined ? initialValues.nonMemberPrice : 0,
     paymentCurrency: initialValues.paymentCurrency || 'EUR',
     ...initialValues
   });
+
+  // Location autocomplete state
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [selectedLocationIndex, setSelectedLocationIndex] = useState(-1);
+  const locationInputRef = useRef(null);
+  const suggestionsRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   // Date picker related state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -51,20 +60,190 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Image state for Storage
   const [imageUrl, setImageUrl] = useState(initialValues.image || '');
 
+  // Location search function
+  const searchLocations = async (query) => {
+    if (!query || query.length < 3) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    setLocationLoading(true);
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=IT`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch locations');
+      }
+      
+      const data = await response.json();
+      
+      // Format suggestions for better display
+      const suggestions = data.map(item => ({
+        display_name: item.display_name,
+        formatted: formatLocationDisplay(item),
+        lat: item.lat,
+        lon: item.lon,
+        raw: item
+      }));
+      
+      setLocationSuggestions(suggestions);
+      setShowLocationSuggestions(suggestions.length > 0);
+      setSelectedLocationIndex(-1);
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // Format location display for better readability
+  const formatLocationDisplay = (location) => {
+    const address = location.address || {};
+    const parts = [];
+    
+    // Add specific place name if available
+    if (address.amenity || address.shop || address.tourism) {
+      parts.push(address.amenity || address.shop || address.tourism);
+    }
+    
+    // Add street address
+    if (address.house_number && address.road) {
+      parts.push(`${address.road} ${address.house_number}`);
+    } else if (address.road) {
+      parts.push(address.road);
+    }
+    
+    // Add neighborhood/suburb
+    if (address.suburb || address.neighbourhood) {
+      parts.push(address.suburb || address.neighbourhood);
+    }
+    
+    // Add city
+    if (address.city || address.town || address.village) {
+      parts.push(address.city || address.town || address.village);
+    }
+    
+    // Add province/state
+    if (address.province || address.state) {
+      parts.push(address.province || address.state);
+    }
+    
+    return parts.slice(0, 3).join(', ') || location.display_name;
+  };
+
+  // Handle location input change with debouncing
+  const handleLocationChange = (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, location: value });
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout for search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchLocations(value);
+    }, 300); // 300ms delay
+  };
+
+  // Handle location suggestion selection
+  const handleLocationSelect = (suggestion) => {
+    setFormData({ 
+      ...formData, 
+      location: suggestion.formatted,
+      venueName: extractVenueName(suggestion) // Auto-populate venue name from suggestion
+    });
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+    setSelectedLocationIndex(-1);
+    
+    // Focus back to input
+    if (locationInputRef.current) {
+      locationInputRef.current.focus();
+    }
+  };
+
+  // Extract venue name from OpenStreetMap suggestion
+  const extractVenueName = (suggestion) => {
+    const address = suggestion.raw.address || {};
+    
+    // Priority order for venue names
+    if (address.amenity) return address.amenity;
+    if (address.shop) return address.shop;
+    if (address.tourism) return address.tourism;
+    if (address.leisure) return address.leisure;
+    if (address.historic) return address.historic;
+    if (address.building && address.building !== 'yes') return address.building;
+    
+    // If no specific venue name, use the formatted address
+    return suggestion.formatted;
+  };
+
+  // Handle keyboard navigation for location suggestions
+  const handleLocationKeyDown = (e) => {
+    if (!showLocationSuggestions) return;
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedLocationIndex(prev => 
+          prev < locationSuggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedLocationIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedLocationIndex >= 0 && locationSuggestions[selectedLocationIndex]) {
+          handleLocationSelect(locationSuggestions[selectedLocationIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowLocationSuggestions(false);
+        setSelectedLocationIndex(-1);
+        break;
+    }
+  };
+
+  // Handle clicks outside location suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target) &&
+        !locationInputRef.current.contains(event.target)
+      ) {
+        setShowLocationSuggestions(false);
+        setSelectedLocationIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Parse and set initial date/time values
   useEffect(() => {
-    // Update form when initialValues changes
     setFormData({
       title: '',
       type: 'hunt',
       date: '',
       time: '',
       location: '',
+      venueName: '',
       description: '',
       spots: 10,
       image: '',
       status: 'active',
-      // Initialize payment fields with member pricing
       isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
       memberPrice: initialValues.memberPrice !== undefined ? initialValues.memberPrice : 0,
       nonMemberPrice: initialValues.nonMemberPrice !== undefined ? initialValues.nonMemberPrice : 0,
@@ -72,7 +251,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       ...initialValues
     });
 
-    // Parse the date from initialValues if available
     if (initialValues.date) {
       const dateParts = initialValues.date.match(/(\w+)\s+(\d+),\s+(\d+)/);
       if (dateParts) {
@@ -85,17 +263,14 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       }
     }
 
-    // Parse the time from initialValues if available
     parseTimeFromInitialValues();
 
-    // If editing an existing event, fetch bookings count
     const fetchBookingsCount = async () => {
       if (initialValues.id) {
         try {
           const count = await getEventBookingsCount(initialValues.id);
           setBookingsCount(count);
 
-          // Calculate actual status based on date/time
           if (initialValues.date && initialValues.time) {
             const status = determineEventStatus(initialValues.date, initialValues.time);
             setCalculatedStatus(status);
@@ -110,8 +285,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     };
 
     fetchBookingsCount();
-
-    // Reset image change tracking when form is initialized/reset
     setIsImageChanged(false);
     setImageUrl(initialValues.image || '');
   }, [initialValues]);
@@ -181,13 +354,11 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Helper function to parse time from initialValues
   const parseTimeFromInitialValues = () => {
     if (initialValues.time) {
-      // Format: "H:MM AM/PM - H:MM AM/PM"
       const timeParts = initialValues.time.split('-');
       if (timeParts.length === 2) {
         const startPart = timeParts[0].trim();
         const endPart = timeParts[1].trim();
 
-        // Parse start time
         const startMatch = startPart.match(/(\d+):(\d+)\s*([AP]M)/i);
         if (startMatch) {
           const hour = startMatch[1];
@@ -197,7 +368,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
           setShowStartAmPm(ampm);
         }
 
-        // Parse end time
         const endMatch = endPart.match(/(\d+):(\d+)\s*([AP]M)/i);
         if (endMatch) {
           const hour = endMatch[1];
@@ -227,7 +397,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     const emoji = emojiObject.emoji;
     const descriptionValue = formData.description;
 
-    // Insert emoji at cursor position
     const newDescription = descriptionValue.substring(0, cursorPosition) + emoji + descriptionValue.substring(cursorPosition);
 
     setFormData({
@@ -237,7 +406,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
     setCursorPosition(cursorPosition + emoji.length);
 
-    // Update cursor position in textarea
     if (descriptionRef.current) {
       const newCursorPos = cursorPosition + emoji.length;
       setTimeout(() => {
@@ -247,23 +415,19 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     }
   };
 
-  // Track cursor position in description field
   const handleDescriptionCursorPosition = (e) => {
     setCursorPosition(e.target.selectionStart);
   };
 
-  // Toggle emoji picker visibility
   const toggleEmojiPicker = () => {
     setShowEmojiPicker(!showEmojiPicker);
   };
 
-  // Handle paid event toggle
   const handlePaidToggle = (e) => {
     const isPaid = e.target.checked;
     setFormData({
       ...formData,
       isPaid,
-      // Reset prices to 0 if toggling to free
       memberPrice: isPaid ? formData.memberPrice : 0,
       nonMemberPrice: isPaid ? formData.nonMemberPrice : 0
     });
@@ -272,27 +436,22 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Special handling for spots field
     if (name === 'spots') {
       const spotsValue = parseInt(value, 10);
 
-      // When editing existing event, ensure spots is >= bookings count
       if (initialValues.id && spotsValue < bookingsCount) {
         setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
         return;
       }
 
-      setError(''); // Clear error if validation passes
+      setError('');
     }
 
-    // For description field, update cursor position
     if (name === 'description') {
       setCursorPosition(e.target.selectionStart);
     }
 
-    // FIXED: Special handling for payment amounts - allow 0 and empty values
     if (name === 'memberPrice' || name === 'nonMemberPrice') {
-      // Allow empty string (user is typing)
       if (value === '') {
         setFormData({
           ...formData,
@@ -303,21 +462,18 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       
       const numValue = parseFloat(value);
       
-      // For member price: allow 0 or positive numbers
       if (name === 'memberPrice') {
         if (isNaN(numValue) || numValue < 0) {
-          return; // Don't update invalid amounts
+          return;
         }
       }
       
-      // For non-member price: must be positive (> 0) when not empty
       if (name === 'nonMemberPrice') {
         if (isNaN(numValue) || numValue < 0) {
-          return; // Don't update invalid amounts
+          return;
         }
       }
       
-      // Update with the numeric value
       setFormData({
         ...formData,
         [name]: numValue
@@ -331,20 +487,17 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     });
   };
 
-  // Handle image upload callback
   const handleImageUploaded = (url) => {
     setImageUrl(url);
     setIsImageChanged(true);
   };
 
   const validateDateFormat = (dateStr) => {
-    // Format: Month DD, YYYY
     const dateRegex = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i;
     return dateRegex.test(dateStr);
   };
 
   const validateTimeFormat = (timeStr) => {
-    // Format: H:MM AM/PM - H:MM AM/PM
     const timeRegex = /^\d{1,2}:\d{2}\s*(AM|PM|am|pm)\s*-\s*\d{1,2}:\d{2}\s*(AM|PM|am|pm)$/i;
     return timeRegex.test(timeStr);
   };
@@ -355,7 +508,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     setError('');
 
     try {
-      // Validate date and time formats
       if (!validateDateFormat(formData.date)) {
         setError('Date format must be "Month DD, YYYY" (e.g., "April 20, 2025")');
         setLoading(false);
@@ -368,23 +520,33 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
-      // Ensure spots is at least equal to bookings count for existing events
       if (initialValues.id && formData.spots < bookingsCount) {
         setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
         setLoading(false);
         return;
       }
 
-      // Check if we have an image URL
       if (!imageUrl && !initialValues.id) {
         setError('Please upload an image');
         setLoading(false);
         return;
       }
 
-      // FIXED: Updated payment validation to allow €0 for members
+      // Validate location - ensure it's not empty
+      if (!formData.location.trim()) {
+        setError('Please enter a valid location address');
+        setLoading(false);
+        return;
+      }
+
+      // Validate venue name - ensure it's not empty
+      if (!formData.venueName.trim()) {
+        setError('Please enter a venue name');
+        setLoading(false);
+        return;
+      }
+
       if (formData.isPaid) {
-        // Member price can be 0 or greater, but must be a valid number (not empty string)
         const memberPrice = typeof formData.memberPrice === 'string' ? 
           parseFloat(formData.memberPrice) : formData.memberPrice;
           
@@ -395,7 +557,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
           return;
         }
         
-        // Non-member price must be greater than 0
         const nonMemberPrice = typeof formData.nonMemberPrice === 'string' ? 
           parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice;
           
@@ -407,26 +568,19 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         }
       }
 
-      // Prepare the form data
       let updatedFormData = {
         ...formData,
-        // FIXED: Set pricing fields only if isPaid is true, ensuring numbers are properly converted
-        // Store the actual pricing values, even if one is 0 (as long as isPaid is true)
         memberPrice: formData.isPaid ? (typeof formData.memberPrice === 'string' ? parseFloat(formData.memberPrice) : formData.memberPrice) : null,
         nonMemberPrice: formData.isPaid ? (typeof formData.nonMemberPrice === 'string' ? parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice) : null,
         paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
-        // Use uploaded image URL
         image: imageUrl
       };
       
-      // Remove isPaid as it's not needed in the database
       delete updatedFormData.isPaid;
 
-      // Determine the actual status based on date/time
       const actualStatus = determineEventStatus(updatedFormData.date, updatedFormData.time);
 
       if (initialValues.id) {
-        // Update existing event
         const eventRef = doc(db, 'events', initialValues.id);
         const eventDoc = await getDoc(eventRef);
 
@@ -434,23 +588,17 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
           throw new Error("Event not found");
         }
 
-        // Keep existing spots availability data
         const currentData = eventDoc.data();
-
-        // Calculate spotsLeft correctly as total spots minus bookings
         const spotsLeft = updatedFormData.spots - bookingsCount;
 
-        // If the image wasn't changed, keep the existing image URL
         if (!isImageChanged) {
           updatedFormData.image = currentData.image;
         }
 
-        // Update event with new data but preserve some fields
         await updateDoc(eventRef, {
           ...updatedFormData,
-          // Keep necessary fields from existing event
-          status: actualStatus, // Override with calculated status
-          spotsLeft: spotsLeft, // Correctly calculated available spots
+          status: actualStatus,
+          spotsLeft: spotsLeft,
           attendees: currentData.attendees || [],
           createdAt: currentData.createdAt,
           updatedAt: serverTimestamp()
@@ -458,11 +606,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
         console.log("Event updated successfully with status:", actualStatus);
       } else {
-        // Create new event with calculated status
         await createNewEvent({
           ...updatedFormData,
-          status: actualStatus, // Set the calculated status
-          spotsLeft: updatedFormData.spots // Initialize spotsLeft equal to total spots (no bookings yet)
+          status: actualStatus,
+          spotsLeft: updatedFormData.spots
         });
         console.log("Event created successfully with status:", actualStatus);
       }
@@ -486,16 +633,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     return days;
   };
 
-  // Get current month/year for the date picker
   const currentDate = selectedDate || new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
   const daysInMonth = getDaysArray(currentYear, currentMonth);
-
-  // Get day of week for the first day of the month (0 = Sunday, 6 = Saturday)
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
 
-  // Month navigation for date picker
   const prevMonth = () => {
     const newDate = new Date(currentYear, currentMonth - 1, 1);
     setSelectedDate(newDate);
@@ -523,7 +666,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         </div>
       )}
 
-      {/* Display calculated status message */}
       {calculatedStatus && (
         <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded">
           <p>This event will be saved with status: <strong>{calculatedStatus}</strong></p>
@@ -531,7 +673,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         </div>
       )}
 
-      {/* Display bookings info when editing */}
       {initialValues.id && bookingsCount > 0 && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded">
           <p>This event has <strong>{bookingsCount} bookings</strong>. The number of spots cannot be less than this.</p>
@@ -595,7 +736,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
               </span>
             </div>
 
-            {/* Calendar date picker */}
             {showDatePicker && (
               <div className="absolute z-10 mt-1 bg-white border rounded-lg shadow-lg p-2 w-64">
                 <div className="flex justify-between items-center mb-2">
@@ -629,12 +769,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center">
-                  {/* Empty cells for days before the first day of the month */}
                   {Array(firstDayOfMonth).fill(null).map((_, index) => (
                     <div key={`empty-${index}`} className="h-8"></div>
                   ))}
 
-                  {/* Calendar days */}
                   {daysInMonth.map((date, index) => {
                     const isSelected = selectedDate &&
                       date.getDate() === selectedDate.getDate() &&
@@ -762,18 +900,91 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </p>
           </div>
 
+          {/* Enhanced location input with autocomplete */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Location Address
+            </label>
+            <div className="relative">
+              <input
+                ref={locationInputRef}
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleLocationChange}
+                onKeyDown={handleLocationKeyDown}
+                onFocus={() => {
+                  if (locationSuggestions.length > 0) {
+                    setShowLocationSuggestions(true);
+                  }
+                }}
+                className="w-full p-2 border rounded pr-8"
+                placeholder="Start typing an address in Italy..."
+                required
+              />
+              {locationLoading && (
+                <div className="absolute right-2 top-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+              )}
+              {!locationLoading && formData.location && (
+                <div className="absolute right-2 top-2 text-gray-400">
+                  📍
+                </div>
+              )}
+            </div>
+            
+            {/* Location suggestions dropdown */}
+            {showLocationSuggestions && locationSuggestions.length > 0 && (
+              <div 
+                ref={suggestionsRef}
+                className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+              >
+                {locationSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                      index === selectedLocationIndex 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleLocationSelect(suggestion)}
+                  >
+                    <div className="font-medium text-sm text-gray-900">
+                      {suggestion.formatted}
+                    </div>
+                    {suggestion.formatted !== suggestion.display_name && (
+                      <div className="text-xs text-gray-500 mt-1 truncate">
+                        {suggestion.display_name}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <p className="text-xs text-gray-500 mt-1">
+              Mappable address for location services (required for map display)
+            </p>
+          </div>
+
+          {/* Venue Name field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location
+              Venue Name
             </label>
             <input
               type="text"
-              name="location"
-              value={formData.location}
+              name="venueName"
+              value={formData.venueName}
               onChange={handleChange}
               className="w-full p-2 border rounded"
+              placeholder="e.g., Caffè delle Arti, Studio Fotografico Roma..."
               required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Display name for the venue (shown to users)
+            </p>
           </div>
 
           <div>
@@ -836,7 +1047,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
               {formData.isPaid && (
                 <div className="space-y-4">
-                  {/* Member vs Non-Member Pricing */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="memberPrice">
@@ -907,7 +1117,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                       value={formData.paymentCurrency}
                       onChange={handleChange}
                       className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      disabled /* For now, we only support EUR */
+                      disabled
                     >
                       <option value="EUR">EUR - Euro</option>
                     </select>

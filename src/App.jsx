@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import EventCard from './components/EventCard';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -240,7 +239,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar 
+      {/* Hero section with integrated navigation */}
+      <Hero 
         user={user} 
         onSignInClick={() => setShowAuthModal(true)}
       />
@@ -295,14 +295,12 @@ function App() {
       )}
       
       <main>
-        <Hero />
-        
         <section id="current-events-section" className="py-16 px-4 max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Current Events</h2>
           
           {events.length > 0 ? (
             <div className="space-y-8">
-              {events.slice(0, 3).map(event => (
+              {events.slice(0, 3).map((event, index) => (
                 <EventCard 
                   key={event.id}
                   event={event} 
@@ -311,6 +309,7 @@ function App() {
                     setSelectedEvent(event);
                     setShowAuthModal(true);
                   }}
+                  index={index}
                 />
               ))}
               

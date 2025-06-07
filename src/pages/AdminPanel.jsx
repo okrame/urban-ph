@@ -28,7 +28,7 @@ function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [syncingStatuses, setSyncingStatuses] = useState(false);
-  const [syncingToSheets, setSyncingToSheets] = useState(false); // New state for Google Sheets sync
+  const [syncingToSheets, setSyncingToSheets] = useState(false);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -77,15 +77,14 @@ function AdminPanel() {
   // Handle Google Sheets sync
   const handleSyncToGoogleSheets = async () => {
     if (!selectedEvent) return;
-    
+
     setSyncingToSheets(true);
     try {
-      // Use Firebase callable function instead of direct fetch
       const functions = getFunctions();
       const syncFunction = httpsCallable(functions, 'syncEventToSheetsManual');
-      
+
       const result = await syncFunction({ eventId: selectedEvent.id });
-      
+
       if (result.data.success) {
         alert(`Successfully synced ${result.data.bookingsCount} bookings to Google Sheet: "${result.data.sheetTitle}"`);
       } else {
@@ -99,97 +98,113 @@ function AdminPanel() {
     }
   };
 
-  const syncAllEventStatuses = async () => {
-    setSyncingStatuses(true);
-    try {
-      const eventsSnapshot = await getDocs(collection(db, 'events'));
-      const updatePromises = [];
+const syncAllEventStatuses = async (preserveSelection = true) => {
+  setSyncingStatuses(true);
+  try {
+    const eventsSnapshot = await getDocs(collection(db, 'events'));
+    const updatePromises = [];
 
-      eventsSnapshot.forEach(eventDoc => {
-        const eventData = eventDoc.data();
-        const actualStatus = determineEventStatus(eventData.date, eventData.time);
+    eventsSnapshot.forEach(eventDoc => {
+      const eventData = eventDoc.data();
+      const actualStatus = determineEventStatus(eventData.date, eventData.time);
 
-        if (actualStatus !== eventData.status) {
-          const updatePromise = updateDoc(eventDoc.ref, {
-            status: actualStatus,
-            updatedAt: serverTimestamp()
-          });
-          updatePromises.push(updatePromise);
+      if (actualStatus !== eventData.status) {
+        const updatePromise = updateDoc(eventDoc.ref, {
+          status: actualStatus,
+          updatedAt: serverTimestamp()
+        });
+        updatePromises.push(updatePromise);
 
-          console.log(`Syncing event ${eventDoc.id}: ${eventData.status} → ${actualStatus}`);
-        }
-      });
-
-      if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
-        console.log(`Synced ${updatePromises.length} event statuses`);
-      } else {
-        console.log('All event statuses are already up to date');
+        console.log(`Syncing event ${eventDoc.id}: ${eventData.status} → ${actualStatus}`);
       }
+    });
 
-      await fetchAllEventTypes();
-
-    } catch (error) {
-      console.error('Error syncing event statuses:', error);
-    } finally {
-      setSyncingStatuses(false);
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
+      console.log(`Synced ${updatePromises.length} event statuses`);
+    } else {
+      console.log('All event statuses are already up to date');
     }
-  };
 
-  const fetchAllEventTypes = async () => {
-    try {
-      const eventsSnapshot = await getDocs(collection(db, 'events'));
+    // FIXED: Pass preserveSelection parameter to fetchAllEventTypes
+    await fetchAllEventTypes(preserveSelection);
 
-      const active = [];
-      const upcoming = [];
-      const past = [];
+  } catch (error) {
+    console.error('Error syncing event statuses:', error);
+  } finally {
+    setSyncingStatuses(false);
+  }
+};
 
-      eventsSnapshot.forEach(doc => {
-        const eventData = doc.data();
-        const event = { id: doc.id, ...eventData };
+const fetchAllEventTypes = async (preserveSelection = true) => {
+  try {
+    const eventsSnapshot = await getDocs(collection(db, 'events'));
 
-        const actualStatus = determineEventStatus(eventData.date, eventData.time);
-        event.actualStatus = actualStatus;
+    const active = [];
+    const upcoming = [];
+    const past = [];
 
-        if (actualStatus === 'active') {
-          active.push(event);
-        } else if (actualStatus === 'upcoming') {
-          upcoming.push(event);
-        } else if (actualStatus === 'past') {
-          past.push(event);
-        }
-      });
+    eventsSnapshot.forEach(doc => {
+      const eventData = doc.data();
+      const event = { id: doc.id, ...eventData };
 
-      const sortByDate = (a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateA - dateB;
-      };
+      const actualStatus = determineEventStatus(eventData.date, eventData.time);
+      event.actualStatus = actualStatus;
 
-      setActiveEvents(active.sort(sortByDate));
-      setUpcomingEvents(upcoming.sort(sortByDate));
-      setPastEvents(past.sort(sortByDate));
-
-      if (selectedEvent) {
-        const updatedEvent = [...active, ...upcoming, ...past].find(e => e.id === selectedEvent.id);
-        if (updatedEvent) {
-          setSelectedEvent(updatedEvent);
-        }
+      if (actualStatus === 'active') {
+        active.push(event);
+      } else if (actualStatus === 'upcoming') {
+        upcoming.push(event);
+      } else if (actualStatus === 'past') {
+        past.push(event);
       }
-    } catch (error) {
-      console.error('Error fetching events by type:', error);
+    });
+
+    const sortByDate = (a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateA - dateB;
+    };
+
+    setActiveEvents(active.sort(sortByDate));
+    setUpcomingEvents(upcoming.sort(sortByDate));
+    setPastEvents(past.sort(sortByDate));
+
+    // FIXED: Only restore selected event if preserveSelection is true
+    if (preserveSelection && selectedEvent) {
+      const updatedEvent = [...active, ...upcoming, ...past].find(e => e.id === selectedEvent.id);
+      if (updatedEvent) {
+        setSelectedEvent(updatedEvent);
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error fetching events by type:', error);
+  }
+};
 
-  const handleEventsTabChange = async (newTab) => {
-    setEventsTab(newTab);
-    setSelectedEvent(null);
-    setBookings([]);
-    await syncAllEventStatuses();
-  };
+const handleEventsTabChange = async (newTab) => {
+  // First clear the current selection immediately
+  setSelectedEvent(null);
+  setBookings([]);
+  setAttendance({}); // Clear attendance tracking
+  setExpandedRequests({}); // Clear expanded request states
+  
+  // Then update the tab
+  setEventsTab(newTab);
+  
+  // FIXED: Pass preserveSelection = false to prevent restoring selection
+  await syncAllEventStatuses(false);
+};
 
+  // FIXED: Enhanced event selection with proper state clearing
   const handleEventSelect = async (eventId) => {
     setLoading(true);
+
+    // Clear previous state first
+    setBookings([]);
+    setAttendance({});
+    setExpandedRequests({});
+
     try {
       let event;
       if (eventsTab === 'active') {
@@ -243,6 +258,9 @@ function AdminPanel() {
       }
     } catch (error) {
       console.error('Error fetching event bookings:', error);
+      // Ensure state is cleared on error
+      setSelectedEvent(null);
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -633,11 +651,10 @@ function AdminPanel() {
                       <button
                         onClick={handleSyncToGoogleSheets}
                         disabled={syncingToSheets}
-                        className={`px-4 py-2 text-sm rounded flex items-center ${
-                          syncingToSheets 
-                            ? 'bg-gray-400 cursor-not-allowed text-white' 
+                        className={`px-4 py-2 text-sm rounded flex items-center ${syncingToSheets
+                            ? 'bg-gray-400 cursor-not-allowed text-white'
                             : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
+                          }`}
                         title="Sync current bookings to Google Sheets"
                       >
                         {syncingToSheets ? (
@@ -710,6 +727,7 @@ function AdminPanel() {
                           <tbody className="divide-y divide-gray-200">
                             {bookings.map(booking => (
                               <tr key={booking.id} className={attendance[booking.id] ? "bg-green-50" : ""}>
+                                {/* FIX: Add the missing attendance checkbox column */}
                                 <td className="px-4 py-2 whitespace-nowrap text-center">
                                   <input
                                     type="checkbox"
@@ -777,8 +795,7 @@ function AdminPanel() {
                     <p className="text-gray-600">Select an event to view bookings</p>
                   </div>
                 )}
-              </div>
-            </div>
+              </div>            </div>
           </>
         )}
       </div>

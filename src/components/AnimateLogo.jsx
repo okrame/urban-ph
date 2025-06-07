@@ -1,24 +1,85 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import UPHLogo from '../assets/UPH_Logo.png';
 import logoAnimationPath from '../assets/logo-animation-path.json';
 
 function AnimateLogo({ 
   className = "w-32 h-auto md:w-40 lg:w-48",
-  animationDelay = 2000,
-  animationDuration = 3000,
+  animationDelay = 750,
+  animationDuration = 5000,
   style = {}
 }) {
   // Animation states
   const [revealedAreas, setRevealedAreas] = useState([]);
+  const [animationStarted, setAnimationStarted] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const logoContainerRef = useRef(null);
   const animationRef = useRef(null);
+  const resizeTimeoutRef = useRef(null);
+
+  // Function to reset and restart animation
+  const resetAndRestartAnimation = useCallback(() => {
+    // Cancel any existing animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+
+    // Clear revealed areas and reset states
+    setRevealedAreas([]);
+    setAnimationStarted(false);
+    setIsResizing(false);
+
+    // Start animation after a brief delay to allow for layout stabilization
+    setTimeout(() => {
+      setAnimationStarted(true);
+      startLogoAnimation();
+    }, 50); // Reduced delay
+  }, []); 
+
+  // Handle window resize with immediate hiding
+  useEffect(() => {
+    const handleResize = () => {
+      if (!isResizing && animationStarted) {
+        setIsResizing(true);
+        setRevealedAreas([]); 
+        
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+          animationRef.current = null;
+        }
+      }
+
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+
+      // Set a new timeout to restart animation after resize stops
+      resizeTimeoutRef.current = setTimeout(() => {
+        if (animationStarted) {
+          resetAndRestartAnimation();
+        }
+      }, 100); 
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
+      }, [animationStarted, isResizing, resetAndRestartAnimation]);
 
   // Initialize logo animation
   useEffect(() => {
-    // Start animation after a delay
-    setTimeout(() => {
+    // Start animation after initial delay
+    const initialTimeout = setTimeout(() => {
+      setAnimationStarted(true);
       startLogoAnimation();
     }, animationDelay);
+
+    return () => clearTimeout(initialTimeout);
   }, [animationDelay]);
 
   const startLogoAnimation = () => {
@@ -42,9 +103,11 @@ function AnimateLogo({
     // Animation settings
     const totalPoints = coordinates.length;
     
-    // Fade-out easing function (starts fast, slows down at the end)
+    // More marked ease-out easing function (starts earlier and more pronounced)
     const easeOut = (t) => {
-      return 1 - Math.pow(1 - t, 3); // cubic ease-out
+      // Apply easing earlier in the timeline and make it more pronounced
+      const adjustedT = Math.min(t * 1.3, 1); 
+      return 1 - Math.pow(1 - adjustedT, 4); 
     };
     
     const animate = () => {
@@ -90,6 +153,9 @@ function AnimateLogo({
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -107,8 +173,8 @@ function AnimateLogo({
         draggable={false}
       />
       
-      {/* Animated logo reveals - individual circles */}
-      <div className="absolute inset-0">
+      {/* Animated logo reveals - individual circles - hidden during resize */}
+      <div className="absolute inset-0" style={{ opacity: isResizing ? 0 : 1 }}>
         {revealedAreas.map((area, index) => (
           <div
             key={index}

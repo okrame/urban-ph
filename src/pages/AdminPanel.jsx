@@ -11,6 +11,7 @@ import {
 } from '../../firebase/adminServices';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getDoc, doc, collection, query, where, getDocs, updateDoc, serverTimestamp, arrayRemove } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../../firebase/config';
 import Navbar from '../components/Navbar';
 import EventForm from '../components/EventForm';
@@ -26,16 +27,15 @@ function AdminPanel() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [syncingStatuses, setSyncingStatuses] = useState(false); // New state for sync loading
+  const [syncingStatuses, setSyncingStatuses] = useState(false);
+  const [syncingToSheets, setSyncingToSheets] = useState(false); // New state for Google Sheets sync
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
-  const [activeTab, setActiveTab] = useState('events'); // 'events' or 'create' or 'db' or 'payments'
-  const [eventsTab, setEventsTab] = useState('active'); // 'active', 'upcoming', or 'past'
-  // Track attendance locally (not persisted to Firebase)
+  const [activeTab, setActiveTab] = useState('events');
+  const [eventsTab, setEventsTab] = useState('active');
   const [attendance, setAttendance] = useState({});
-  // Track expanded request text fields
   const [expandedRequests, setExpandedRequests] = useState({});
 
   useEffect(() => {
@@ -61,11 +61,8 @@ function AdminPanel() {
 
       setLoading(true);
       try {
-        // Load statistics
         const statsData = await getEventsStats();
         setStats(statsData);
-
-        // Load all event types
         await fetchAllEventTypes();
       } catch (error) {
         console.error('Error fetching admin data:', error);
@@ -77,11 +74,34 @@ function AdminPanel() {
     fetchData();
   }, [isAdmin]);
 
-  // Auto-sync all event statuses when needed
+  // Handle Google Sheets sync
+  const handleSyncToGoogleSheets = async () => {
+    if (!selectedEvent) return;
+    
+    setSyncingToSheets(true);
+    try {
+      // Use Firebase callable function instead of direct fetch
+      const functions = getFunctions();
+      const syncFunction = httpsCallable(functions, 'syncEventToSheetsManual');
+      
+      const result = await syncFunction({ eventId: selectedEvent.id });
+      
+      if (result.data.success) {
+        alert(`Successfully synced ${result.data.bookingsCount} bookings to Google Sheet: "${result.data.sheetTitle}"`);
+      } else {
+        throw new Error(result.data.message || 'Sync failed');
+      }
+    } catch (error) {
+      console.error('Error syncing to Google Sheets:', error);
+      alert(`Error syncing to Google Sheets: ${error.message}`);
+    } finally {
+      setSyncingToSheets(false);
+    }
+  };
+
   const syncAllEventStatuses = async () => {
     setSyncingStatuses(true);
     try {
-      // Get all events
       const eventsSnapshot = await getDocs(collection(db, 'events'));
       const updatePromises = [];
 
@@ -89,7 +109,6 @@ function AdminPanel() {
         const eventData = eventDoc.data();
         const actualStatus = determineEventStatus(eventData.date, eventData.time);
 
-        // Only update if status has changed
         if (actualStatus !== eventData.status) {
           const updatePromise = updateDoc(eventDoc.ref, {
             status: actualStatus,
@@ -101,7 +120,6 @@ function AdminPanel() {
         }
       });
 
-      // Wait for all updates to complete
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises);
         console.log(`Synced ${updatePromises.length} event statuses`);
@@ -109,7 +127,6 @@ function AdminPanel() {
         console.log('All event statuses are already up to date');
       }
 
-      // Refresh event lists after sync
       await fetchAllEventTypes();
 
     } catch (error) {
@@ -119,26 +136,21 @@ function AdminPanel() {
     }
   };
 
-  // Fetch all event types and categorize by actual status
   const fetchAllEventTypes = async () => {
     try {
-      // Fetch all events
       const eventsSnapshot = await getDocs(collection(db, 'events'));
 
       const active = [];
       const upcoming = [];
       const past = [];
 
-      // Process each event and categorize by actual status
       eventsSnapshot.forEach(doc => {
         const eventData = doc.data();
         const event = { id: doc.id, ...eventData };
 
-        // Calculate actual status based on date/time
         const actualStatus = determineEventStatus(eventData.date, eventData.time);
         event.actualStatus = actualStatus;
 
-        // Add to appropriate array based on actual status
         if (actualStatus === 'active') {
           active.push(event);
         } else if (actualStatus === 'upcoming') {
@@ -148,7 +160,6 @@ function AdminPanel() {
         }
       });
 
-      // Sort events by date
       const sortByDate = (a, b) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
@@ -159,7 +170,6 @@ function AdminPanel() {
       setUpcomingEvents(upcoming.sort(sortByDate));
       setPastEvents(past.sort(sortByDate));
 
-      // If there's a selected event, refresh its data to ensure UI consistency
       if (selectedEvent) {
         const updatedEvent = [...active, ...upcoming, ...past].find(e => e.id === selectedEvent.id);
         if (updatedEvent) {
@@ -171,22 +181,17 @@ function AdminPanel() {
     }
   };
 
-  // Enhanced tab switching with auto-sync
   const handleEventsTabChange = async (newTab) => {
     setEventsTab(newTab);
     setSelectedEvent(null);
     setBookings([]);
-
-    // Auto-sync statuses when switching tabs
     await syncAllEventStatuses();
   };
 
-  // Load bookings for a specific event
   const handleEventSelect = async (eventId) => {
     setLoading(true);
     try {
       let event;
-      // Find the event in the appropriate array based on the current tab
       if (eventsTab === 'active') {
         event = activeEvents.find(e => e.id === eventId);
       } else if (eventsTab === 'upcoming') {
@@ -195,12 +200,9 @@ function AdminPanel() {
         event = pastEvents.find(e => e.id === eventId);
       }
 
-      // If event not found in current tab, check all tabs
-      // This helps when an event changes category and we need to re-select it
       if (!event) {
         event = [...activeEvents, ...upcomingEvents, ...pastEvents].find(e => e.id === eventId);
 
-        // If found in a different tab, switch to that tab
         if (event) {
           if (activeEvents.some(e => e.id === eventId)) {
             setEventsTab('active');
@@ -215,16 +217,13 @@ function AdminPanel() {
       if (event) {
         setSelectedEvent(event);
 
-        // Get bookings with full user details
         const bookingsData = await getEventBookings(eventId);
 
-        // Enrich bookings with user profile data to get real name
         const enrichedBookings = await Promise.all(bookingsData.map(async (booking) => {
           const userRef = doc(db, 'users', booking.userId);
           const userDoc = await getDoc(userRef);
           const userData = userDoc.exists() ? userDoc.data() : {};
 
-          // Get the real name from user profile (collected during first booking)
           const userFullName = userData.name && userData.surname
             ? `${userData.name} ${userData.surname}`
             : null;
@@ -232,7 +231,6 @@ function AdminPanel() {
           return {
             ...booking,
             userFullName,
-            // Add the specificRequest field from booking data
             specificRequest: booking.specificRequest || ''
           };
         }));
@@ -250,9 +248,8 @@ function AdminPanel() {
     }
   };
 
-  // Delete an event
   const handleDeleteEvent = async (eventId, e) => {
-    e.stopPropagation(); // Prevent event propagation to parent
+    e.stopPropagation();
 
     if (!confirm('Are you sure you want to delete this event? This will also remove all bookings.')) {
       return;
@@ -260,7 +257,6 @@ function AdminPanel() {
 
     try {
       await deleteEvent(eventId);
-      // Refresh all event lists
       await fetchAllEventTypes();
 
       if (selectedEvent && selectedEvent.id === eventId) {
@@ -273,7 +269,6 @@ function AdminPanel() {
     }
   };
 
-  // Delete a booking (attendee)
   const handleDeleteBooking = async (booking, e) => {
     e.preventDefault();
 
@@ -289,15 +284,12 @@ function AdminPanel() {
     setDeleteLoading(booking.id);
 
     try {
-      // 1. Remove user from event's attendees array
       const eventRef = doc(db, 'events', selectedEvent.id);
       await updateDoc(eventRef, {
         attendees: arrayRemove(booking.userId),
-        // Increase available spots by 1
         spotsLeft: (selectedEvent.spotsLeft || 0) + 1
       });
 
-      // 2. Update user's eventsBooked array to remove this event
       const userRef = doc(db, 'users', booking.userId);
       const userDoc = await getDoc(userRef);
 
@@ -307,29 +299,22 @@ function AdminPanel() {
         });
       }
 
-      // 3. Set booking status to 'cancelled'
-      // We don't actually delete the booking record for audit purposes
       const bookingRef = doc(db, 'bookings', booking.id);
       await updateDoc(bookingRef, {
         status: 'cancelled',
         cancelledAt: serverTimestamp()
       });
 
-      // 4. Remove from local attendance tracking
       if (attendance[booking.id]) {
         const newAttendance = { ...attendance };
         delete newAttendance[booking.id];
         setAttendance(newAttendance);
       }
 
-      // 5. Update UI
-      // Remove booking from the list
       setBookings(prev => prev.filter(b => b.id !== booking.id));
 
-      // 6. Refresh event data
       await fetchAllEventTypes();
       if (selectedEvent) {
-        // Re-fetch specific event data
         const eventRef = doc(db, 'events', selectedEvent.id);
         const eventDoc = await getDoc(eventRef);
         if (eventDoc.exists()) {
@@ -341,7 +326,6 @@ function AdminPanel() {
           });
         }
 
-        // Re-fetch bookings to sync bookings list with DB
         await handleEventSelect(selectedEvent.id);
       }
     } catch (error) {
@@ -352,7 +336,6 @@ function AdminPanel() {
     }
   };
 
-  // Handle attendance check
   const handleAttendanceCheck = (bookingId, checked) => {
     setAttendance(prev => ({
       ...prev,
@@ -360,7 +343,6 @@ function AdminPanel() {
     }));
   };
 
-  // Toggle expanded request text
   const toggleRequestExpand = (bookingId) => {
     setExpandedRequests(prev => ({
       ...prev,
@@ -368,7 +350,6 @@ function AdminPanel() {
     }));
   };
 
-  // Render request text with show more functionality
   const renderRequestText = (bookingId, text) => {
     if (!text) return 'None';
 
@@ -410,25 +391,20 @@ function AdminPanel() {
     return text;
   };
 
-  // Edit an event
   const handleEditEvent = (event, e) => {
-    e.stopPropagation(); // Prevent event propagation to parent
+    e.stopPropagation();
     setEditingEvent(event);
     setActiveTab('create');
   };
 
-  // Handle successful form submission
   const handleFormSuccess = async () => {
     try {
-      // Refresh all event lists
       await fetchAllEventTypes();
 
-      // If we were editing an event that was selected, reload that event's data
       if (editingEvent && selectedEvent && editingEvent.id === selectedEvent.id) {
         await handleEventSelect(editingEvent.id);
       }
 
-      // Reset form state
       setShowForm(false);
       setEditingEvent(null);
       setActiveTab('events');
@@ -437,14 +413,12 @@ function AdminPanel() {
     }
   };
 
-  // Handle form cancel
   const handleFormCancel = () => {
     setShowForm(false);
     setEditingEvent(null);
     setActiveTab('events');
   };
 
-  // Get current events based on selected tab
   const getCurrentEvents = () => {
     switch (eventsTab) {
       case 'active':
@@ -458,7 +432,6 @@ function AdminPanel() {
     }
   };
 
-  // Determine status label style based on status
   const getStatusStyle = (status) => {
     switch (status) {
       case 'active':
@@ -494,7 +467,6 @@ function AdminPanel() {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 text-center">Admin Panel</h1>
 
-        {/* Main Tabs */}
         <div className="flex border-b mb-6">
           <button
             className={`px-4 py-2 mr-2 ${activeTab === 'events'
@@ -538,7 +510,6 @@ function AdminPanel() {
           <UsersDatabase />
         ) : (
           <>
-            {/* Event Type Tabs with sync indicator */}
             <div className="flex mb-6 border-b items-center">
               <button
                 className={`px-4 py-2 ${eventsTab === 'active'
@@ -571,7 +542,6 @@ function AdminPanel() {
                 Past Events ({pastEvents.length})
               </button>
 
-              {/* Sync indicator */}
               {syncingStatuses && (
                 <div className="ml-4 flex items-center text-sm text-blue-600">
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -584,7 +554,6 @@ function AdminPanel() {
             </div>
 
             <div className="flex flex-col lg:flex-row gap-8">
-              {/* Events list */}
               <div className="lg:w-1/3">
                 <div className="bg-white rounded-lg shadow p-4">
                   <div className="flex justify-between items-center mb-4">
@@ -634,7 +603,6 @@ function AdminPanel() {
                           <p className="text-sm text-gray-600">{event.date} | {event.type}</p>
                           <div className="flex justify-between items-center mt-1">
                             <p className="text-sm">Spots: {event.spotsLeft || 0}/{event.spots}</p>
-                            {/* Status badge */}
                             <span className={`inline-block text-xs px-2 py-1 rounded-full ${getStatusStyle(event.status)}`}>
                               {event.status}
                             </span>
@@ -644,7 +612,6 @@ function AdminPanel() {
                               Will sync to: {event.actualStatus}
                             </div>
                           )}
-
                         </div>
                       ))}
                     </div>
@@ -656,13 +623,41 @@ function AdminPanel() {
                 </div>
               </div>
 
-              {/* Bookings details for selected event */}
               <div className="lg:w-2/3">
                 {selectedEvent ? (
                   <div className="bg-white rounded-lg shadow p-4">
-                    <h2 className="text-xl font-bold mb-4">
-                      Bookings for {selectedEvent.title}
-                    </h2>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold">
+                        Bookings for {selectedEvent.title}
+                      </h2>
+                      <button
+                        onClick={handleSyncToGoogleSheets}
+                        disabled={syncingToSheets}
+                        className={`px-4 py-2 text-sm rounded flex items-center ${
+                          syncingToSheets 
+                            ? 'bg-gray-400 cursor-not-allowed text-white' 
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                        title="Sync current bookings to Google Sheets"
+                      >
+                        {syncingToSheets ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Sync to Sheets
+                          </>
+                        )}
+                      </button>
+                    </div>
 
                     <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-3 bg-gray-50 rounded">
@@ -677,14 +672,12 @@ function AdminPanel() {
                           selectedEvent.actualStatus === 'upcoming' ? 'text-blue-700' : 'text-gray-700'
                           }`}>{selectedEvent.actualStatus}</span></p>
                       </div>
-                      {/* Add pricing information row */}
                       {(selectedEvent.memberPrice !== null || selectedEvent.nonMemberPrice !== null || selectedEvent.paymentAmount > 0) && (
                         <div className="md:col-span-2 p-3 bg-yellow-50 rounded border border-yellow-200">
                           <p className="text-sm font-medium text-yellow-800">Event Pricing:</p>
                           {selectedEvent.memberPrice !== null && selectedEvent.nonMemberPrice !== null ? (
                             <div className="mt-1 text-sm text-yellow-700">
                               <span>Members: €{selectedEvent.memberPrice} | Non-members: €{selectedEvent.nonMemberPrice}</span>
-              
                             </div>
                           ) : selectedEvent.paymentAmount > 0 ? (
                             <div className="mt-1 text-sm text-yellow-700">
@@ -772,6 +765,7 @@ function AdminPanel() {
                         <div className="text-xs text-gray-500 mt-4 bg-blue-50 p-2 rounded">
                           <p>✓ <strong>Attendance tracking:</strong> Checking the attendance box is for your record only and won't be saved to the database.</p>
                           <p>✓ <strong>Remove attendee:</strong> Clicking the trash icon will permanently remove the attendee from this event and free up a spot.</p>
+                          <p>✓ <strong>Google Sheets:</strong> Click "Sync to Sheets" to copy all bookings to your Google Sheet. New bookings are automatically synced.</p>
                         </div>
                       </div>
                     ) : (

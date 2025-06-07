@@ -1,9 +1,12 @@
 // functions/index.js - Updated for better payment handling
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onCall } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { defineString } = require("firebase-functions/params");
 const { verifyWebhook } = require('./webhookVerification');
+const { createOrUpdateEventSheet } = require('./googleSheetsService');
 
 // Define parameters for configuration
 const paypalWebhookId = defineString("PAYPAL_WEBHOOK_ID");
@@ -101,6 +104,105 @@ exports.paypalWebhook = onRequest(
       console.error("Error processing webhook:", error);
       // Still return 200 to prevent PayPal from retrying
       return res.status(200).send("Webhook acknowledged with errors");
+    }
+  }
+);
+
+exports.syncEventToSheetsManual = onCall(
+  {
+    region: "us-central1",
+  },
+  async (request) => {
+    try {
+      const { eventId } = request.data;
+      
+      if (!eventId) {
+        throw new Error('eventId is required');
+      }
+
+      console.log(`Manual sync requested for event: ${eventId}`);
+      
+      const db = getFirestore();
+      
+      // Get event data
+      const eventDoc = await db.collection('events').doc(eventId).get();
+      
+      if (!eventDoc.exists) {
+        throw new Error('Event not found');
+      }
+
+      const eventData = eventDoc.data();
+      
+      // SIMPLIFIED APPROACH: Get all bookings for this event without status filter
+      // This avoids the composite index requirement
+      const bookingsSnapshot = await db.collection('bookings')
+        .where('eventId', '==', eventId)
+        .get();
+
+      const bookings = [];
+      
+      // Process each booking document
+      for (const bookingDoc of bookingsSnapshot.docs) {
+        const booking = bookingDoc.data();
+        
+        // Filter out cancelled bookings in code instead of query
+        if (booking.status === 'cancelled') {
+          continue;
+        }
+        
+        // Get user profile data - FIXED: Use .exists instead of .exists()
+        const userDoc = await db.collection('users').doc(booking.userId).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        
+        const userFullName = userData.name && userData.surname
+          ? `${userData.name} ${userData.surname}`
+          : null;
+
+        bookings.push({
+          id: bookingDoc.id,
+          ...booking,
+          userFullName,
+          email: booking.contactInfo?.email || 'N/A',
+          phone: booking.contactInfo?.phone || 'N/A',
+          displayName: booking.contactInfo?.displayName || 'N/A',
+          birthDate: userData.birthDate || 'N/A',
+          address: userData.address || 'N/A', 
+          taxId: userData.taxId || 'N/A',
+          instagram: userData.instagram || 'N/A'
+        });
+      }
+
+      // Sort bookings by creation date
+      bookings.sort((a, b) => {
+        const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+        return timeA - timeB;
+      });
+
+      // Update Google Sheet
+      const result = await createOrUpdateEventSheet({
+        id: eventId,
+        title: eventData.title,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        venueName: eventData.venueName,
+        spots: eventData.spots,
+        spotsLeft: eventData.spotsLeft
+      }, bookings);
+
+      console.log(`Manual sync completed: ${result.sheetTitle} with ${result.bookingsCount} bookings`);
+      
+      return {
+        success: true,
+        message: `Successfully synced ${result.bookingsCount} bookings to sheet "${result.sheetTitle}"`,
+        sheetTitle: result.sheetTitle,
+        bookingsCount: result.bookingsCount
+      };
+      
+    } catch (error) {
+      console.error('Error in manual sync:', error);
+      throw new Error(`Sync failed: ${error.message}`);
     }
   }
 );

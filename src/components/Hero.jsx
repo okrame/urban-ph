@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { getUserProfile } from '../../firebase/userServices';
 import gianicolo from '../assets/gianicolo.jpg';
-import UPHLogo from '../assets/UPH_Logo.png';
+import AnimateLogo from '../components/AnimateLogo';
 
 function Hero({ user, onSignInClick }) {
   const [loading, setLoading] = useState(false);
@@ -66,7 +66,7 @@ function Hero({ user, onSignInClick }) {
         />
       </div>
 
-      {/* Logo - fixed position */}
+      {/* Logo - with animation */}
       <div
         className="absolute z-25"
         style={{
@@ -75,11 +75,10 @@ function Hero({ user, onSignInClick }) {
           transform: 'translate(-50%, -50%)',
         }}
       >
-        <img
-          src={UPHLogo}
-          alt="Urban Photo Hunts Logo"
+        <AnimateLogo 
           className="w-32 h-auto md:w-40 lg:w-48"
-          draggable={false}
+          animationDelay={1000}
+          animationDuration={4000}
         />
       </div>
 
@@ -91,9 +90,6 @@ function Hero({ user, onSignInClick }) {
           top: '60%',
           transform: 'translate(-50%, -50%)',
         }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 1.5 }}
       >
         <p
           className="text-lg md:text-xl font-light text-center"
@@ -136,11 +132,8 @@ function Hero({ user, onSignInClick }) {
             <div
               className="text-left"
               style={{
-                transform: 'translateY(50px)', // Adjust this value to control vertical spacing
+                transform: 'translateY(50px)',
               }}
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 1 }}
             >
               <h1
                 className="font-medium leading-tight"
@@ -198,11 +191,8 @@ function Hero({ user, onSignInClick }) {
             <div
               className="max-w-md text-right"
               style={{
-                transform: 'translateY(420px)', // Adjust this value to control vertical spacing
+                transform: 'translateY(420px)',
               }}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 1, delay: 1.5 }}
             >
               <p className="text-xl md:text-2xl mb-4" style={{ color: '#FFFADE' }}>
                 Disegniamo esperienze<br />Creiamo Workshop, Cacce & Mostre
@@ -215,14 +205,9 @@ function Hero({ user, onSignInClick }) {
         </div>
       </div>
 
-
-
       {/* Scroll Arrow */}
       <div
         className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 2.5 }}
       >
         <button
           onClick={scrollToCurrentEvents}

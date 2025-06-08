@@ -28,7 +28,7 @@ function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [syncingStatuses, setSyncingStatuses] = useState(false);
-  const [syncingToSheets, setSyncingToSheets] = useState(false);
+  const [downloadingCSV, setDownloadingCSV] = useState(false);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -74,127 +74,175 @@ function AdminPanel() {
     fetchData();
   }, [isAdmin]);
 
-  // Handle Google Sheets sync
-  const handleSyncToGoogleSheets = async () => {
-    if (!selectedEvent) return;
+  // Handle CSV download for event bookings
+  const downloadEventBookingsCSV = () => {
+    if (!selectedEvent || !bookings.length) {
+      alert('No event selected or no bookings to download');
+      return;
+    }
 
-    setSyncingToSheets(true);
+    setDownloadingCSV(true);
+
     try {
-      const functions = getFunctions();
-      const syncFunction = httpsCallable(functions, 'syncEventToSheetsManual');
+      const header = [
+        'Data prenotazione',
+        'Nome',
+        'Email',
+        'Phone',
+        'Data di nascita',
+        'Residenza',
+        'Codice Fiscale',
+        'Instagram',
+        'Richiesta specifica',
+        'Status',
+        'Payment Status',
+        'Data Evento',
+        'Ora Evento',
+        'Location',
+        'Spazio'
+      ];
 
-      const result = await syncFunction({ eventId: selectedEvent.id });
+      const csvData = bookings.map(booking => [
+        booking.createdAt ? booking.createdAt.toDate().toLocaleDateString() : 'N/A',
+        booking.userFullName || booking.displayName || 'N/A',
+        booking.email || 'N/A',
+        booking.phone || 'N/A',
+        booking.birthDate || 'N/A',
+        booking.address || 'N/A',
+        booking.taxId || 'N/A',
+        booking.instagram || 'N/A',
+        booking.specificRequest || 'None',
+        booking.status || 'confirmed',
+        booking.paymentStatus || 'N/A',
+        selectedEvent.title,
+        selectedEvent.date,
+        selectedEvent.time,
+        selectedEvent.location,
+        selectedEvent.venueName || ''
+      ]);
 
-      if (result.data.success) {
-        alert(`Successfully synced ${result.data.bookingsCount} bookings to Google Sheet: "${result.data.sheetTitle}"`);
-      } else {
-        throw new Error(result.data.message || 'Sync failed');
-      }
+      const csv = [
+        header.join(','),
+        ...csvData.map(row => row.map(field => {
+          // Escape commas and quotes in CSV data
+          const value = typeof field === 'string' ? field.replace(/"/g, '""') : String(field || '');
+          return `"${value}"`;
+        }).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedEvent.title.replace(/[^a-zA-Z0-9]/g, '_')}_bookings_${selectedEvent.date}.csv`;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error syncing to Google Sheets:', error);
-      alert(`Error syncing to Google Sheets: ${error.message}`);
+      console.error('Error creating CSV:', error);
+      alert('Failed to download CSV: ' + error.message);
     } finally {
-      setSyncingToSheets(false);
+      setDownloadingCSV(false);
     }
   };
 
-const syncAllEventStatuses = async (preserveSelection = true) => {
-  setSyncingStatuses(true);
-  try {
-    const eventsSnapshot = await getDocs(collection(db, 'events'));
-    const updatePromises = [];
+  const syncAllEventStatuses = async (preserveSelection = true) => {
+    setSyncingStatuses(true);
+    try {
+      const eventsSnapshot = await getDocs(collection(db, 'events'));
+      const updatePromises = [];
 
-    eventsSnapshot.forEach(eventDoc => {
-      const eventData = eventDoc.data();
-      const actualStatus = determineEventStatus(eventData.date, eventData.time);
+      eventsSnapshot.forEach(eventDoc => {
+        const eventData = eventDoc.data();
+        const actualStatus = determineEventStatus(eventData.date, eventData.time);
 
-      if (actualStatus !== eventData.status) {
-        const updatePromise = updateDoc(eventDoc.ref, {
-          status: actualStatus,
-          updatedAt: serverTimestamp()
-        });
-        updatePromises.push(updatePromise);
+        if (actualStatus !== eventData.status) {
+          const updatePromise = updateDoc(eventDoc.ref, {
+            status: actualStatus,
+            updatedAt: serverTimestamp()
+          });
+          updatePromises.push(updatePromise);
 
-        console.log(`Syncing event ${eventDoc.id}: ${eventData.status} → ${actualStatus}`);
+          console.log(`Syncing event ${eventDoc.id}: ${eventData.status} → ${actualStatus}`);
+        }
+      });
+
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        console.log(`Synced ${updatePromises.length} event statuses`);
+      } else {
+        console.log('All event statuses are already up to date');
       }
-    });
 
-    if (updatePromises.length > 0) {
-      await Promise.all(updatePromises);
-      console.log(`Synced ${updatePromises.length} event statuses`);
-    } else {
-      console.log('All event statuses are already up to date');
+      // FIXED: Pass preserveSelection parameter to fetchAllEventTypes
+      await fetchAllEventTypes(preserveSelection);
+
+    } catch (error) {
+      console.error('Error syncing event statuses:', error);
+    } finally {
+      setSyncingStatuses(false);
     }
+  };
 
-    // FIXED: Pass preserveSelection parameter to fetchAllEventTypes
-    await fetchAllEventTypes(preserveSelection);
+  const fetchAllEventTypes = async (preserveSelection = true) => {
+    try {
+      const eventsSnapshot = await getDocs(collection(db, 'events'));
 
-  } catch (error) {
-    console.error('Error syncing event statuses:', error);
-  } finally {
-    setSyncingStatuses(false);
-  }
-};
+      const active = [];
+      const upcoming = [];
+      const past = [];
 
-const fetchAllEventTypes = async (preserveSelection = true) => {
-  try {
-    const eventsSnapshot = await getDocs(collection(db, 'events'));
+      eventsSnapshot.forEach(doc => {
+        const eventData = doc.data();
+        const event = { id: doc.id, ...eventData };
 
-    const active = [];
-    const upcoming = [];
-    const past = [];
+        const actualStatus = determineEventStatus(eventData.date, eventData.time);
+        event.actualStatus = actualStatus;
 
-    eventsSnapshot.forEach(doc => {
-      const eventData = doc.data();
-      const event = { id: doc.id, ...eventData };
+        if (actualStatus === 'active') {
+          active.push(event);
+        } else if (actualStatus === 'upcoming') {
+          upcoming.push(event);
+        } else if (actualStatus === 'past') {
+          past.push(event);
+        }
+      });
 
-      const actualStatus = determineEventStatus(eventData.date, eventData.time);
-      event.actualStatus = actualStatus;
+      const sortByDate = (a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA - dateB;
+      };
 
-      if (actualStatus === 'active') {
-        active.push(event);
-      } else if (actualStatus === 'upcoming') {
-        upcoming.push(event);
-      } else if (actualStatus === 'past') {
-        past.push(event);
+      setActiveEvents(active.sort(sortByDate));
+      setUpcomingEvents(upcoming.sort(sortByDate));
+      setPastEvents(past.sort(sortByDate));
+
+      // FIXED: Only restore selected event if preserveSelection is true
+      if (preserveSelection && selectedEvent) {
+        const updatedEvent = [...active, ...upcoming, ...past].find(e => e.id === selectedEvent.id);
+        if (updatedEvent) {
+          setSelectedEvent(updatedEvent);
+        }
       }
-    });
-
-    const sortByDate = (a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateA - dateB;
-    };
-
-    setActiveEvents(active.sort(sortByDate));
-    setUpcomingEvents(upcoming.sort(sortByDate));
-    setPastEvents(past.sort(sortByDate));
-
-    // FIXED: Only restore selected event if preserveSelection is true
-    if (preserveSelection && selectedEvent) {
-      const updatedEvent = [...active, ...upcoming, ...past].find(e => e.id === selectedEvent.id);
-      if (updatedEvent) {
-        setSelectedEvent(updatedEvent);
-      }
+    } catch (error) {
+      console.error('Error fetching events by type:', error);
     }
-  } catch (error) {
-    console.error('Error fetching events by type:', error);
-  }
-};
+  };
 
-const handleEventsTabChange = async (newTab) => {
-  // First clear the current selection immediately
-  setSelectedEvent(null);
-  setBookings([]);
-  setAttendance({}); // Clear attendance tracking
-  setExpandedRequests({}); // Clear expanded request states
-  
-  // Then update the tab
-  setEventsTab(newTab);
-  
-  // FIXED: Pass preserveSelection = false to prevent restoring selection
-  await syncAllEventStatuses(false);
-};
+  const handleEventsTabChange = async (newTab) => {
+    // First clear the current selection immediately
+    setSelectedEvent(null);
+    setBookings([]);
+    setAttendance({}); // Clear attendance tracking
+    setExpandedRequests({}); // Clear expanded request states
+
+    // Then update the tab
+    setEventsTab(newTab);
+
+    await syncAllEventStatuses(false);
+  };
 
   // FIXED: Enhanced event selection with proper state clearing
   const handleEventSelect = async (eventId) => {
@@ -246,7 +294,12 @@ const handleEventsTabChange = async (newTab) => {
           return {
             ...booking,
             userFullName,
-            specificRequest: booking.specificRequest || ''
+            specificRequest: booking.specificRequest || '',
+            // Add additional user data for CSV export
+            birthDate: userData.birthDate || 'N/A',
+            address: userData.address || 'N/A',
+            taxId: userData.taxId || 'N/A',
+            instagram: userData.instagram || 'N/A'
           };
         }));
 
@@ -649,28 +702,28 @@ const handleEventsTabChange = async (newTab) => {
                         Bookings for {selectedEvent.title}
                       </h2>
                       <button
-                        onClick={handleSyncToGoogleSheets}
-                        disabled={syncingToSheets}
-                        className={`px-4 py-2 text-sm rounded flex items-center ${syncingToSheets
+                        onClick={downloadEventBookingsCSV}
+                        disabled={downloadingCSV || !bookings.length}
+                        className={`px-4 py-2 text-sm rounded flex items-center ${downloadingCSV || !bookings.length
                             ? 'bg-gray-400 cursor-not-allowed text-white'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
                           }`}
-                        title="Sync current bookings to Google Sheets"
+                        title="Download bookings as CSV file"
                       >
-                        {syncingToSheets ? (
+                        {downloadingCSV ? (
                           <>
                             <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Syncing...
+                            Preparing...
                           </>
                         ) : (
                           <>
                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            Sync to Sheets
+                            Download CSV
                           </>
                         )}
                       </button>
@@ -727,7 +780,6 @@ const handleEventsTabChange = async (newTab) => {
                           <tbody className="divide-y divide-gray-200">
                             {bookings.map(booking => (
                               <tr key={booking.id} className={attendance[booking.id] ? "bg-green-50" : ""}>
-                                {/* FIX: Add the missing attendance checkbox column */}
                                 <td className="px-4 py-2 whitespace-nowrap text-center">
                                   <input
                                     type="checkbox"
@@ -780,11 +832,7 @@ const handleEventsTabChange = async (newTab) => {
                             ))}
                           </tbody>
                         </table>
-                        <div className="text-xs text-gray-500 mt-4 bg-blue-50 p-2 rounded">
-                          <p>✓ <strong>Attendance tracking:</strong> Checking the attendance box is for your record only and won't be saved to the database.</p>
-                          <p>✓ <strong>Remove attendee:</strong> Clicking the trash icon will permanently remove the attendee from this event and free up a spot.</p>
-                          <p>✓ <strong>Google Sheets:</strong> Click "Sync to Sheets" to copy all bookings to your Google Sheet. New bookings are automatically synced.</p>
-                        </div>
+
                       </div>
                     ) : (
                       <p className="text-center py-4">No bookings found for this event.</p>
@@ -795,7 +843,8 @@ const handleEventsTabChange = async (newTab) => {
                     <p className="text-gray-600">Select an event to view bookings</p>
                   </div>
                 )}
-              </div>            </div>
+              </div>
+            </div>
           </>
         )}
       </div>

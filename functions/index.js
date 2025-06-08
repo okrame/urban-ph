@@ -207,6 +207,208 @@ exports.syncEventToSheetsManual = onCall(
   }
 );
 
+// Auto-sync new bookings to Google Sheets
+exports.autoSyncNewBookingToSheets = onDocumentCreated(
+  {
+    document: "bookings/{bookingId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    try {
+      const bookingData = event.data.data();
+      const bookingId = event.params.bookingId;
+      
+      console.log(`New booking created: ${bookingId} for event: ${bookingData.eventId}`);
+      
+      // Only sync if booking is confirmed (not cancelled or payment-pending)
+      if (bookingData.status === 'cancelled') {
+        console.log(`Skipping sync for cancelled booking: ${bookingId}`);
+        return;
+      }
+      
+      const db = getFirestore();
+      
+      // Get event data
+      const eventDoc = await db.collection('events').doc(bookingData.eventId).get();
+      
+      if (!eventDoc.exists) {
+        console.error(`Event not found for booking: ${bookingId}`);
+        return;
+      }
+
+      const eventData = eventDoc.data();
+      
+      // Get all current bookings for this event (to update the complete sheet)
+      const bookingsSnapshot = await db.collection('bookings')
+        .where('eventId', '==', bookingData.eventId)
+        .get();
+
+      const bookings = [];
+      
+      // Process each booking document
+      for (const bookingDoc of bookingsSnapshot.docs) {
+        const booking = bookingDoc.data();
+        
+        // Filter out cancelled bookings
+        if (booking.status === 'cancelled') {
+          continue;
+        }
+        
+        // Get user profile data
+        const userDoc = await db.collection('users').doc(booking.userId).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        
+        const userFullName = userData.name && userData.surname
+          ? `${userData.name} ${userData.surname}`
+          : null;
+
+        bookings.push({
+          id: bookingDoc.id,
+          ...booking,
+          userFullName,
+          email: booking.contactInfo?.email || 'N/A',
+          phone: booking.contactInfo?.phone || 'N/A',
+          displayName: booking.contactInfo?.displayName || 'N/A',
+          birthDate: userData.birthDate || 'N/A',
+          address: userData.address || 'N/A', 
+          taxId: userData.taxId || 'N/A',
+          instagram: userData.instagram || 'N/A'
+        });
+      }
+
+      // Sort bookings by creation date
+      bookings.sort((a, b) => {
+        const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+        return timeA - timeB;
+      });
+
+      // Update Google Sheet
+      const result = await createOrUpdateEventSheet({
+        id: bookingData.eventId,
+        title: eventData.title,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        venueName: eventData.venueName,
+        spots: eventData.spots,
+        spotsLeft: eventData.spotsLeft
+      }, bookings);
+
+      console.log(`Auto-sync completed for new booking ${bookingId}: ${result.sheetTitle} updated with ${result.bookingsCount} total bookings`);
+      
+    } catch (error) {
+      console.error(`Error auto-syncing booking to Google Sheets:`, error);
+      // Don't throw - we don't want booking creation to fail if sheets sync fails
+    }
+  }
+);
+
+// Auto-sync booking updates to Google Sheets (for status changes, payment updates, etc.)
+exports.autoSyncBookingUpdateToSheets = onDocumentUpdated(
+  {
+    document: "bookings/{bookingId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    try {
+      const beforeData = event.data.before.data();
+      const afterData = event.data.after.data();
+      const bookingId = event.params.bookingId;
+      
+      // Only sync if there's a meaningful change (status, payment status, or contact info)
+      const meaningfulChange = 
+        beforeData.status !== afterData.status ||
+        beforeData.paymentStatus !== afterData.paymentStatus ||
+        JSON.stringify(beforeData.contactInfo) !== JSON.stringify(afterData.contactInfo);
+      
+      if (!meaningfulChange) {
+        console.log(`Skipping sync for booking ${bookingId} - no meaningful changes`);
+        return;
+      }
+      
+      console.log(`Booking updated: ${bookingId} for event: ${afterData.eventId}`);
+      console.log(`Status change: ${beforeData.status} → ${afterData.status}`);
+      console.log(`Payment status change: ${beforeData.paymentStatus} → ${afterData.paymentStatus}`);
+      
+      const db = getFirestore();
+      
+      // Get event data
+      const eventDoc = await db.collection('events').doc(afterData.eventId).get();
+      
+      if (!eventDoc.exists) {
+        console.error(`Event not found for booking: ${bookingId}`);
+        return;
+      }
+
+      const eventData = eventDoc.data();
+      
+      // Get all current bookings for this event
+      const bookingsSnapshot = await db.collection('bookings')
+        .where('eventId', '==', afterData.eventId)
+        .get();
+
+      const bookings = [];
+      
+      // Process each booking document
+      for (const bookingDoc of bookingsSnapshot.docs) {
+        const booking = bookingDoc.data();
+        
+        // Filter out cancelled bookings
+        if (booking.status === 'cancelled') {
+          continue;
+        }
+        
+        // Get user profile data
+        const userDoc = await db.collection('users').doc(booking.userId).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        
+        const userFullName = userData.name && userData.surname
+          ? `${userData.name} ${userData.surname}`
+          : null;
+
+        bookings.push({
+          id: bookingDoc.id,
+          ...booking,
+          userFullName,
+          email: booking.contactInfo?.email || 'N/A',
+          phone: booking.contactInfo?.phone || 'N/A',
+          displayName: booking.contactInfo?.displayName || 'N/A',
+          birthDate: userData.birthDate || 'N/A',
+          address: userData.address || 'N/A', 
+          taxId: userData.taxId || 'N/A',
+          instagram: userData.instagram || 'N/A'
+        });
+      }
+
+      // Sort bookings by creation date
+      bookings.sort((a, b) => {
+        const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+        return timeA - timeB;
+      });
+
+      // Update Google Sheet
+      const result = await createOrUpdateEventSheet({
+        id: afterData.eventId,
+        title: eventData.title,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        venueName: eventData.venueName,
+        spots: eventData.spots,
+        spotsLeft: eventData.spotsLeft
+      }, bookings);
+
+      console.log(`Auto-sync completed for updated booking ${bookingId}: ${result.sheetTitle} updated with ${result.bookingsCount} total bookings`);
+      
+    } catch (error) {
+      console.error(`Error auto-syncing booking update to Google Sheets:`, error);
+      // Don't throw - we don't want booking updates to fail if sheets sync fails
+    }
+  }
+);
+
 // Create a summary of the webhook body to avoid overly large logs
 function summarizeWebhookBody(body) {
   if (!body) return "Empty body";

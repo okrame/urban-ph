@@ -74,30 +74,30 @@ const createOrUpdateEventSheet = async (eventData, bookingsData) => {
 
     // Prepare data for the sheet
     const headers = [
-      'Booking Date',
-      'Full Name',
+      'Data prenotazione',
+      'Nome',
       'Email', 
       'Phone',
-      'Birth Date',
-      'Address',
-      'Tax ID',
+      'Data di nascita',
+      'Residenza',
+      'Codice Fiscale',
       'Instagram',
-      'Specific Request',
+      'Richiesta specifica',
       'Status',
       'Payment Status',
-      'Event Date',
-      'Event Time',
-      'Event Location',
-      'Venue Name'
+      'Data Evento',
+      'Ora Evento',
+      'Location',
+      'Spazio'
     ];
 
     // Add event info and headers
     const eventInfoRows = [
-      [`Event: ${eventData.title}`],
-      [`Date: ${eventData.date} | Time: ${eventData.time}`],
+      [`Evento: ${eventData.title}`],
+      [`Data: ${eventData.date} | Ora: ${eventData.time}`],
       [`Location: ${eventData.venueName || eventData.location}`],
-      [`Total Spots: ${eventData.spots} | Available: ${eventData.spotsLeft || 0}`],
-      [], // Empty row
+      [`Posti totali: ${eventData.spots} | Rimasti: ${eventData.spotsLeft || 0}`],
+      [], 
       headers
     ];
 

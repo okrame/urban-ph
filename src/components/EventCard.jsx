@@ -79,6 +79,22 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     }
   };
   
+  // Mobile animation variants (simpler, no horizontal movement)
+  const mobileVariants = {
+    hidden: {
+      y: 30,
+      opacity: 0
+    },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    }
+  };
+  
   // [Keep all existing useEffect hooks - unchanged]
   useEffect(() => {
     if (!prevUserState && user && authRequested && !isBooked) {
@@ -297,6 +313,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           setBookingSuccess(true);
           setBookingStatus('confirmed');
           setShowBookingForm(false);
+          setShouldAnimate(false);
         } else {
           setAuthError(result.message || "Booking failed. Please try again.");
         }
@@ -338,6 +355,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         setBookingSuccess(true);
         setBookingStatus('confirmed');
         setShowPaymentModal(false);
+        setShouldAnimate(false);
       } else {
         throw new Error(result.message || "Unknown error during booking");
       }
@@ -383,6 +401,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   
   const isClosedForBooking = !isBookable && eventStatus === 'active';
   const isFullyBooked = bookableReason === "No spots left";
+
+  if (!event || !event.id) {
+  return null;
+}
 
   // Show booking form
   if (showBookingForm) {
@@ -453,21 +475,23 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     );
   }
   
-  // Main event card with alternating layout and animations
+  // Main event card with responsive layout
   return (
     <motion.div 
       className="bg-white border border-black my-8 overflow-hidden"
       variants={containerVariants}
-      initial={shouldAnimate ? "hidden" : "static"}
-      animate={shouldAnimate ? undefined : "static"}
+      initial={shouldAnimate ? "hidden" : "false"}
+      animate={shouldAnimate ? undefined : "false"}
       whileInView={shouldAnimate ? "visible" : undefined}
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
-      <div className={`flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
+      {/* Desktop Layout */}
+      <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
         {/* Image section - 50% width with animation */}
         <motion.div 
           className="w-1/2 flex flex-col"
-          variants={imageVariants}
+          variants={shouldAnimate ? imageVariants : {}}
+
         >
           {/* Main image */}
           <div className="h-96">
@@ -499,7 +523,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         {/* Content section - 50% width with animation */}
         <motion.div 
           className="w-1/2 p-8 flex flex-col justify-between"
-          variants={contentVariants}
+          variants={shouldAnimate ? contentVariants : {}}
+
         >
           <div>
             <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
@@ -627,6 +652,168 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           </motion.button>
         </motion.div>
       </div>
+
+      {/* Mobile Layout */}
+      <motion.div 
+        className="lg:hidden"
+        variants={shouldAnimate ? mobileVariants : {}}
+        initial={shouldAnimate ? "hidden" : "false"}
+        animate={shouldAnimate ? undefined : "false"}
+        whileInView={shouldAnimate ? "visible" : undefined}
+        viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
+      >
+        {/* Mobile Image - Smaller height */}
+        <div className="w-full h-48 sm:h-56">
+          <img 
+            src={getImageSource()}
+            alt={event.title}
+            className="w-full h-full object-cover"
+            onError={handleImageError}
+          />
+        </div>
+        
+        {/* Mobile Content */}
+        <div className="p-6">
+          <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0">
+            <span>{event.date}</span>
+            <span className="hidden sm:inline mx-2">·</span>
+            <span>{event.time}</span>
+            <span className="hidden sm:inline mx-2">·</span>
+            <span className="text-xs sm:text-sm">{event.venueName || event.location}</span>
+          </div>
+          
+          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+            {shouldTruncate && !showFullDescription ? (
+              <>
+                {event.description.substring(0, DESCRIPTION_LIMIT)}...
+                <button 
+                  onClick={() => setShowFullDescription(true)}
+                  className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                >
+                  Show more
+                </button>
+              </>
+            ) : (
+              <>
+                {event.description}
+                {shouldTruncate && (
+                  <button 
+                    onClick={() => setShowFullDescription(false)}
+                    className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                  >
+                    Show less
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Mobile Map section - Full width under text when expanded */}
+          {showFullDescription && (
+            <motion.div 
+              className="mb-4 border border-black rounded-none overflow-hidden"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="p-4">
+                <h4 className="text-sm font-light text-black mb-3">Event Location</h4>
+                <LocationMap location={event.location} isVisible={showFullDescription} />
+              </div>
+            </motion.div>
+          )}
+          
+          {/* Event meta info */}
+          <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
+            <span className="border border-black px-2 py-1">{event.type}</span>
+            <span className="border border-black px-2 py-1">
+              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+            </span>
+            {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
+              <span className="border border-purple-600 text-purple-600 px-2 py-1">
+                {event.memberPrice !== null && event.nonMemberPrice !== null ? (
+                  user ? (
+                    userMembershipStatus !== null ? (
+                      userMembershipStatus ? `€${event.memberPrice}` : `€${event.nonMemberPrice}`
+                    ) : `€${event.memberPrice}/${event.nonMemberPrice}`
+                  ) : `€${event.memberPrice}/${event.nonMemberPrice}`
+                ) : (
+                  `€${event.paymentAmount || 0}`
+                )}
+              </span>
+            )}
+          </div>
+          
+          {/* Status messages */}
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+              {authError}
+            </div>
+          )}
+          
+          {bookingStatus === 'cancelled' && (
+            <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+              <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
+              <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
+            </div>
+          )}
+          
+          {isFullyBooked && bookingStatus !== 'cancelled' && (
+            <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+              <p className="font-medium text-black text-sm">This event is fully booked</p>
+            </div>
+          )}
+          
+          {eventStatus === 'past' && (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200">
+              <p className="font-medium text-black text-sm">This event has ended</p>
+            </div>
+          )}
+          
+          {isClosedForBooking && bookingStatus !== 'cancelled' && (
+            <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+              <p className="font-medium text-black text-sm">Booking closed</p>
+            </div>
+          )}
+          
+          {/* Mobile Book button */}
+          <motion.button 
+            onClick={handleBookEvent}
+            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
+            className={`w-full py-3 px-4 border text-sm font-light transition-colors ${
+              (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
+                ? 'border-black bg-black text-white cursor-not-allowed' 
+                : (!isBookable && bookingStatus !== 'cancelled')
+                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : loading 
+                    ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-wait' 
+                    : 'border-black bg-white text-black hover:bg-black hover:text-white'
+            }`}
+            whileHover={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 1.02 }}
+            whileTap={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 0.98 }}
+            transition={{ duration: 0.2 }}
+          >
+            {isBooked && bookingStatus !== 'cancelled'
+              ? 'Booking Confirmed' 
+              : loading 
+                ? 'Processing...' 
+                : (!isBookable && bookingStatus !== 'cancelled')
+                  ? isFullyBooked 
+                    ? 'Fully Booked'
+                    : eventStatus === 'past'
+                      ? 'Event Ended'
+                      : 'Booking Closed'
+                  : user 
+                    ? bookingStatus === 'cancelled'
+                      ? 'Book Again'
+                      : 'Book Now'
+                    : 'Sign In to Book'}
+          </motion.button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

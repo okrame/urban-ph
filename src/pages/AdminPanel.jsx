@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getEventsStats,
   getEventBookings,
@@ -12,7 +13,6 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { getDoc, doc, collection, query, where, getDocs, updateDoc, serverTimestamp, arrayRemove } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
-import Navbar from '../components/Navbar';
 import EventForm from '../components/EventForm';
 import UsersDatabase from '../components/UsersDatabase';
 import PaymentsView from '../components/PaymentsView';
@@ -475,7 +475,16 @@ function AdminPanel() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <Navbar user={user} />
+        {/* Simple Back to Home Button */}
+        <div className="container mx-auto px-4 py-4">
+          <Link 
+            to="/" 
+            className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+          >
+            ← Back to home
+          </Link>
+        </div>
+        
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-3xl font-bold mb-4">Admin Panel</h1>
           <p className="mb-8">You need to be logged in as an admin to access this page.</p>
@@ -489,7 +498,15 @@ function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar user={user} />
+      {/* Simple Back to Home Button */}
+      <div className="container mx-auto px-4 py-4">
+        <Link 
+          to="/" 
+          className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+        >
+          ← Back to home
+        </Link>
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 text-center">Admin Panel</h1>

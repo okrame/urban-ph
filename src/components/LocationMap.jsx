@@ -186,6 +186,32 @@ function LocationMap({ location, isVisible = true }) {
     }
   };
 
+  useEffect(() => {
+    // Add custom marker styles to the document head
+    const styleId = 'leaflet-custom-marker-styles';
+    
+    // Check if styles are already added
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        .custom-marker {
+          background: transparent !important;
+          border: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Cleanup function to remove styles when component unmounts
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
+
   if (!isVisible) return null;
 
   return (
@@ -212,14 +238,6 @@ function LocationMap({ location, isVisible = true }) {
           </div>
         </div>
       )}
-      
-      {/* Custom marker styles */}
-      <style jsx>{`
-        .custom-marker {
-          background: transparent !important;
-          border: none !important;
-        }
-      `}</style>
     </div>
   );
 }

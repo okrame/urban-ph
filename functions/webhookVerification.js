@@ -1,4 +1,4 @@
-// functions/webhookVerification.js
+// functions/webhookVerification
 const crypto = require('crypto');
 const fetch = require('node-fetch');
 

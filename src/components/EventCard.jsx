@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { bookEventSimple, checkUserBooking, determineEventStatus, isEventBookable, getUserContactInfo } from '../../firebase/firestoreServices';
 import { getUserProfile, checkUserProfileComplete } from '../../firebase/userServices';
@@ -30,6 +30,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   
   // State to track if we should show animations (only for main card view)
   const [shouldAnimate, setShouldAnimate] = useState(true);
+  
+  // Refs for dynamic sizing
+  const contentRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState(0);
   
   // Determine if image should be on left or right based on index
   const isImageLeft = index % 2 === 0;
@@ -93,6 +97,42 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         ease: "easeOut"
       }
     }
+  };
+  
+  // Effect to measure content height when description is expanded
+  useEffect(() => {
+    if (showFullDescription && contentRef.current) {
+      const measureHeight = () => {
+        const height = contentRef.current.scrollHeight;
+        setContentHeight(height);
+      };
+      
+      // Measure after a short delay to ensure content is rendered
+      const timer = setTimeout(measureHeight, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setContentHeight(0);
+    }
+  }, [showFullDescription, event.description]);
+  
+  // Calculate map height based on content height
+  const getMapHeight = () => {
+    if (!showFullDescription) return 0;
+    
+    // Base height for the main image (384px = h-96)
+    const baseImageHeight = 384;  
+    // Maximum map height (350px for expanded view)
+    const maxMapHeight = 350;
+    // Minimum map height for readability
+    const minMapHeight = 220;
+    
+    if (contentHeight > 0) {
+      // Calculate proportional height but cap it at maximum
+      const proportionalHeight = Math.min(contentHeight * 0.7, maxMapHeight);
+      return Math.max(proportionalHeight, minMapHeight);
+    }
+    
+    return minMapHeight;
   };
   
   // [Keep all existing useEffect hooks - unchanged]
@@ -403,8 +443,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const isFullyBooked = bookableReason === "No spots left";
 
   if (!event || !event.id) {
-  return null;
-}
+    return null;
+  }
 
   // Show booking form
   if (showBookingForm) {
@@ -491,7 +531,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         <motion.div 
           className="w-1/2 flex flex-col"
           variants={shouldAnimate ? imageVariants : {}}
-
         >
           {/* Main image */}
           <div className="h-96">
@@ -503,18 +542,31 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             />
           </div>
           
-          {/* Map section appears below the image when expanded */}
+          {/* Map section with dynamic height */}
           {showFullDescription && (
             <motion.div 
               className="border-t border-black"
+              style={{ 
+                height: `${getMapHeight()}px`,
+                minHeight: '220px',
+                maxHeight: '350px'
+              }}
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
+              animate={{ 
+                height: `${getMapHeight()}px`, 
+                opacity: 1 
+              }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
             >
-              <div className="p-4">
-                <h4 className="text-sm font-light text-black mb-3">Event Location</h4>
-                <LocationMap location={event.location} isVisible={showFullDescription} />
+              <div className="w-full h-full p-2 flex flex-col">
+                <div className="flex-1 min-h-0">
+                  <LocationMap 
+                    location={event.location} 
+                    isVisible={showFullDescription}
+                    style={{ height: '100%', width: '100%' }}
+                  />
+                </div>
               </div>
             </motion.div>
           )}
@@ -524,9 +576,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         <motion.div 
           className="w-1/2 p-8 flex flex-col justify-between"
           variants={shouldAnimate ? contentVariants : {}}
-
         >
-          <div>
+          <div ref={contentRef}>
             <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
             
             <div className="flex items-center text-sm text-black opacity-70 mb-4">
@@ -710,18 +761,21 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             )}
           </div>
 
-          {/* Mobile Map section - Full width under text when expanded */}
+          {/* Mobile Map section - No border, no heading */}
           {showFullDescription && (
             <motion.div 
-              className="mb-4 border border-black rounded-none overflow-hidden"
+              className="mb-4"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="p-4">
-                <h4 className="text-sm font-light text-black mb-3">Event Location</h4>
-                <LocationMap location={event.location} isVisible={showFullDescription} />
+              <div className="w-full" style={{ height: '250px' }}>
+                <LocationMap 
+                  location={event.location} 
+                  isVisible={showFullDescription}
+                  style={{ height: '100%', width: '100%' }}
+                />
               </div>
             </motion.div>
           )}

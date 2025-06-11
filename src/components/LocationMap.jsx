@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-function LocationMap({ location, isVisible = true }) {
+// Global cache per evitare ripetute chiamate API
+const geocodingCache = new Map();
+let leafletLoaded = false;
+let leafletLoading = false;
+
+function LocationMap({ location, isVisible = true, style, className }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [mapError, setMapError] = useState(false);
@@ -17,14 +22,8 @@ function LocationMap({ location, isVisible = true }) {
     setIsLoading(true);
     setErrorMessage('');
 
-    // Load Leaflet CSS and JS if not already loaded
-    loadLeaflet().then(() => {
-      initializeMap();
-    }).catch((error) => {
-      setMapError(true);
-      setErrorMessage(`Failed to load map: ${error.message}`);
-      setIsLoading(false);
-    });
+    // Pre-load Leaflet and initialize map
+    initializeMapWithOptimizations();
 
     return () => {
       // Cleanup map instance
@@ -35,14 +34,57 @@ function LocationMap({ location, isVisible = true }) {
     };
   }, [location, isVisible]);
 
+  // Effect to handle map resize when container size changes
+  useEffect(() => {
+    if (mapInstanceRef.current && isVisible) {
+      // Multiple resize attempts with different delays
+      const resizeMap = () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      };
+
+      // Immediate resize
+      resizeMap();
+      
+      // Additional resizes with delays to handle animation completion
+      const timers = [
+        setTimeout(resizeMap, 50),
+        setTimeout(resizeMap, 150),
+        setTimeout(resizeMap, 300),
+        setTimeout(resizeMap, 500)
+      ];
+      
+      return () => {
+        timers.forEach(timer => clearTimeout(timer));
+      };
+    }
+  }, [isVisible, style]);
+
   const loadLeaflet = async () => {
-    // Check if Leaflet is already loaded
-    if (window.L) {
+    // If already loaded, return immediately
+    if (leafletLoaded && window.L) {
       return Promise.resolve();
     }
 
+    // If already loading, wait for it
+    if (leafletLoading) {
+      return new Promise((resolve) => {
+        const checkLoaded = () => {
+          if (leafletLoaded && window.L) {
+            resolve();
+          } else {
+            setTimeout(checkLoaded, 50);
+          }
+        };
+        checkLoaded();
+      });
+    }
+
+    leafletLoading = true;
+
     return new Promise((resolve, reject) => {
-      // Load CSS
+      // Load CSS only once
       if (!document.querySelector('link[href*="leaflet"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -52,27 +94,48 @@ function LocationMap({ location, isVisible = true }) {
         document.head.appendChild(link);
       }
 
-      // Load JS
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-      script.crossOrigin = '';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Leaflet'));
-      document.head.appendChild(script);
+      // Load JS only once
+      if (!document.querySelector('script[src*="leaflet"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+        script.crossOrigin = '';
+        script.onload = () => {
+          leafletLoaded = true;
+          leafletLoading = false;
+          resolve();
+        };
+        script.onerror = () => {
+          leafletLoading = false;
+          reject(new Error('Failed to load Leaflet'));
+        };
+        document.head.appendChild(script);
+      } else {
+        // Script exists, check if loaded
+        if (window.L) {
+          leafletLoaded = true;
+          leafletLoading = false;
+          resolve();
+        } else {
+          // Wait for existing script to load
+          const existingScript = document.querySelector('script[src*="leaflet"]');
+          existingScript.onload = () => {
+            leafletLoaded = true;
+            leafletLoading = false;
+            resolve();
+          };
+        }
+      }
     });
   };
 
-  const initializeMap = async () => {
-    if (!mapRef.current || !window.L) {
-      setMapError(true);
-      setErrorMessage('Map container or Leaflet not available');
-      setIsLoading(false);
-      return;
+  const getCachedCoordinates = async (location) => {
+    // Check cache first
+    if (geocodingCache.has(location)) {
+      return geocodingCache.get(location);
     }
 
     try {
-      // Geocoding with Nominatim (OpenStreetMap's geocoding service)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`
       );
@@ -87,64 +150,89 @@ function LocationMap({ location, isVisible = true }) {
         throw new Error(`Location "${location}" not found`);
       }
 
-      const lat = parseFloat(data[0].lat);
-      const lon = parseFloat(data[0].lon);
+      const coordinates = {
+        lat: parseFloat(data[0].lat),
+        lon: parseFloat(data[0].lon),
+        displayName: data[0].display_name
+      };
 
-      // Create map
+      // Cache the result
+      geocodingCache.set(location, coordinates);
+      
+      return coordinates;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const initializeMapWithOptimizations = async () => {
+    if (!mapRef.current) {
+      setMapError(true);
+      setErrorMessage('Map container not available');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Load Leaflet and get coordinates in parallel
+      const [, coordinates] = await Promise.all([
+        loadLeaflet(),
+        getCachedCoordinates(location)
+      ]);
+
+      if (!window.L) {
+        throw new Error('Leaflet not loaded');
+      }
+
+      const { lat, lon } = coordinates;
+
+      // Create map with optimized settings
       const map = window.L.map(mapRef.current, {
         zoomControl: true,
-        attributionControl: true
+        attributionControl: true,
+        preferCanvas: false, // Changed back to SVG for better tile rendering
+        fadeAnimation: true, // Enable fade animations
+        zoomAnimation: true, // Enable zoom animations
+        markerZoomAnimation: true // Enable marker zoom animations
       }).setView([lat, lon], 15);
 
-      // Add tile layer (OpenStreetMap)
+      // Add tile layer with caching
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 19,
+        detectRetina: true, // Better quality on retina displays
+        updateWhenIdle: false, // Changed to false for immediate updates
+        updateWhenZooming: true, // Changed to true for better tile loading
+        keepBuffer: 3, // Increased buffer for better coverage
+        maxNativeZoom: 18, // Prevent over-zooming
+        tileSize: 256, // Standard tile size
+        zoomOffset: 0,
+        crossOrigin: true
       }).addTo(map);
 
-      // Custom marker with your brand color
+      // Simplified custom marker (faster rendering)
       const customIcon = window.L.divIcon({
-        className: 'custom-marker',
-        html: `
-          <div style="
-            width: 24px; 
-            height: 36px; 
-            background: #6366f1; 
-            border-radius: 50% 50% 50% 0; 
-            transform: rotate(-45deg);
-            border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            position: relative;
-          ">
-            <div style="
-              width: 8px; 
-              height: 8px; 
-              background: white; 
-              border-radius: 50%; 
-              position: absolute;
-              top: 6px;
-              left: 6px;
-            "></div>
-          </div>
-        `,
+        className: 'custom-marker-optimized',
+        html: `<div class="marker-pin"></div>`,
         iconSize: [24, 36],
         iconAnchor: [12, 36]
       });
 
-      // Add marker with popup on click/hover
+      // Add marker with optimized popup
       const marker = window.L.marker([lat, lon], { icon: customIcon })
         .addTo(map)
         .bindPopup(location, {
           closeButton: false,
           autoClose: true,
-          closeOnEscapeKey: true
+          closeOnEscapeKey: true,
+          autoPan: false // Disable auto-panning for better performance
         });
 
+      // Optimized event handling
       let hoverTimeout;
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
       if (isMobile) {
-        // Mobile: solo tap per aprire/chiudere
         marker.on('click', function() {
           if (this.isPopupOpen()) {
             this.closePopup();
@@ -153,7 +241,6 @@ function LocationMap({ location, isVisible = true }) {
           }
         });
       } else {
-        // Desktop: hover + click
         marker.on('mouseover', function() {
           clearTimeout(hoverTimeout);
           this.openPopup();
@@ -165,7 +252,6 @@ function LocationMap({ location, isVisible = true }) {
           }, 350);
         });
 
-        // Click su desktop apre/chiude il popup
         marker.on('click', function() {
           clearTimeout(hoverTimeout);
           if (this.isPopupOpen()) {
@@ -179,6 +265,21 @@ function LocationMap({ location, isVisible = true }) {
       mapInstanceRef.current = map;
       setIsLoading(false);
 
+      // Multiple resize attempts to ensure proper tile loading
+      const forceResize = () => {
+        if (map && mapRef.current) {
+          map.invalidateSize(true); // Force resize with animate: true
+        }
+      };
+
+      // Schedule multiple resizes
+      requestAnimationFrame(() => {
+        forceResize();
+        setTimeout(forceResize, 100);
+        setTimeout(forceResize, 250);
+        setTimeout(forceResize, 500);
+      });
+
     } catch (error) {
       setMapError(true);
       setErrorMessage(error.message);
@@ -187,38 +288,57 @@ function LocationMap({ location, isVisible = true }) {
   };
 
   useEffect(() => {
-    // Add custom marker styles to the document head
-    const styleId = 'leaflet-custom-marker-styles';
+    // Add optimized custom marker styles
+    const styleId = 'leaflet-custom-marker-optimized';
     
-    // Check if styles are already added
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
       style.textContent = `
-        .custom-marker {
+        .custom-marker-optimized {
           background: transparent !important;
           border: none !important;
+        }
+        .marker-pin {
+          width: 24px; 
+          height: 36px; 
+          background: #6366f1; 
+          border-radius: 50% 50% 50% 0; 
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          position: relative;
+        }
+        .marker-pin::after {
+          content: '';
+          width: 8px; 
+          height: 8px; 
+          background: white; 
+          border-radius: 50%; 
+          position: absolute;
+          top: 6px;
+          left: 6px;
         }
       `;
       document.head.appendChild(style);
     }
-
-    // Cleanup function to remove styles when component unmounts
-    return () => {
-      const existingStyle = document.getElementById(styleId);
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-    };
   }, []);
 
   if (!isVisible) return null;
 
+  const containerStyle = {
+    height: '100%',
+    width: '100%',
+    ...style
+  };
+
+  const containerClass = `bg-gray-50 border border-gray-200 overflow-hidden relative ${className || ''}`;
+
   return (
-    <div className="w-full h-48 bg-gray-50 border border-gray-200 overflow-hidden relative">
+    <div className={containerClass} style={containerStyle}>
       <div ref={mapRef} className="w-full h-full" />
       
-      {/* Loading state */}
+      {/* Optimized Loading state */}
       {isLoading && (
         <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
           <div className="text-center">

@@ -5,6 +5,8 @@ import { getUserProfile, checkUserProfileComplete } from '../../firebase/userSer
 import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
 import LocationMap from './LocationMap';
+import RoughNotationText from './RoughNotationText';
+import RoughNotationCircle from './RoughNotationCircle';
 
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [isBooked, setIsBooked] = useState(false);
@@ -30,6 +32,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   
   // State to track if we should show animations (only for main card view)
   const [shouldAnimate, setShouldAnimate] = useState(true);
+  const [cardVisible, setCardVisible] = useState(false);
+  const [roughAnimationsReady, setRoughAnimationsReady] = useState(false);
+  const [annotationTrigger, setAnnotationTrigger] = useState(0);
   
   // Refs for dynamic sizing
   const contentRef = useRef(null);
@@ -68,7 +73,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       opacity: 1,
       transition: {
         duration: 0.8,
-        ease: "easeOut"
+        ease: "easeOut",
+        onComplete: () => {
+          setCardVisible(true);
+          // Start rough notation animations after a short delay
+          setTimeout(() => setRoughAnimationsReady(true), 200);
+        }
       }
     }
   };
@@ -94,7 +104,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       opacity: 1,
       transition: {
         duration: 0.6,
-        ease: "easeOut"
+        ease: "easeOut",
+        onComplete: () => {
+          setCardVisible(true);
+          // Start rough notation animations after a short delay
+          setTimeout(() => setRoughAnimationsReady(true), 200);
+        }
       }
     }
   };
@@ -114,6 +129,16 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       setContentHeight(0);
     }
   }, [showFullDescription, event.description]);
+
+  // Effect to trigger annotation recreation when layout changes
+  useEffect(() => {
+    // Wait for layout animations to complete, then recreate annotations
+    const timer = setTimeout(() => {
+      setAnnotationTrigger(prev => prev + 1);
+    }, 500); // Wait for map animation to fully complete
+
+    return () => clearTimeout(timer);
+  }, [showFullDescription]);
   
   // Calculate map height based on content height
   const getMapHeight = () => {
@@ -441,6 +466,23 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   
   const isClosedForBooking = !isBookable && eventStatus === 'active';
   const isFullyBooked = bookableReason === "No spots left";
+  const isInteractiveButton = !((isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled'));
+
+  // Get button text
+  const getButtonText = () => {
+    if (isBooked && bookingStatus !== 'cancelled') return 'Booking Confirmed';
+    if (loading) return 'Processing...';
+    if (!isBookable && bookingStatus !== 'cancelled') {
+      if (isFullyBooked) return 'Fully Booked';
+      if (eventStatus === 'past') return 'Event Ended';
+      return 'Booking Closed';
+    }
+    if (user) {
+      if (bookingStatus === 'cancelled') return 'Book Again';
+      return 'Book Now';
+    }
+    return 'Sign In to Book';
+  };
 
   if (!event || !event.id) {
     return null;
@@ -614,12 +656,30 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
               )}
             </div>
             
-            {/* Event meta info */}
+            {/* Event meta info with circles */}
             <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
-              <span className="border border-black px-2 py-1">{event.type}</span>
-              <span className="border border-black px-2 py-1">
+              <RoughNotationCircle 
+                className="px-2 py-1"
+                animationDelay={roughAnimationsReady ? 300 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                color="#000000"
+                strokeWidth={1}
+                trigger={annotationTrigger}
+              >
+                {event.type}
+              </RoughNotationCircle>
+              
+              <RoughNotationCircle 
+                className="px-2 py-1"
+                animationDelay={roughAnimationsReady ? 500 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                color="#000000"
+                strokeWidth={1}
+                trigger={annotationTrigger}
+              >
                 {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-              </span>
+              </RoughNotationCircle>
+              
               {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
                 <span className="border border-purple-600 text-purple-600 px-2 py-1">
                   {event.memberPrice !== null && event.nonMemberPrice !== null ? (
@@ -668,39 +728,41 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             )}
           </div>
           
-          {/* Book button with hover animation */}
-          <motion.button 
-            onClick={handleBookEvent}
-            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-            className={`w-full py-3 px-4 border text-sm font-light transition-colors ${
-              (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-                ? 'border-black bg-black text-white cursor-not-allowed' 
-                : (!isBookable && bookingStatus !== 'cancelled')
-                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : loading 
-                    ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-wait' 
-                    : 'border-black bg-white text-black hover:bg-black hover:text-white'
-            }`}
-            whileHover={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 1.02 }}
-            whileTap={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 0.98 }}
-            transition={{ duration: 0.2 }}
-          >
-            {isBooked && bookingStatus !== 'cancelled'
-              ? 'Booking Confirmed' 
-              : loading 
-                ? 'Processing...' 
-                : (!isBookable && bookingStatus !== 'cancelled')
-                  ? isFullyBooked 
-                    ? 'Fully Booked'
-                    : eventStatus === 'past'
-                      ? 'Event Ended'
-                      : 'Booking Closed'
-                  : user 
-                    ? bookingStatus === 'cancelled'
-                      ? 'Book Again'
-                      : 'Book Now'
-                    : 'Sign In to Book'}
-          </motion.button>
+          {/* Enhanced Book button with sketchy underline */}
+          <div className="w-full">
+            <button 
+              onClick={handleBookEvent}
+              disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
+              className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${
+                (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
+                  ? 'bg-black text-white cursor-not-allowed' 
+                  : (!isBookable && bookingStatus !== 'cancelled')
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
+                    : loading 
+                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300' 
+                      : 'bg-transparent text-black hover:text-purple-700 transition-colors'
+              }`}
+              style={{
+                background: isInteractiveButton ? 'transparent' : undefined,
+                border: isInteractiveButton ? 'none' : undefined
+              }}
+            >
+              {isInteractiveButton ? (
+                <RoughNotationText 
+                  type="underline"
+                  color="#8B5CF6"
+                  strokeWidth={2}
+                  animationDelay={roughAnimationsReady ? 100 : 0}
+                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  trigger={annotationTrigger}
+                >
+                  {getButtonText()}
+                </RoughNotationText>
+              ) : (
+                getButtonText()
+              )}
+            </button>
+          </div>
         </motion.div>
       </div>
 
@@ -761,7 +823,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             )}
           </div>
 
-          {/* Mobile Map section - No border, no heading */}
+          {/* Mobile Map section */}
           {showFullDescription && (
             <motion.div 
               className="mb-4"
@@ -780,12 +842,30 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             </motion.div>
           )}
           
-          {/* Event meta info */}
+          {/* Event meta info with circles - Mobile */}
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            <span className="border border-black px-2 py-1">{event.type}</span>
-            <span className="border border-black px-2 py-1">
+            <RoughNotationCircle 
+              className="px-2 py-1"
+              animationDelay={roughAnimationsReady ? 300 : 0}
+              disabled={!shouldAnimate || !roughAnimationsReady}
+              color="#000000"
+              strokeWidth={1}
+              trigger={annotationTrigger}
+            >
+              {event.type}
+            </RoughNotationCircle>
+            
+            <RoughNotationCircle 
+              className="px-2 py-1"
+              animationDelay={roughAnimationsReady ? 500 : 0}
+              disabled={!shouldAnimate || !roughAnimationsReady}
+              color="#000000"
+              strokeWidth={1}
+              trigger={annotationTrigger}
+            >
               {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-            </span>
+            </RoughNotationCircle>
+            
             {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
               <span className="border border-purple-600 text-purple-600 px-2 py-1">
                 {event.memberPrice !== null && event.nonMemberPrice !== null ? (
@@ -833,39 +913,41 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             </div>
           )}
           
-          {/* Mobile Book button */}
-          <motion.button 
-            onClick={handleBookEvent}
-            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-            className={`w-full py-3 px-4 border text-sm font-light transition-colors ${
-              (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-                ? 'border-black bg-black text-white cursor-not-allowed' 
-                : (!isBookable && bookingStatus !== 'cancelled')
-                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : loading 
-                    ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-wait' 
-                    : 'border-black bg-white text-black hover:bg-black hover:text-white'
-            }`}
-            whileHover={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 1.02 }}
-            whileTap={{ scale: loading || (isBooked && bookingStatus !== 'cancelled') || (!isBookable && bookingStatus !== 'cancelled') ? 1 : 0.98 }}
-            transition={{ duration: 0.2 }}
-          >
-            {isBooked && bookingStatus !== 'cancelled'
-              ? 'Booking Confirmed' 
-              : loading 
-                ? 'Processing...' 
-                : (!isBookable && bookingStatus !== 'cancelled')
-                  ? isFullyBooked 
-                    ? 'Fully Booked'
-                    : eventStatus === 'past'
-                      ? 'Event Ended'
-                      : 'Booking Closed'
-                  : user 
-                    ? bookingStatus === 'cancelled'
-                      ? 'Book Again'
-                      : 'Book Now'
-                    : 'Sign In to Book'}
-          </motion.button>
+          {/* Mobile Book button with sketchy underline */}
+          <div className="w-full">
+            <button 
+              onClick={handleBookEvent}
+              disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
+              className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${
+                (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
+                  ? 'bg-black text-white cursor-not-allowed' 
+                  : (!isBookable && bookingStatus !== 'cancelled')
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
+                    : loading 
+                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300' 
+                      : 'bg-transparent text-black hover:text-purple-700 transition-colors'
+              }`}
+              style={{
+                background: isInteractiveButton ? 'transparent' : undefined,
+                border: isInteractiveButton ? 'none' : undefined
+              }}
+            >
+              {isInteractiveButton ? (
+                <RoughNotationText 
+                  type="underline"
+                  color="#8B5CF6"
+                  strokeWidth={2}
+                  animationDelay={roughAnimationsReady ? 100 : 0}
+                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  trigger={annotationTrigger}
+                >
+                  {getButtonText()}
+                </RoughNotationText>
+              ) : (
+                getButtonText()
+              )}
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

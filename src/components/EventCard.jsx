@@ -23,30 +23,30 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [prevUserState, setPrevUserState] = useState(null);
   const [authRequested, setAuthRequested] = useState(false);
   const [bookingStatus, setBookingStatus] = useState('none');
-  
+
   const [bookingFormData, setBookingFormData] = useState(null);
   const [isFirstTimeBooking, setIsFirstTimeBooking] = useState(false);
   const [existingUserData, setExistingUserData] = useState({});
   const [userMembershipStatus, setUserMembershipStatus] = useState(null);
   const [applicablePrice, setApplicablePrice] = useState(0);
-  
+
   // State to track if we should show animations (only for main card view)
   const [shouldAnimate, setShouldAnimate] = useState(true);
   const [cardVisible, setCardVisible] = useState(false);
   const [roughAnimationsReady, setRoughAnimationsReady] = useState(false);
   const [annotationTrigger, setAnnotationTrigger] = useState(0);
-  
+
   // Refs for dynamic sizing
   const contentRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
-  
+
   // Determine if image should be on left or right based on index
   const isImageLeft = index % 2 === 0;
-  
+
   // Character limit for description
-  const DESCRIPTION_LIMIT = 200;
+  const DESCRIPTION_LIMIT = 400;
   const shouldTruncate = event.description && event.description.length > DESCRIPTION_LIMIT;
-  
+
   // Animation variants for slide-in effects
   const imageVariants = {
     hidden: {
@@ -92,7 +92,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       }
     }
   };
-  
+
   // Mobile animation variants (simpler, no horizontal movement)
   const mobileVariants = {
     hidden: {
@@ -113,7 +113,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       }
     }
   };
-  
+
   // Effect to measure content height when description is expanded
   useEffect(() => {
     if (showFullDescription && contentRef.current) {
@@ -121,45 +121,60 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         const height = contentRef.current.scrollHeight;
         setContentHeight(height);
       };
-      
-      // Measure after a short delay to ensure content is rendered
-      const timer = setTimeout(measureHeight, 100);
-      return () => clearTimeout(timer);
+      measureHeight();
     } else {
       setContentHeight(0);
     }
   }, [showFullDescription, event.description]);
 
-  // Effect to trigger annotation recreation when layout changes
+  // Effect to trigger annotation recreation when layout changes - SIMPLE APPROACH
   useEffect(() => {
-    // Wait for layout animations to complete, then recreate annotations
-    const timer = setTimeout(() => {
+    if (roughAnimationsReady) {
+      // Trigger immediately to hide existing annotations, then recreate after layout settles
       setAnnotationTrigger(prev => prev + 1);
-    }, 500); // Wait for map animation to fully complete
+    }
+  }, [showFullDescription, roughAnimationsReady]);
 
-    return () => clearTimeout(timer);
-  }, [showFullDescription]);
-  
+  // Resize handler
+  useEffect(() => {
+    let resizeTimer;
+    
+    const handleResize = () => {
+      if (roughAnimationsReady) {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          setAnnotationTrigger(prev => prev + 1);
+        }, 200);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimer) clearTimeout(resizeTimer);
+    };
+  }, [roughAnimationsReady]);
+
   // Calculate map height based on content height
   const getMapHeight = () => {
     if (!showFullDescription) return 0;
-    
+
     // Base height for the main image (384px = h-96)
-    const baseImageHeight = 384;  
+    const baseImageHeight = 384;
     // Maximum map height (350px for expanded view)
     const maxMapHeight = 350;
     // Minimum map height for readability
     const minMapHeight = 220;
-    
+
     if (contentHeight > 0) {
       // Calculate proportional height but cap it at maximum
       const proportionalHeight = Math.min(contentHeight * 0.7, maxMapHeight);
       return Math.max(proportionalHeight, minMapHeight);
     }
-    
+
     return minMapHeight;
   };
-  
+
   // [Keep all existing useEffect hooks - unchanged]
   useEffect(() => {
     if (!prevUserState && user && authRequested && !isBooked) {
@@ -183,7 +198,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       const status = determineEventStatus(event.date, event.time);
       setEventStatus(status);
       setImageError(false);
-      
+
       const checkBookability = async () => {
         try {
           const { bookable, reason } = await isEventBookable(event.id);
@@ -195,7 +210,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           setBookableReason("Error checking event status");
         }
       };
-      
+
       checkBookability();
     }
   }, [event]);
@@ -208,9 +223,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           const userProfile = await getUserProfile(user.uid);
           const isMember = userProfile?.currentYearMember || false;
           setUserMembershipStatus(isMember);
-          
+
           const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
-          
+
           if (isPaidEvent) {
             setApplicablePrice(isMember ? event.memberPrice : event.nonMemberPrice);
           } else if (event.paymentAmount) {
@@ -221,7 +236,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         } catch (error) {
           console.error('Error checking membership status:', error);
           setUserMembershipStatus(false);
-          
+
           const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
           setApplicablePrice(isPaidEvent ? event.nonMemberPrice : (event.paymentAmount || 0));
         }
@@ -231,10 +246,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         setApplicablePrice(isPaidEvent ? event.nonMemberPrice : (event.paymentAmount || 0));
       }
     };
-  
+
     checkMembershipStatus();
   }, [user, event]);
-  
+
   useEffect(() => {
     const checkBookingStatus = async () => {
       if (!user || !event.id) {
@@ -243,10 +258,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         setBookingStatus('none');
         return;
       }
-      
+
       try {
         const { isBooked: hasBooking, status } = await checkUserBooking(user.uid, event.id, true);
-        
+
         if (hasBooking && status !== 'cancelled') {
           setIsBooked(true);
           setBookingSuccess(true);
@@ -263,19 +278,19 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         setBookingStatus('none');
       }
     };
-    
+
     checkBookingStatus();
   }, [user, event.id]);
-  
+
   // [Keep all handler functions - unchanged]
   const handleBookEvent = async () => {
     setAuthError(null);
-    
+
     if (!isBookable) {
       setAuthError(bookableReason);
       return;
     }
-    
+
     if (!user) {
       if (onAuthNeeded) {
         setAuthRequested(true);
@@ -283,20 +298,20 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       }
       return;
     }
-    
+
     if (isBooked && bookingStatus !== 'cancelled') {
       setAuthError("You've already booked this event!");
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       const { checkUserBookingRequirements } = await import('../../firebase/firestoreServices');
       const requirements = await checkUserBookingRequirements(user.uid);
-      
+
       setIsFirstTimeBooking(requirements.needsPersonalDetails);
-      
+
       if (requirements.needsPersonalDetails) {
         if (requirements.isFirstTime) {
           setExistingUserData(requirements.existingData || {});
@@ -306,7 +321,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             email: requirements.existingData.email || user.email || '',
             phone: ''
           });
-          
+
           const contactInfo = await getUserContactInfo(user.uid);
           if (contactInfo) {
             setExistingUserData(prev => ({
@@ -332,14 +347,14 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     } finally {
       setLoading(false);
     }
-    
+
     setShowBookingForm(true);
   };
-  
+
   const handleFormSubmit = async (formData) => {
     setLoading(true);
     setAuthError(null);
-    
+
     try {
       const { bookable, reason } = await isEventBookable(event.id);
       if (!bookable) {
@@ -347,7 +362,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         setLoading(false);
         return;
       }
-      
+
       const userData = {
         userId: user.uid,
         email: formData.email,
@@ -361,18 +376,18 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         instagram: formData.instagram,
         requests: formData.requests
       };
-      
+
       setBookingFormData(userData);
-      
+
       const isPaidEvent = event.memberPrice !== null && event.nonMemberPrice !== null;
       const requiresPayment = isPaidEvent && applicablePrice > 0;
-      
+
       if (requiresPayment) {
         setShowBookingForm(false);
         setShowPaymentModal(true);
       } else {
         const result = await bookEventSimple(event.id, userData);
-        
+
         if (result.success) {
           setIsBooked(true);
           setBookingSuccess(true);
@@ -390,14 +405,14 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       setLoading(false);
     }
   };
-  
+
   const handlePaymentSuccess = async (paymentData) => {
     setLoading(true);
     setAuthError(null);
-    
+
     try {
       console.log("Payment approved:", paymentData);
-      
+
       const sanitizedPaymentDetails = {
         paymentId: paymentData.paymentDetails?.paymentId || '',
         payerID: paymentData.paymentDetails?.payerID || null,
@@ -409,12 +424,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         updateTime: paymentData.paymentDetails?.updateTime || new Date().toISOString(),
         orderId: paymentData.paymentDetails?.orderId || null
       };
-      
+
       const result = await bookEventSimple(event.id, {
         ...bookingFormData,
         paymentDetails: sanitizedPaymentDetails
       });
-      
+
       if (result && result.success) {
         setIsBooked(true);
         setBookingSuccess(true);
@@ -431,39 +446,39 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       setLoading(false);
     }
   };
-  
+
   const handlePaymentCancel = () => {
     setShowPaymentModal(false);
     setAuthError("Payment was cancelled.");
   };
-  
+
   const handleCancelForm = () => {
     setShowBookingForm(false);
     setAuthError(null);
     // Disable animation since card has already been viewed
     setShouldAnimate(false);
   };
-  
+
   const handleImageError = () => {
     setImageError(true);
   };
-  
+
   const getImageSource = () => {
     if (imageError) {
       return 'https://via.placeholder.com/600x400?text=No+Image+Available';
     }
-    
+
     if (event.imageBase64) {
       return event.imageBase64;
     }
-    
+
     if (event.image) {
       return event.image;
     }
-    
+
     return 'https://via.placeholder.com/600x400?text=No+Image+Available';
   };
-  
+
   const isClosedForBooking = !isBookable && eventStatus === 'active';
   const isFullyBooked = bookableReason === "No spots left";
   const isInteractiveButton = !((isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled'));
@@ -491,7 +506,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Show booking form
   if (showBookingForm) {
     return (
-      <motion.div 
+      <motion.div
         className="bg-white border border-black rounded-none overflow-hidden p-6 my-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -503,8 +518,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             {authError}
           </div>
         )}
-        <BookingForm 
-          onSubmit={handleFormSubmit} 
+        <BookingForm
+          onSubmit={handleFormSubmit}
           onCancel={handleCancelForm}
           loading={loading}
           isFirstTime={isFirstTimeBooking}
@@ -518,7 +533,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       </motion.div>
     );
   }
-  
+
   // Show payment modal
   if (showPaymentModal) {
     const eventForPayment = {
@@ -528,7 +543,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
     return (
       <>
-        <motion.div 
+        <motion.div
           className="bg-white border border-black rounded-none overflow-hidden p-6 my-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -544,7 +559,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             </div>
           )}
         </motion.div>
-        
+
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={handlePaymentCancel}
@@ -556,10 +571,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       </>
     );
   }
-  
+
   // Main event card with responsive layout
   return (
-    <motion.div 
+    <motion.div
       className="bg-white border border-black my-8 overflow-hidden"
       variants={containerVariants}
       initial={shouldAnimate ? "hidden" : "false"}
@@ -570,41 +585,41 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       {/* Desktop Layout */}
       <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
         {/* Image section - 50% width with animation */}
-        <motion.div 
+        <motion.div
           className="w-1/2 flex flex-col"
           variants={shouldAnimate ? imageVariants : {}}
         >
           {/* Main image */}
           <div className="h-96">
-            <img 
+            <img
               src={getImageSource()}
               alt={event.title}
               className="w-full h-full object-cover"
               onError={handleImageError}
             />
           </div>
-          
+
           {/* Map section with dynamic height */}
           {showFullDescription && (
-            <motion.div 
+            <motion.div
               className="border-t border-black"
-              style={{ 
+              style={{
                 height: `${getMapHeight()}px`,
                 minHeight: '220px',
                 maxHeight: '350px'
               }}
               initial={{ height: 0, opacity: 0 }}
-              animate={{ 
-                height: `${getMapHeight()}px`, 
-                opacity: 1 
+              animate={{
+                height: `${getMapHeight()}px`,
+                opacity: 1
               }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.4, ease: "easeInOut" }}
             >
               <div className="w-full h-full p-2 flex flex-col">
                 <div className="flex-1 min-h-0">
-                  <LocationMap 
-                    location={event.location} 
+                  <LocationMap
+                    location={event.location}
                     isVisible={showFullDescription}
                     style={{ height: '100%', width: '100%' }}
                   />
@@ -613,30 +628,47 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             </motion.div>
           )}
         </motion.div>
-        
+
         {/* Content section - 50% width with animation */}
-        <motion.div 
+        <motion.div
           className="w-1/2 p-8 flex flex-col justify-between"
           variants={shouldAnimate ? contentVariants : {}}
         >
           <div ref={contentRef}>
             <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
-            
-            <div className="flex items-center text-sm text-black opacity-70 mb-4">
-              <span>{event.date}</span>
+
+            <div className="flex items-center text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
+              <RoughNotationText
+                type="underline"
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 200 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                trigger={annotationTrigger}
+              >
+                {event.date}
+              </RoughNotationText>
               <span className="mx-2">·</span>
               <span>{event.time}</span>
               <span className="mx-2">·</span>
-              <span>{event.venueName || event.location}</span>
+              <RoughNotationCircle
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 400 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                trigger={annotationTrigger}
+              >
+                {event.venueName || event.location}
+              </RoughNotationCircle>
             </div>
-            
+
             <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
               {shouldTruncate && !showFullDescription ? (
                 <>
                   {event.description.substring(0, DESCRIPTION_LIMIT)}...
-                  <button 
+                  <button
                     onClick={() => setShowFullDescription(true)}
-                    className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                    className="ml-2 text-purple-800 hover:text-purple-600 underline text-sm"
                   >
                     Show more
                   </button>
@@ -645,7 +677,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 <>
                   {event.description}
                   {shouldTruncate && (
-                    <button 
+                    <button
                       onClick={() => setShowFullDescription(false)}
                       className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
                     >
@@ -655,33 +687,39 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 </>
               )}
             </div>
-            
-            {/* Event meta info with circles */}
+
+            {/* Event meta info */}
             <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
-              <RoughNotationCircle 
-                className="px-2 py-1"
-                animationDelay={roughAnimationsReady ? 300 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
-                color="#000000"
-                strokeWidth={1}
-                trigger={annotationTrigger}
-              >
-                {event.type}
-              </RoughNotationCircle>
-              
-              <RoughNotationCircle 
-                className="px-2 py-1"
-                animationDelay={roughAnimationsReady ? 500 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
-                color="#000000"
-                strokeWidth={1}
-                trigger={annotationTrigger}
-              >
-                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-              </RoughNotationCircle>
-              
-              {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
-                <span className="border border-purple-600 text-purple-600 px-2 py-1">
+              {/* Spots left */}
+              {event.spotsLeft < 5 ? (
+                <RoughNotationText
+                  type="underline"
+                  color="#4A7E74"
+                  strokeWidth={2}
+                  animationDelay={roughAnimationsReady ? 300 : 0}
+                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  trigger={annotationTrigger}
+                  className="px-2 py-1"
+                >
+                  {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+                </RoughNotationText>
+              ) : (
+                <span className="px-2 py-1">
+                  {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+                </span>
+              )}
+
+              {/* Price - green underline */}
+              {/* {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
+                <RoughNotationText
+                  type="underline"
+                  color="#4A7E74"
+                  strokeWidth={2}
+                  animationDelay={roughAnimationsReady ? 500 : 0}
+                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  trigger={annotationTrigger}
+                  className="px-2 py-1"
+                >
                   {event.memberPrice !== null && event.nonMemberPrice !== null ? (
                     user ? (
                       userMembershipStatus !== null ? (
@@ -691,66 +729,65 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                   ) : (
                     `€${event.paymentAmount || 0}`
                   )}
-                </span>
-              )}
+                </RoughNotationText>
+              )} */}
             </div>
-            
+
             {/* Status messages */}
             {authError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
                 {authError}
               </div>
             )}
-            
+
             {bookingStatus === 'cancelled' && (
-              <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+              <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
                 <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
                 <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
               </div>
             )}
-            
+
             {isFullyBooked && bookingStatus !== 'cancelled' && (
-              <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+              <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
                 <p className="font-medium text-black text-sm">This event is fully booked</p>
               </div>
             )}
-            
+
             {eventStatus === 'past' && (
               <div className="mb-4 p-3 bg-gray-50 border border-gray-200">
                 <p className="font-medium text-black text-sm">This event has ended</p>
               </div>
             )}
-            
+
             {isClosedForBooking && bookingStatus !== 'cancelled' && (
-              <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+              <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
                 <p className="font-medium text-black text-sm">Booking closed</p>
               </div>
             )}
           </div>
-          
+
           {/* Enhanced Book button with sketchy underline */}
           <div className="w-full">
-            <button 
+            <button
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-              className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${
-                (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-                  ? 'bg-black text-white cursor-not-allowed' 
+              className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
+                  ? 'bg-black text-white cursor-not-allowed'
                   : (!isBookable && bookingStatus !== 'cancelled')
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                    : loading 
-                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300' 
+                    : loading
+                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300'
                       : 'bg-transparent text-black hover:text-purple-700 transition-colors'
-              }`}
+                }`}
               style={{
                 background: isInteractiveButton ? 'transparent' : undefined,
                 border: isInteractiveButton ? 'none' : undefined
               }}
             >
               {isInteractiveButton ? (
-                <RoughNotationText 
-                  type="underline"
-                  color="#8B5CF6"
+                <RoughNotationText
+                  type="highlight"
+                  color="#FFFADE"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
                   disabled={!shouldAnimate || !roughAnimationsReady}
@@ -767,7 +804,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       </div>
 
       {/* Mobile Layout */}
-      <motion.div 
+      <motion.div
         className="lg:hidden"
         variants={shouldAnimate ? mobileVariants : {}}
         initial={shouldAnimate ? "hidden" : "false"}
@@ -777,31 +814,49 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       >
         {/* Mobile Image - Smaller height */}
         <div className="w-full h-48 sm:h-56">
-          <img 
+          <img
             src={getImageSource()}
             alt={event.title}
             className="w-full h-full object-cover"
             onError={handleImageError}
           />
         </div>
-        
+
         {/* Mobile Content */}
         <div className="p-6">
           <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
-          
-          <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0">
-            <span>{event.date}</span>
+
+          <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0 flex-wrap">
+            <RoughNotationText
+              type="underline"
+              color="#8B5CF6"
+              strokeWidth={2}
+              animationDelay={roughAnimationsReady ? 200 : 0}
+              disabled={!shouldAnimate || !roughAnimationsReady}
+              trigger={annotationTrigger}
+            >
+              {event.date}
+            </RoughNotationText>
             <span className="hidden sm:inline mx-2">·</span>
             <span>{event.time}</span>
             <span className="hidden sm:inline mx-2">·</span>
-            <span className="text-xs sm:text-sm">{event.venueName || event.location}</span>
+            <RoughNotationCircle
+              color="#8B5CF6"
+              strokeWidth={2}
+              animationDelay={roughAnimationsReady ? 400 : 0}
+              disabled={!shouldAnimate || !roughAnimationsReady}
+              trigger={annotationTrigger}
+              className="text-xs sm:text-sm"
+            >
+              {event.venueName || event.location}
+            </RoughNotationCircle>
           </div>
-          
+
           <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
             {shouldTruncate && !showFullDescription ? (
               <>
                 {event.description.substring(0, DESCRIPTION_LIMIT)}...
-                <button 
+                <button
                   onClick={() => setShowFullDescription(true)}
                   className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
                 >
@@ -812,7 +867,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
               <>
                 {event.description}
                 {shouldTruncate && (
-                  <button 
+                  <button
                     onClick={() => setShowFullDescription(false)}
                     className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
                   >
@@ -825,7 +880,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
           {/* Mobile Map section */}
           {showFullDescription && (
-            <motion.div 
+            <motion.div
               className="mb-4"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -833,41 +888,47 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
               transition={{ duration: 0.3 }}
             >
               <div className="w-full" style={{ height: '250px' }}>
-                <LocationMap 
-                  location={event.location} 
+                <LocationMap
+                  location={event.location}
                   isVisible={showFullDescription}
                   style={{ height: '100%', width: '100%' }}
                 />
               </div>
             </motion.div>
           )}
-          
-          {/* Event meta info with circles - Mobile */}
+
+          {/* Event meta info - Mobile */}
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            <RoughNotationCircle 
-              className="px-2 py-1"
-              animationDelay={roughAnimationsReady ? 300 : 0}
-              disabled={!shouldAnimate || !roughAnimationsReady}
-              color="#000000"
-              strokeWidth={1}
-              trigger={annotationTrigger}
-            >
-              {event.type}
-            </RoughNotationCircle>
-            
-            <RoughNotationCircle 
-              className="px-2 py-1"
-              animationDelay={roughAnimationsReady ? 500 : 0}
-              disabled={!shouldAnimate || !roughAnimationsReady}
-              color="#000000"
-              strokeWidth={1}
-              trigger={annotationTrigger}
-            >
-              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-            </RoughNotationCircle>
-            
+            {/* Spots left - only show green underline if less than 10 */}
+            {event.spotsLeft < 10 ? (
+              <RoughNotationText
+                type="underline"
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 300 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                trigger={annotationTrigger}
+                className="px-2 py-1"
+              >
+                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+              </RoughNotationText>
+            ) : (
+              <span className="px-2 py-1">
+                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+              </span>
+            )}
+
+            {/* Price - green underline */}
             {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
-              <span className="border border-purple-600 text-purple-600 px-2 py-1">
+              <RoughNotationText
+                type="underline"
+                color="#10B981"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 500 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                trigger={annotationTrigger}
+                className="px-2 py-1"
+              >
                 {event.memberPrice !== null && event.nonMemberPrice !== null ? (
                   user ? (
                     userMembershipStatus !== null ? (
@@ -877,65 +938,64 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 ) : (
                   `€${event.paymentAmount || 0}`
                 )}
-              </span>
+              </RoughNotationText>
             )}
           </div>
-          
+
           {/* Status messages */}
           {authError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
               {authError}
             </div>
           )}
-          
+
           {bookingStatus === 'cancelled' && (
-            <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+            <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
               <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
             </div>
           )}
-          
+
           {isFullyBooked && bookingStatus !== 'cancelled' && (
-            <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+            <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">This event is fully booked</p>
             </div>
           )}
-          
+
           {eventStatus === 'past' && (
             <div className="mb-4 p-3 bg-gray-50 border border-gray-200">
               <p className="font-medium text-black text-sm">This event has ended</p>
             </div>
           )}
-          
+
           {isClosedForBooking && bookingStatus !== 'cancelled' && (
-            <div className="mb-4 p-3" style={{backgroundColor: '#FFFADE'}}>
+            <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">Booking closed</p>
             </div>
           )}
-          
+
           {/* Mobile Book button with sketchy underline */}
           <div className="w-full">
-            <button 
+            <button
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-              className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${
-                (isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-                  ? 'bg-black text-white cursor-not-allowed' 
+              className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
+                  ? 'bg-black text-white cursor-not-allowed'
                   : (!isBookable && bookingStatus !== 'cancelled')
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                    : loading 
-                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300' 
+                    : loading
+                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300'
                       : 'bg-transparent text-black hover:text-purple-700 transition-colors'
-              }`}
+                }`}
               style={{
                 background: isInteractiveButton ? 'transparent' : undefined,
                 border: isInteractiveButton ? 'none' : undefined
               }}
             >
               {isInteractiveButton ? (
-                <RoughNotationText 
-                  type="underline"
-                  color="#8B5CF6"
+                <RoughNotationText
+                  type="highlight"
+                  color="#FFFADE"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
                   disabled={!shouldAnimate || !roughAnimationsReady}

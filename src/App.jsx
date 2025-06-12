@@ -225,7 +225,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center #A1B4A4">
       <div className="text-center">
   <svg
     className="animate-spin h-10 w-10 mx-auto mb-4"

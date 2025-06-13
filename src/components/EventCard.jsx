@@ -631,10 +631,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
         {/* Content section - 50% width with animation */}
         <motion.div
-          className="w-1/2 p-8 flex flex-col justify-between"
+          className="w-1/2 p-8 flex flex-col"
           variants={shouldAnimate ? contentVariants : {}}
         >
-          <div ref={contentRef}>
+          <div ref={contentRef} className="flex-1">
             <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
 
             <div className="flex items-center text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
@@ -708,66 +708,43 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                   {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
                 </span>
               )}
-
-              {/* Price - green underline */}
-              {/* {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
-                <RoughNotationText
-                  type="underline"
-                  color="#4A7E74"
-                  strokeWidth={2}
-                  animationDelay={roughAnimationsReady ? 500 : 0}
-                  disabled={!shouldAnimate || !roughAnimationsReady}
-                  trigger={annotationTrigger}
-                  className="px-2 py-1"
-                >
-                  {event.memberPrice !== null && event.nonMemberPrice !== null ? (
-                    user ? (
-                      userMembershipStatus !== null ? (
-                        userMembershipStatus ? `€${event.memberPrice}` : `€${event.nonMemberPrice}`
-                      ) : `€${event.memberPrice}/${event.nonMemberPrice}`
-                    ) : `€${event.memberPrice}/${event.nonMemberPrice}`
-                  ) : (
-                    `€${event.paymentAmount || 0}`
-                  )}
-                </RoughNotationText>
-              )} */}
             </div>
 
             {/* Status messages */}
             {authError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
                 {authError}
               </div>
             )}
 
             {bookingStatus === 'cancelled' && (
-              <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
+              <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
                 <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
                 <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
               </div>
             )}
 
             {isFullyBooked && bookingStatus !== 'cancelled' && (
-              <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
+              <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
                 <p className="font-medium text-black text-sm">This event is fully booked</p>
               </div>
             )}
 
             {eventStatus === 'past' && (
-              <div className="mb-4 p-3 bg-gray-50 border border-gray-200">
+              <div className="mb-3 p-3 bg-gray-50 border border-gray-200">
                 <p className="font-medium text-black text-sm">This event has ended</p>
               </div>
             )}
 
             {isClosedForBooking && bookingStatus !== 'cancelled' && (
-              <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
+              <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
                 <p className="font-medium text-black text-sm">Booking closed</p>
               </div>
             )}
           </div>
 
-          {/* Enhanced Book button with sketchy underline */}
-          <div className="w-full">
+          {/* Enhanced Book button with sketchy underline - Reduced top margin from mt-4 to mt-2 */}
+          <div className="w-full mt-2">
             <button
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
@@ -777,7 +754,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                     : loading
                       ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300'
-                      : 'bg-transparent text-black hover:text-purple-700 transition-colors'
+                      : 'bg-transparent text-black hover:text-green-800 transition-colors'
                 }`}
               style={{
                 background: isInteractiveButton ? 'transparent' : undefined,
@@ -827,29 +804,33 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
 
           <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0 flex-wrap">
-            <RoughNotationText
-              type="underline"
-              color="#8B5CF6"
-              strokeWidth={2}
-              animationDelay={roughAnimationsReady ? 200 : 0}
-              disabled={!shouldAnimate || !roughAnimationsReady}
-              trigger={annotationTrigger}
-            >
-              {event.date}
-            </RoughNotationText>
+            <div className="flex items-center gap-1">
+              <RoughNotationText
+                type="underline"
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 200 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                trigger={annotationTrigger}
+              >
+                {event.date}
+              </RoughNotationText>
+            </div>
             <span className="hidden sm:inline mx-2">·</span>
             <span>{event.time}</span>
             <span className="hidden sm:inline mx-2">·</span>
-            <RoughNotationCircle
-              color="#8B5CF6"
-              strokeWidth={2}
-              animationDelay={roughAnimationsReady ? 400 : 0}
-              disabled={!shouldAnimate || !roughAnimationsReady}
-              trigger={annotationTrigger}
-              className="text-xs sm:text-sm"
-            >
-              {event.venueName || event.location}
-            </RoughNotationCircle>
+            <div className="flex items-center gap-1">
+              <RoughNotationCircle
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 400 : 0}
+                disabled={!shouldAnimate || !roughAnimationsReady}
+                trigger={annotationTrigger}
+                className="text-xs sm:text-sm"
+              >
+                {event.venueName || event.location}
+              </RoughNotationCircle>
+            </div>
           </div>
 
           <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
@@ -899,7 +880,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
           {/* Event meta info - Mobile */}
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            {/* Spots left - only show green underline if less than 10 */}
+            {/* Spots left - only show annotation if less than 10 */}
             {event.spotsLeft < 10 ? (
               <RoughNotationText
                 type="underline"
@@ -919,7 +900,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             )}
 
             {/* Price - green underline */}
-            {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
+            {/* {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
               <RoughNotationText
                 type="underline"
                 color="#10B981"
@@ -939,43 +920,43 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                   `€${event.paymentAmount || 0}`
                 )}
               </RoughNotationText>
-            )}
+            )} */}
           </div>
 
           {/* Status messages */}
           {authError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
               {authError}
             </div>
           )}
 
           {bookingStatus === 'cancelled' && (
-            <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
+            <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
               <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
             </div>
           )}
 
           {isFullyBooked && bookingStatus !== 'cancelled' && (
-            <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
+            <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">This event is fully booked</p>
             </div>
           )}
 
           {eventStatus === 'past' && (
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-200">
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200">
               <p className="font-medium text-black text-sm">This event has ended</p>
             </div>
           )}
 
           {isClosedForBooking && bookingStatus !== 'cancelled' && (
-            <div className="mb-4 p-3" style={{ backgroundColor: '#FFFADE' }}>
+            <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">Booking closed</p>
             </div>
           )}
 
           {/* Mobile Book button with sketchy underline */}
-          <div className="w-full">
+          <div className="w-full mt-2">
             <button
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
@@ -995,7 +976,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
               {isInteractiveButton ? (
                 <RoughNotationText
                   type="highlight"
-                  color="#FFFADE"
+                  color="#FFFADE"  
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
                   disabled={!shouldAnimate || !roughAnimationsReady}

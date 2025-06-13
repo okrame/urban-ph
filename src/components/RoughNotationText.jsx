@@ -16,7 +16,37 @@ const RoughNotationText = ({
   const elementRef = useRef(null);
   const annotationRef = useRef(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const prevTriggerRef = useRef(trigger);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Get mobile-optimized settings
+  const getMobileSettings = () => {
+    if (!isMobile) {
+      return {
+        strokeWidth,
+        padding: type === 'highlight' ? 4 : 2,
+        animationDuration: 800
+      };
+    }
+
+    // Mobile optimizations - much tighter annotations
+    return {
+      strokeWidth: Math.max(1, strokeWidth - 0.5), // Thinner strokes on mobile
+      padding: type === 'highlight' ? 1 : 0, // Minimal padding on mobile for tight fit
+      animationDuration: 600 // Faster animations on mobile
+    };
+  };
 
   useEffect(() => {
     // Immediately hide annotation when trigger changes (prevents ghosting)
@@ -48,13 +78,15 @@ const RoughNotationText = ({
       // Small delay to ensure DOM is stable
       const createTimer = setTimeout(() => {
         if (elementRef.current && !disabled && !isTransitioning) {
+          const settings = getMobileSettings();
+          
           annotationRef.current = annotate(elementRef.current, {
             type,
             color,
-            strokeWidth,
+            strokeWidth: settings.strokeWidth,
             animate,
-            animationDuration: 800,
-            padding: 2
+            animationDuration: settings.animationDuration,
+            padding: settings.padding
           });
 
           // Start animation with delay
@@ -66,7 +98,7 @@ const RoughNotationText = ({
 
           return () => clearTimeout(showTimer);
         }
-      }, 100); // Prevent false starts
+      }, isMobile ? 150 : 100); // Slightly longer delay on mobile for stability
 
       return () => {
         clearTimeout(createTimer);
@@ -80,23 +112,27 @@ const RoughNotationText = ({
         }
       };
     }
-  }, [type, color, animate, animationDelay, strokeWidth, disabled, children, isTransitioning]);
+  }, [type, color, animate, animationDelay, strokeWidth, disabled, children, isTransitioning, isMobile]);
 
   // Handle transition state for smooth recreation
   useEffect(() => {
     if (trigger > 0 && isTransitioning) {
       const timer = setTimeout(() => {
         setIsTransitioning(false);
-      }, 200); // Wait for layout to settle
+      }, isMobile ? 250 : 200); // Longer wait on mobile for layout to settle
 
       return () => clearTimeout(timer);
     }
-  }, [trigger, isTransitioning]);
+  }, [trigger, isTransitioning, isMobile]);
 
   return (
     <span 
       ref={elementRef} 
       className={className}
+      style={{
+        display: isMobile ? 'inline' : undefined,
+        maxWidth: isMobile ? 'fit-content' : undefined
+      }}
       {...props}
     >
       {children}

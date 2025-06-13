@@ -7,6 +7,7 @@ import PaymentModal from './PaymentModal';
 import LocationMap from './LocationMap';
 import RoughNotationText from './RoughNotationText';
 import RoughNotationCircle from './RoughNotationCircle';
+import LoadingSpinner from './LoadingSpinner';
 
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [isBooked, setIsBooked] = useState(false);
@@ -35,6 +36,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [cardVisible, setCardVisible] = useState(false);
   const [roughAnimationsReady, setRoughAnimationsReady] = useState(false);
   const [annotationTrigger, setAnnotationTrigger] = useState(0);
+  const [allowRoughAnimations, setAllowRoughAnimations] = useState(true);
+  const [bookingJustCompleted, setBookingJustCompleted] = useState(false);
 
   // Refs for dynamic sizing
   const contentRef = useRef(null);
@@ -393,7 +396,15 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           setBookingSuccess(true);
           setBookingStatus('confirmed');
           setShowBookingForm(false);
-          setShouldAnimate(false);
+          setShouldAnimate(false); // Disable motion animations
+          setAllowRoughAnimations(true); // Keep rough annotations enabled
+          setBookingJustCompleted(true); // Prevent immediate highlight animation
+          
+          // Trigger clean booking confirmed animation after delay
+          setTimeout(() => {
+            setBookingJustCompleted(false);
+            setAnnotationTrigger(prev => prev + 1);
+          }, 300);
         } else {
           setAuthError(result.message || "Booking failed. Please try again.");
         }
@@ -435,7 +446,15 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         setBookingSuccess(true);
         setBookingStatus('confirmed');
         setShowPaymentModal(false);
-        setShouldAnimate(false);
+        setShouldAnimate(false); // Disable motion animations
+        setAllowRoughAnimations(true); // Keep rough annotations enabled
+        setBookingJustCompleted(true); // Prevent immediate highlight animation
+        
+        // Trigger clean booking confirmed animation after delay
+        setTimeout(() => {
+          setBookingJustCompleted(false);
+          setAnnotationTrigger(prev => prev + 1);
+        }, 500);
       } else {
         throw new Error(result.message || "Unknown error during booking");
       }
@@ -455,8 +474,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const handleCancelForm = () => {
     setShowBookingForm(false);
     setAuthError(null);
-    // Disable animation since card has already been viewed
-    setShouldAnimate(false);
+    setShouldAnimate(false); // Disable motion animations since card has been viewed
+    setAllowRoughAnimations(true); // Keep rough annotations enabled
   };
 
   const handleImageError = () => {
@@ -483,10 +502,52 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const isFullyBooked = bookableReason === "No spots left";
   const isInteractiveButton = !((isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled'));
 
-  // Get button text
+  // Get button text and rendering logic
+  const getButtonContent = () => {
+    if (isBooked && bookingStatus !== 'cancelled') {
+      // Return JSX for booking confirmed with purple highlight
+      return (
+        <RoughNotationText
+          type="highlight"
+          color="#AFACFB"
+          strokeWidth={2}
+          animationDelay={100}
+          disabled={!allowRoughAnimations || !roughAnimationsReady || bookingJustCompleted}
+          trigger={annotationTrigger}
+        >
+          Booking Confirmed!
+        </RoughNotationText>
+      );
+    }
+    
+    if (loading) {
+      // Return JSX with loading spinner
+      return (
+        <div className="flex items-center gap-2">
+          <LoadingSpinner size={20} color="#4A7E74" />
+          <span>Hold on...</span>
+        </div>
+      );
+    }
+    
+    if (!isBookable && bookingStatus !== 'cancelled') {
+      if (isFullyBooked) return 'Fully Booked';
+      if (eventStatus === 'past') return 'Event Ended';
+      return 'Booking Closed';
+    }
+    
+    if (user) {
+      if (bookingStatus === 'cancelled') return 'Book Again';
+      return 'Book Now';
+    }
+    
+    return 'Sign In to Book';
+  };
+
+  // Simplified button text getter for cases where we need string
   const getButtonText = () => {
-    if (isBooked && bookingStatus !== 'cancelled') return 'Booking Confirmed';
-    if (loading) return 'Processing...';
+    if (isBooked && bookingStatus !== 'cancelled') return 'Booking Confirmed!';
+    if (loading) return 'Hold on...';
     if (!isBookable && bookingStatus !== 'cancelled') {
       if (isFullyBooked) return 'Fully Booked';
       if (eventStatus === 'past') return 'Event Ended';
@@ -643,7 +704,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 color="#4A7E74"
                 strokeWidth={2}
                 animationDelay={roughAnimationsReady ? 200 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
+                disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
               >
                 {event.date}
@@ -655,7 +716,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 color="#4A7E74"
                 strokeWidth={2}
                 animationDelay={roughAnimationsReady ? 400 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
+                disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
               >
                 {event.venueName || event.location}
@@ -697,7 +758,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                   color="#4A7E74"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 300 : 0}
-                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  disabled={!allowRoughAnimations || !roughAnimationsReady}
                   trigger={annotationTrigger}
                   className="px-2 py-1"
                 >
@@ -743,31 +804,33 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             )}
           </div>
 
-          {/* Enhanced Book button with sketchy underline - Reduced top margin from mt-4 to mt-2 */}
+          {/* Enhanced Book button - Updated for new content logic */}
           <div className="w-full mt-2">
             <button
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-              className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-                  ? 'bg-black text-white cursor-not-allowed'
-                  : (!isBookable && bookingStatus !== 'cancelled')
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                    : loading
-                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300'
+              className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
+                  ? 'bg-transparent text-black'
+                  : loading
+                    ? 'bg-transparent text-black cursor-wait'
+                    : (!isBookable && bookingStatus !== 'cancelled')
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                       : 'bg-transparent text-black hover:text-green-800 transition-colors'
                 }`}
               style={{
-                background: isInteractiveButton ? 'transparent' : undefined,
-                border: isInteractiveButton ? 'none' : undefined
+                background: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'transparent' : undefined,
+                border: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'none' : undefined
               }}
             >
-              {isInteractiveButton ? (
+              {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
+                getButtonContent()
+              ) : isInteractiveButton ? (
                 <RoughNotationText
                   type="highlight"
                   color="#FFFADE"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
-                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  disabled={!allowRoughAnimations || !roughAnimationsReady}
                   trigger={annotationTrigger}
                 >
                   {getButtonText()}
@@ -810,7 +873,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 color="#4A7E74"
                 strokeWidth={2}
                 animationDelay={roughAnimationsReady ? 200 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
+                disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
               >
                 {event.date}
@@ -824,7 +887,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 color="#4A7E74"
                 strokeWidth={2}
                 animationDelay={roughAnimationsReady ? 400 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
+                disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
                 className="text-xs sm:text-sm"
               >
@@ -887,7 +950,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 color="#4A7E74"
                 strokeWidth={2}
                 animationDelay={roughAnimationsReady ? 300 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
+                disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
                 className="px-2 py-1"
               >
@@ -898,29 +961,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
               </span>
             )}
-
-            {/* Price - green underline */}
-            {/* {(event.memberPrice !== null || event.nonMemberPrice !== null || event.paymentAmount > 0) && (
-              <RoughNotationText
-                type="underline"
-                color="#10B981"
-                strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 500 : 0}
-                disabled={!shouldAnimate || !roughAnimationsReady}
-                trigger={annotationTrigger}
-                className="px-2 py-1"
-              >
-                {event.memberPrice !== null && event.nonMemberPrice !== null ? (
-                  user ? (
-                    userMembershipStatus !== null ? (
-                      userMembershipStatus ? `€${event.memberPrice}` : `€${event.nonMemberPrice}`
-                    ) : `€${event.memberPrice}/${event.nonMemberPrice}`
-                  ) : `€${event.memberPrice}/${event.nonMemberPrice}`
-                ) : (
-                  `€${event.paymentAmount || 0}`
-                )}
-              </RoughNotationText>
-            )} */}
           </div>
 
           {/* Status messages */}
@@ -955,31 +995,33 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             </div>
           )}
 
-          {/* Mobile Book button with sketchy underline */}
+          {/* Mobile Book button - Updated for new content logic */}
           <div className="w-full mt-2">
             <button
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
-              className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled') || (bookingSuccess && bookingStatus !== 'cancelled')
-                  ? 'bg-black text-white cursor-not-allowed'
-                  : (!isBookable && bookingStatus !== 'cancelled')
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                    : loading
-                      ? 'bg-gray-100 text-gray-600 cursor-wait border border-gray-300'
+              className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
+                  ? 'bg-transparent text-black'
+                  : loading
+                    ? 'bg-transparent text-black cursor-wait'
+                    : (!isBookable && bookingStatus !== 'cancelled')
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                       : 'bg-transparent text-black hover:text-purple-700 transition-colors'
                 }`}
               style={{
-                background: isInteractiveButton ? 'transparent' : undefined,
-                border: isInteractiveButton ? 'none' : undefined
+                background: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'transparent' : undefined,
+                border: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'none' : undefined
               }}
             >
-              {isInteractiveButton ? (
+              {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
+                getButtonContent()
+              ) : isInteractiveButton ? (
                 <RoughNotationText
                   type="highlight"
-                  color="#FFFADE"  
+                  color="#FFFADE"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
-                  disabled={!shouldAnimate || !roughAnimationsReady}
+                  disabled={!allowRoughAnimations || !roughAnimationsReady}
                   trigger={annotationTrigger}
                 >
                   {getButtonText()}

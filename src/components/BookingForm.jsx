@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import LoadingSpinner from './LoadingSpinner';
 
 function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event }) {
   const [name, setName] = useState(existingData.name || '');
@@ -384,10 +385,17 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           <button
             type="submit"
             disabled={loading}
-            className={`px-4 py-1.5 bg-blue-600 text-white rounded font-medium text-sm ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
+            className={`px-4 py-1.5 bg-blue-600 text-white rounded font-medium text-sm flex items-center gap-2 ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
               }`}
           >
-            {loading ? 'Processing...' : event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'}
+            {loading ? (
+              <>
+                <LoadingSpinner size={16} color="#ffffff" />
+                <span>Hold on...</span>
+              </>
+            ) : (
+              event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'
+            )}
           </button>
         </div>
       </form>

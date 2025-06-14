@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Hero from './components/Hero';
+import Info from './components/Info';
 import EventCard from './components/EventCard';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
@@ -261,6 +262,9 @@ function App() {
         user={user} 
         onSignInClick={() => setShowAuthModal(true)}
       />
+      
+      {/* Info section with animated squares */}
+      <Info />
       
       {/* Auth Modal */}
       <AuthModal 

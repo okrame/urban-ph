@@ -313,7 +313,7 @@ function App() {
       
       <main>
         <section id="current-events-section" className="py-16 px-4 max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Current Events</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">.Events</h2>
           
           {events.length > 0 ? (
             <div className="space-y-8">

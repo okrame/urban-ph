@@ -6,7 +6,6 @@ import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
 import LocationMap from './LocationMap';
 import RoughNotationText from './RoughNotationText';
-import RoughNotationCircle from './RoughNotationCircle';
 import LoadingSpinner from './LoadingSpinner';
 
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
@@ -508,7 +507,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       // Return JSX for booking confirmed with purple highlight
       return (
         <RoughNotationText
-          type="highlight"
+          type="box"
           color="#AFACFB"
           strokeWidth={2}
           animationDelay={100}
@@ -643,11 +642,11 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       whileInView={shouldAnimate ? "visible" : undefined}
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
-      {/* Desktop Layout */}
+      {/* Desktop Layout  */}
       <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
-        {/* Image section - 50% width with animation */}
+        {/* Image section */}
         <motion.div
-          className="w-1/2 flex flex-col"
+          className="w-[30%] flex flex-col"
           variants={shouldAnimate ? imageVariants : {}}
         >
           {/* Main image */}
@@ -690,9 +689,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           )}
         </motion.div>
 
-        {/* Content section - 50% width with animation */}
+        {/* Content section  */}
         <motion.div
-          className="w-1/2 p-8 flex flex-col"
+          className="w-[70%] p-8 flex flex-col"
           variants={shouldAnimate ? contentVariants : {}}
         >
           <div ref={contentRef} className="flex-1">
@@ -712,15 +711,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
               <span className="mx-2">·</span>
               <span>{event.time}</span>
               <span className="mx-2">·</span>
-              <RoughNotationCircle
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 400 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
-              >
-                {event.venueName || event.location}
-              </RoughNotationCircle>
+              <span>{event.venueName || event.location}</span>
             </div>
 
             <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
@@ -751,24 +742,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
             {/* Event meta info */}
             <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
-              {/* Spots left */}
-              {event.spotsLeft < 5 ? (
-                <RoughNotationText
-                  type="underline"
-                  color="#4A7E74"
-                  strokeWidth={2}
-                  animationDelay={roughAnimationsReady ? 300 : 0}
-                  disabled={!allowRoughAnimations || !roughAnimationsReady}
-                  trigger={annotationTrigger}
-                  className="px-2 py-1"
-                >
-                  {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-                </RoughNotationText>
-              ) : (
-                <span className="px-2 py-1">
-                  {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-                </span>
-              )}
+              {/* Spots left - no underline */}
+              <span className="px-2 py-1">
+                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+              </span>
             </div>
 
             {/* Status messages */}
@@ -826,8 +803,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 getButtonContent()
               ) : isInteractiveButton ? (
                 <RoughNotationText
-                  type="highlight"
-                  color="#FFFADE"
+                  type="box"
+                  color="#4A7E74"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
                   disabled={!allowRoughAnimations || !roughAnimationsReady}
@@ -883,16 +860,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             <span>{event.time}</span>
             <span className="hidden sm:inline mx-2">·</span>
             <div className="flex items-center gap-1">
-              <RoughNotationCircle
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 400 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
-                className="text-xs sm:text-sm"
-              >
+              <span className="text-xs sm:text-sm">
                 {event.venueName || event.location}
-              </RoughNotationCircle>
+              </span>
             </div>
           </div>
 
@@ -941,26 +911,11 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             </motion.div>
           )}
 
-          {/* Event meta info - Mobile */}
+          {/* Event meta info - Mobile - no underline for spots left */}
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            {/* Spots left - only show annotation if less than 10 */}
-            {event.spotsLeft < 10 ? (
-              <RoughNotationText
-                type="underline"
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 300 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
-                className="px-2 py-1"
-              >
-                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-              </RoughNotationText>
-            ) : (
-              <span className="px-2 py-1">
-                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-              </span>
-            )}
+            <span className="px-2 py-1">
+              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+            </span>
           </div>
 
           {/* Status messages */}
@@ -1017,8 +972,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
                 getButtonContent()
               ) : isInteractiveButton ? (
                 <RoughNotationText
-                  type="highlight"
-                  color="#FFFADE"
+                  type="box"
+                  color="#4A7E74"
                   strokeWidth={2}
                   animationDelay={roughAnimationsReady ? 100 : 0}
                   disabled={!allowRoughAnimations || !roughAnimationsReady}

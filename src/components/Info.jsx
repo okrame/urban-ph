@@ -5,14 +5,21 @@ function Info() {
   const ref = useRef(null);
   const isInView = useInView(ref, { threshold: 0.1, once: false });
   
+  // PARAMETRO PER REGOLARE I VERTICI SMUSSATI
+  const borderRadius = 30; // Cambia questo valore per regolare l'arrotondamento
+  
   // Scroll-based animation - starts earlier, ends much sooner
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start end", "end start"]
   });
 
-  // Animation stops much earlier - reduced from [0.1, 0.5] to [0.1, 0.3]
-  const progress = useTransform(scrollYProgress, [0.1, 0.3], [0, 1]);
+  // PARAMETRO PER POSIZIONE FINALE QUADRATO 2 (margine sinistro eventcard)
+  const eventCardLeftMargin = 0.05; // 5% del viewport - regola secondo il tuo layout
+  
+  // Extended animation: Phase 1 (overlap) + Phase 2 (square 2 moves left)
+  const progressPhase1 = useTransform(scrollYProgress, [0.1, 0.3], [0, 1]);
+  const progressPhase2 = useTransform(scrollYProgress, [0.35, 0.6], [0, 1]);
 
   // Massive squares - 200% of viewport
   const [squareSize, setSquareSize] = useState(400);
@@ -31,28 +38,38 @@ function Info() {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Movement stops when overlapped area is formed
-  // Square 1 (top-left): moves from mostly off-screen to creating smaller overlap
-  const square1X = useTransform(progress, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
-  const square1Y = useTransform(progress, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
+  // PHASE 1: Movement to overlapped area
+  // Square 1 (top-left): moves from mostly off-screen to creating overlap
+  const square1XPhase1 = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
+  const square1YPhase1 = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
   
-  // Square 2 (bottom-right): moves from mostly off-screen to creating smaller overlap
-  const square2X = useTransform(progress, [0, 1], [squareSize * 0.35, squareSize * 0.45]);
-  const square2Y = useTransform(progress, [0, 1], [squareSize * 0.35, squareSize * 0.45]);
+  // Square 2 (bottom-right): moves from mostly off-screen to creating overlap
+  const square2XPhase1 = useTransform(progressPhase1, [0, 1], [squareSize * 0.35, squareSize * 0.45]);
+  const square2YPhase1 = useTransform(progressPhase1, [0, 1], [squareSize * 0.35, squareSize * 0.45]);
 
-  // Text "Hunts" - appears when squares overlap
-  const textOpacity = useTransform(progress, [0.6, 1], [0, 1]);
-  const textScale = useTransform(progress, [0.6, 1], [0.5, 1]);
+  // PHASE 2: Only square 2 moves horizontally leftward
+  // Square 1 stays in overlap position (no additional movement)
+  const square1X = square1XPhase1;
+  const square1Y = square1YPhase1;
+  
+  // Square 2 continues moving horizontally left to eventcard margin
+  const square2XPhase2 = useTransform(progressPhase2, [0, 1], [squareSize * 0.45, -(window.innerWidth * eventCardLeftMargin)]);
+  const square2X = useTransform(scrollYProgress, [0, 0.3, 0.6], [squareSize * 0.35, squareSize * 0.45, -(window.innerWidth * eventCardLeftMargin)]);
+  const square2Y = square2YPhase1; // Y position stays the same in phase 2
+
+  // Text "Hunts" - appears when squares overlap (phase 1)
+  const textOpacity = useTransform(progressPhase1, [0.6, 1], [0, 1]);
+  const textScale = useTransform(progressPhase1, [0.6, 1], [0.5, 1]);
 
   // Italian text positioning - same level as "Hunts", in overlap area
-  const italianTextX = useTransform(progress, [0, 1], [squareSize * 0.1, squareSize * 0.05]);
-  const italianTextY = useTransform(progress, [0, 1], [squareSize * 0.35 - squareSize/2 + 20, squareSize * 0.45 - squareSize/2 + 20]);
+  const italianTextX = useTransform(progressPhase1, [0, 1], [squareSize * 0.1, squareSize * 0.05]);
+  const italianTextY = useTransform(progressPhase1, [0, 1], [squareSize * 0.35 - squareSize/2 + 20, squareSize * 0.45 - squareSize/2 + 20]);
 
-  const italianTextOpacity = useTransform(progress, [0.4, 0.8], [0, 1]);
+  const italianTextOpacity = useTransform(progressPhase1, [0.4, 0.8], [0, 1]);
 
   return (
     <section ref={ref} className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-      {/* Top-left square - outline only */}
+      {/* Top-left square - outline only with rounded corners */}
       <motion.div
         className="absolute border-2 border-green-800"
         style={{
@@ -60,13 +77,14 @@ function Info() {
           height: squareSize,
           x: square1X,
           y: square1Y,
+          borderRadius: `${borderRadius}px`,
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: isInView ? 1 : 0 }}
         transition={{ duration: 0.3 }}
       />
 
-      {/* Bottom-right square - outline only */}
+      {/* Bottom-right square - outline only with rounded corners */}
       <motion.div
         className="absolute border-2 border-black"
         style={{
@@ -74,6 +92,7 @@ function Info() {
           height: squareSize,
           x: square2X,
           y: square2Y,
+          borderRadius: `${borderRadius}px`,
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: isInView ? 1 : 0 }}

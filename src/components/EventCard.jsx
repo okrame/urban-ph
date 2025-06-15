@@ -7,8 +7,10 @@ import PaymentModal from './PaymentModal';
 import LocationMap from './LocationMap';
 import RoughNotationText from './RoughNotationText';
 import LoadingSpinner from './LoadingSpinner';
+import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 
-function EventCard({ event, user, onAuthNeeded, index = 0 }) {
+
+function EventCard({ event, user, onAuthNeeded, index = 0, onPositionUpdate }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -38,9 +40,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [allowRoughAnimations, setAllowRoughAnimations] = useState(true);
   const [bookingJustCompleted, setBookingJustCompleted] = useState(false);
 
-  // Refs for dynamic sizing
+  // Refs for dynamic sizing and position tracking
   const contentRef = useRef(null);
+  const cardRef = useRef(null); // NEW: Ref for the main card container
   const [contentHeight, setContentHeight] = useState(0);
+
+  const { updateEventCardPosition } = useEventCardPosition();
 
   // Determine if image should be on left or right based on index
   const isImageLeft = index % 2 === 0;
@@ -48,6 +53,28 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Character limit for description
   const DESCRIPTION_LIMIT = 400;
   const shouldTruncate = event.description && event.description.length > DESCRIPTION_LIMIT;
+
+  // NEW
+useEffect(() => {
+  if (!cardRef.current || !updateEventCardPosition) return;
+
+  const updatePosition = () => {
+    const rect = cardRef.current.getBoundingClientRect();
+    updateEventCardPosition(rect);
+  };
+
+  updatePosition();
+  
+  const resizeObserver = new ResizeObserver(updatePosition);
+  resizeObserver.observe(cardRef.current);
+  
+  window.addEventListener('resize', updatePosition);
+  
+  return () => {
+    resizeObserver.disconnect();
+    window.removeEventListener('resize', updatePosition);
+  };
+}, [updateEventCardPosition]);
 
   // Animation variants for slide-in effects
   const imageVariants = {
@@ -284,7 +311,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     checkBookingStatus();
   }, [user, event.id]);
 
-  // [Keep all handler functions - unchanged]
+  // [Keep all handler functions - unchanged from original]
   const handleBookEvent = async () => {
     setAuthError(null);
 
@@ -635,6 +662,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Main event card with responsive layout
   return (
     <motion.div
+      ref={cardRef} // NEW: Add ref to the main container
       className="bg-white border border-black my-8 overflow-hidden"
       variants={containerVariants}
       initial={shouldAnimate ? "hidden" : "false"}

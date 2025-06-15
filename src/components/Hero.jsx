@@ -191,14 +191,11 @@ function Hero({ user, onSignInClick }) {
             <div
               className="max-w-md text-right"
               style={{
-                transform: 'translateY(420px)',
+                transform: 'translateY(580px)',
               }}
             >
-              <p className="text-xl md:text-2xl mb-4" style={{ color: '#FFFADE' }}>
-                Disegniamo esperienze<br />Creiamo Workshop, Cacce & Mostre
-              </p>
               <p ref={endTextRef} className="text-lg md:text-xl opacity-90 mb-8" style={{ color: '#FFFADE' }}>
-                La città è di tuttə, così come la fotografia.
+                La città è di tuttə, così come l'arte e la fotografia.
               </p>
             </div>
           </div>

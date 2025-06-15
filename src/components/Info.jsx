@@ -12,7 +12,7 @@ function Info() {
   });
 
   // Animation stops much earlier - reduced from [0.1, 0.5] to [0.1, 0.3]
-  const progress = useTransform(scrollYProgress, [0.1, 0.35], [0, 1]);
+  const progress = useTransform(scrollYProgress, [0.1, 0.3], [0, 1]);
 
   // Massive squares - 200% of viewport
   const [squareSize, setSquareSize] = useState(400);
@@ -44,11 +44,17 @@ function Info() {
   const textOpacity = useTransform(progress, [0.6, 1], [0, 1]);
   const textScale = useTransform(progress, [0.6, 1], [0.5, 1]);
 
+  // Italian text positioning - same level as "Hunts", in overlap area
+  const italianTextX = useTransform(progress, [0, 1], [squareSize * 0.1, squareSize * 0.05]);
+  const italianTextY = useTransform(progress, [0, 1], [squareSize * 0.35 - squareSize/2 + 20, squareSize * 0.45 - squareSize/2 + 20]);
+
+  const italianTextOpacity = useTransform(progress, [0.4, 0.8], [0, 1]);
+
   return (
     <section ref={ref} className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
       {/* Top-left square - outline only */}
       <motion.div
-        className="absolute border-2 border-black"
+        className="absolute border-2 border-green-800"
         style={{
           width: squareSize,
           height: squareSize,
@@ -76,10 +82,11 @@ function Info() {
 
       {/* "Hunts" text - appears when squares overlap */}
       <motion.div
-        className="absolute text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-black text-center"
+        className="absolute text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
+
         style={{
           left: '50%',
-          top: '50%',
+          top: '29%',
           opacity: textOpacity,
           scale: textScale,
           x: '-50%',
@@ -87,6 +94,21 @@ function Info() {
         }}
       >
         Hunts
+      </motion.div>
+
+      {/* Italian text - positioned where square 1 crosses square 2 */}
+      <motion.div
+        className="absolute text-sm sm:text-base md:text-lg max-w-xs sm:max-w-sm md:max-w-md text-black leading-relaxed text-justify"
+
+        style={{
+          left: '51%',
+          top: '50%',
+          x: italianTextX,
+          y: italianTextY,
+          opacity: italianTextOpacity,
+        }}
+      >
+        Le nostre cacce fotografiche sono <strong>esplorazioni di quartieri</strong> e non solo, delineate da temi elaborati da esperti in vari settori, che vanno dalla cultura, alla storia, all'urbanistica, all'ecologia, alla psicologia, per citarne qualcuno. I partecipanti, scoprono le realtà di quartiere interpretando i temi tramite la fotografia, condividendo poi immagini ed esperienze nel corso di <strong>aperitivi in centri culturali locali</strong>.
       </motion.div>
     </section>
   );

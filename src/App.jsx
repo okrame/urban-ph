@@ -320,11 +320,11 @@ function App() {
         )}
         
         <main>
-          <section id="current-events-section" className="py-16 px-4 max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12">.Events</h2>
+        <section id="current-events-section" className="pb-16 max-w-6xl mx-auto">
+            {/* <h2 className="text-3xl font-bold text-center mb-12">.Events</h2> */}
             
             {events.length > 0 ? (
-              <div className="space-y-8">
+              <div className="space-y-0">
                 {events.slice(0, 3).map((event, index) => (
                   <EventCard 
                     key={event.id}
@@ -340,7 +340,7 @@ function App() {
                 ))}
                 
                 {events.length > 3 && (
-                  <div className="text-center mt-8">
+                  <div className="text-center mt-8 pt-8">
                     <Link 
                       to="/events" 
                       className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"

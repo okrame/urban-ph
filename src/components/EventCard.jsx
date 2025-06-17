@@ -9,6 +9,17 @@ import RoughNotationText from './RoughNotationText';
 import LoadingSpinner from './LoadingSpinner';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 
+const getBorderClasses = (index) => {
+  // All cards get bottom border + alternating left/right borders
+  if (index % 2 === 0) {
+    // Odd events (1st, 3rd, 5th...) - bottom + left borders
+    return "border-b-4 border-l-4 border-black";
+  } else {
+    // Even events (2nd, 4th, 6th...) - bottom + right borders
+    return "border-b-4 border-r-4 border-black";
+  }
+};
+
 
 function EventCard({ event, user, onAuthNeeded, index = 0, onPositionUpdate }) {
   const [isBooked, setIsBooked] = useState(false);
@@ -64,6 +75,8 @@ useEffect(() => {
   };
 
   updatePosition();
+
+  
   
   const resizeObserver = new ResizeObserver(updatePosition);
   resizeObserver.observe(cardRef.current);
@@ -592,78 +605,80 @@ useEffect(() => {
 
   // Show booking form
   if (showBookingForm) {
-    return (
+  return (
+    <motion.div
+      ref={cardRef} 
+      className={`bg-white overflow-hidden ${getBorderClasses(index)}`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
+      {authError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+          {authError}
+        </div>
+      )}
+      <BookingForm
+        onSubmit={handleFormSubmit}
+        onCancel={handleCancelForm}
+        loading={loading}
+        isFirstTime={isFirstTimeBooking}
+        existingData={existingUserData}
+        event={{
+          ...event,
+          paymentAmount: applicablePrice,
+          userMembershipStatus: userMembershipStatus
+        }}
+      />
+    </motion.div>
+  );
+}
+
+  // Show payment modal
+  if (showPaymentModal) {
+  const eventForPayment = {
+    ...event,
+    paymentAmount: applicablePrice
+  };
+
+  return (
+    <>
       <motion.div
-        className="bg-white border border-black rounded-none overflow-hidden p-6 my-8"
+        ref={cardRef}
+        className={`bg-white overflow-hidden p-6 ${getBorderClasses(index)}`}  // Updated: use getBorderClasses, removed border and my-8
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
+        <p className="text-center text-gray-600 text-sm">
+          Please complete the payment to confirm your booking.
+        </p>
         {authError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
             {authError}
           </div>
         )}
-        <BookingForm
-          onSubmit={handleFormSubmit}
-          onCancel={handleCancelForm}
-          loading={loading}
-          isFirstTime={isFirstTimeBooking}
-          existingData={existingUserData}
-          event={{
-            ...event,
-            paymentAmount: applicablePrice,
-            userMembershipStatus: userMembershipStatus
-          }}
-        />
       </motion.div>
-    );
-  }
 
-  // Show payment modal
-  if (showPaymentModal) {
-    const eventForPayment = {
-      ...event,
-      paymentAmount: applicablePrice
-    };
-
-    return (
-      <>
-        <motion.div
-          className="bg-white border border-black rounded-none overflow-hidden p-6 my-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
-          <p className="text-center text-gray-600 text-sm">
-            Please complete the payment to confirm your booking.
-          </p>
-          {authError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-              {authError}
-            </div>
-          )}
-        </motion.div>
-
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={handlePaymentCancel}
-          event={eventForPayment}
-          userData={bookingFormData}
-          onPaymentSuccess={handlePaymentSuccess}
-          onPaymentCancel={handlePaymentCancel}
-        />
-      </>
-    );
-  }
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={handlePaymentCancel}
+        event={eventForPayment}
+        userData={bookingFormData}
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentCancel={handlePaymentCancel}
+      />
+    </>
+  );
+}
 
   // Main event card with responsive layout
   return (
     <motion.div
       ref={cardRef} // NEW: Add ref to the main container
-      className="bg-white border border-black my-8 overflow-hidden"
+      className={`bg-white overflow-hidden ${getBorderClasses(index)}`}
       variants={containerVariants}
       initial={shouldAnimate ? "hidden" : "false"}
       animate={shouldAnimate ? undefined : "false"}

@@ -20,7 +20,32 @@ const getBorderClasses = (index) => {
   }
 };
 
+const getBorderClassesMobile = (index) => {
+  // Remove all borders from container - borders will be applied to content section only
+  return "overflow-hidden";
+};
 
+const getContentBorderClassesMobile = (index) => {
+  // Apply only vertical borders to content section (no horizontal borders)
+  // First card: only border right (thicker)
+  if (index === 0) {
+    return "border-r-2 border-black";
+  }
+
+  // Alternating pattern starting from index 1
+  if (index % 2 === 1) {
+    // Odd index (1, 3, 5...) - only border left (thicker)
+    return "border-l-2 border-black";
+  } else {
+    // Even index (2, 4, 6...) - only border right (thicker)
+    return "border-r-2 border-black";
+  }
+};
+const getImageRoundingMobile = (index) => {
+  // Image must match container rounding
+  if (index === 0) return "rounded-tr-2xl";
+  return index % 2 === 1 ? "rounded-tl-2xl" : "rounded-tr-2xl";
+};
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,27 +91,27 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const shouldTruncate = event.description && event.description.length > DESCRIPTION_LIMIT;
 
   // NEW
-useEffect(() => {
-  if (!cardRef.current || !updateEventCardPosition) return;
+  useEffect(() => {
+    if (!cardRef.current || !updateEventCardPosition) return;
 
-  const updatePosition = () => {
-    const rect = cardRef.current.getBoundingClientRect();
-    updateEventCardPosition(rect, index);
-  };
+    const updatePosition = () => {
+      const rect = cardRef.current.getBoundingClientRect();
+      updateEventCardPosition(rect, index);
+    };
 
-  updatePosition();
+    updatePosition();
 
-  
-  const resizeObserver = new ResizeObserver(updatePosition);
-  resizeObserver.observe(cardRef.current);
-  
-  window.addEventListener('resize', updatePosition);
-  
-  return () => {
-    resizeObserver.disconnect();
-    window.removeEventListener('resize', updatePosition);
-  };
-}, [updateEventCardPosition, index]);
+
+    const resizeObserver = new ResizeObserver(updatePosition);
+    resizeObserver.observe(cardRef.current);
+
+    window.addEventListener('resize', updatePosition);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [updateEventCardPosition, index]);
 
   // Animation variants for slide-in effects
   const imageVariants = {
@@ -136,25 +161,22 @@ useEffect(() => {
 
   // Mobile animation variants (simpler, no horizontal movement)
   const mobileVariants = {
-    hidden: {
-      y: 30,
-      opacity: 0
-    },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-        onComplete: () => {
-          setCardVisible(true);
-          // Start rough notation animations after a short delay
-          setTimeout(() => setRoughAnimationsReady(true), 200);
-        }
+  hidden: {
+    opacity: 0
+  },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.6,
+      ease: "easeOut",
+      onComplete: () => {
+        setCardVisible(true);
+        // Start rough notation animations after a short delay
+        setTimeout(() => setRoughAnimationsReady(true), 200);
       }
     }
-  };
-
+  }
+};
   // Effect to measure content height when description is expanded
   useEffect(() => {
     if (showFullDescription && contentRef.current) {
@@ -179,7 +201,7 @@ useEffect(() => {
   // Resize handler
   useEffect(() => {
     let resizeTimer;
-    
+
     const handleResize = () => {
       if (roughAnimationsReady) {
         if (resizeTimer) clearTimeout(resizeTimer);
@@ -437,7 +459,7 @@ useEffect(() => {
           setShouldAnimate(false); // Disable motion animations
           setAllowRoughAnimations(true); // Keep rough annotations enabled
           setBookingJustCompleted(true); // Prevent immediate highlight animation
-          
+
           // Trigger clean booking confirmed animation after delay
           setTimeout(() => {
             setBookingJustCompleted(false);
@@ -487,7 +509,7 @@ useEffect(() => {
         setShouldAnimate(false); // Disable motion animations
         setAllowRoughAnimations(true); // Keep rough annotations enabled
         setBookingJustCompleted(true); // Prevent immediate highlight animation
-        
+
         // Trigger clean booking confirmed animation after delay
         setTimeout(() => {
           setBookingJustCompleted(false);
@@ -557,7 +579,7 @@ useEffect(() => {
         </RoughNotationText>
       );
     }
-    
+
     if (loading) {
       // Return JSX with loading spinner
       return (
@@ -567,18 +589,18 @@ useEffect(() => {
         </div>
       );
     }
-    
+
     if (!isBookable && bookingStatus !== 'cancelled') {
       if (isFullyBooked) return 'Fully Booked';
       if (eventStatus === 'past') return 'Event Ended';
       return 'Booking Closed';
     }
-    
+
     if (user) {
       if (bookingStatus === 'cancelled') return 'Book Again';
       return 'Book Now';
     }
-    
+
     return 'Sign In to Book';
   };
 
@@ -604,74 +626,74 @@ useEffect(() => {
 
   // Show booking form
   if (showBookingForm) {
-  return (
-    <motion.div
-      ref={cardRef} 
-      className={`bg-white overflow-hidden ${getBorderClasses(index)}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
-      {authError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-          {authError}
-        </div>
-      )}
-      <BookingForm
-        onSubmit={handleFormSubmit}
-        onCancel={handleCancelForm}
-        loading={loading}
-        isFirstTime={isFirstTimeBooking}
-        existingData={existingUserData}
-        event={{
-          ...event,
-          paymentAmount: applicablePrice,
-          userMembershipStatus: userMembershipStatus
-        }}
-      />
-    </motion.div>
-  );
-}
-
-  // Show payment modal
-  if (showPaymentModal) {
-  const eventForPayment = {
-    ...event,
-    paymentAmount: applicablePrice
-  };
-
-  return (
-    <>
+    return (
       <motion.div
         ref={cardRef}
-        className="bg-white overflow-hidden"
+        className={`bg-white overflow-hidden ${getBorderClasses(index)}`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
-        <p className="text-center text-gray-600 text-sm">
-          Please complete the payment to confirm your booking.
-        </p>
         {authError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
             {authError}
           </div>
         )}
+        <BookingForm
+          onSubmit={handleFormSubmit}
+          onCancel={handleCancelForm}
+          loading={loading}
+          isFirstTime={isFirstTimeBooking}
+          existingData={existingUserData}
+          event={{
+            ...event,
+            paymentAmount: applicablePrice,
+            userMembershipStatus: userMembershipStatus
+          }}
+        />
       </motion.div>
+    );
+  }
 
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={handlePaymentCancel}
-        event={eventForPayment}
-        userData={bookingFormData}
-        onPaymentSuccess={handlePaymentSuccess}
-        onPaymentCancel={handlePaymentCancel}
-      />
-    </>
-  );
-}
+  // Show payment modal
+  if (showPaymentModal) {
+    const eventForPayment = {
+      ...event,
+      paymentAmount: applicablePrice
+    };
+
+    return (
+      <>
+        <motion.div
+          ref={cardRef}
+          className="bg-white overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
+          <p className="text-center text-gray-600 text-sm">
+            Please complete the payment to confirm your booking.
+          </p>
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+              {authError}
+            </div>
+          )}
+        </motion.div>
+
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentCancel}
+          event={eventForPayment}
+          userData={bookingFormData}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentCancel={handlePaymentCancel}
+        />
+      </>
+    );
+  }
 
   // Main event card with responsive layout
   return (
@@ -685,7 +707,7 @@ useEffect(() => {
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
       {/* Desktop Layout  */}
-        <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getBorderClasses(index)}`}>
+      <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getBorderClasses(index)}`}>
 
         {/* Image section */}
         <motion.div
@@ -830,12 +852,12 @@ useEffect(() => {
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
               className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
-                  ? 'bg-transparent text-black'
-                  : loading
-                    ? 'bg-transparent text-black cursor-wait'
-                    : (!isBookable && bookingStatus !== 'cancelled')
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                      : 'bg-transparent text-black hover:text-green-800 transition-colors'
+                ? 'bg-transparent text-black'
+                : loading
+                  ? 'bg-transparent text-black cursor-wait'
+                  : (!isBookable && bookingStatus !== 'cancelled')
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
+                    : 'bg-transparent text-black hover:text-green-800 transition-colors'
                 }`}
               style={{
                 background: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'transparent' : undefined,
@@ -863,11 +885,11 @@ useEffect(() => {
         </motion.div>
       </div>
 
-{/* Mobile Layout */}
+      {/* Mobile Layout */}
       <motion.div
-      style={{ marginLeft: "7.5px", marginRight: "7px" }}
+        style={{ marginLeft: "7.5px", marginRight: "7px" }}
         ref={cardRef}
-        className={`lg:hidden sm:mx-6 md:mx-8 ${getBorderClasses(index)}`}
+        className={`lg:hidden sm:mx-6 md:mx-8 ${getBorderClassesMobile(index)}`}
         variants={shouldAnimate ? mobileVariants : {}}
         initial={shouldAnimate ? "hidden" : "false"}
         animate={shouldAnimate ? undefined : "false"}
@@ -875,19 +897,19 @@ useEffect(() => {
         viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
       >
         {/* Mobile Image - Smaller height */}
-        <div className="w-full h-48 sm:h-56">
-          <img
-            src={getImageSource()}
-            alt={event.title}
-            className="w-full h-full object-cover"
-            onError={handleImageError}
-          />
-        </div>
+      <div className={`w-full h-48 sm:h-56 overflow-hidden ${getImageRoundingMobile(index)}`}>
+        <img
+          src={getImageSource()}
+          alt={event.title}
+          className="w-full h-full object-cover"
+          onError={handleImageError}
+        />
+      </div>
 
         {/* Mobile Content */}
-        <div 
-          className="py-6 px-4 sm:px-6 md:px-8"
-          //style={getMobileMargins(index)}
+        <div
+          className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
+
         >
           <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
 
@@ -1004,12 +1026,12 @@ useEffect(() => {
               onClick={handleBookEvent}
               disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
               className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
-                  ? 'bg-transparent text-black'
-                  : loading
-                    ? 'bg-transparent text-black cursor-wait'
-                    : (!isBookable && bookingStatus !== 'cancelled')
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                      : 'bg-transparent text-black hover:text-purple-700 transition-colors'
+                ? 'bg-transparent text-black'
+                : loading
+                  ? 'bg-transparent text-black cursor-wait'
+                  : (!isBookable && bookingStatus !== 'cancelled')
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
+                    : 'bg-transparent text-black hover:text-purple-700 transition-colors'
                 }`}
               style={{
                 background: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'transparent' : undefined,

@@ -645,7 +645,7 @@ useEffect(() => {
     <>
       <motion.div
         ref={cardRef}
-        className={`bg-white overflow-hidden p-6 ${getBorderClasses(index)}`}  // Updated: use getBorderClasses, removed border and my-8
+        className="bg-white overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -677,7 +677,7 @@ useEffect(() => {
   return (
     <motion.div
       ref={cardRef} // add ref to the main container
-      className={`bg-white overflow-hidden ${getBorderClasses(index)}`}
+      className="bg-white overflow-hidden"
       variants={containerVariants}
       initial={shouldAnimate ? "hidden" : "false"}
       animate={shouldAnimate ? undefined : "false"}
@@ -685,7 +685,8 @@ useEffect(() => {
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
       {/* Desktop Layout  */}
-      <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
+        <div className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getBorderClasses(index)}`}>
+
         {/* Image section */}
         <motion.div
           className="w-[30%] flex flex-col"
@@ -862,10 +863,11 @@ useEffect(() => {
         </motion.div>
       </div>
 
-      {/* Mobile Layout */}
+{/* Mobile Layout */}
       <motion.div
+      style={{ marginLeft: "7.5px", marginRight: "7px" }}
         ref={cardRef}
-        className="lg:hidden mx-4 sm:mx-6 md:mx-8"
+        className={`lg:hidden sm:mx-6 md:mx-8 ${getBorderClasses(index)}`}
         variants={shouldAnimate ? mobileVariants : {}}
         initial={shouldAnimate ? "hidden" : "false"}
         animate={shouldAnimate ? undefined : "false"}
@@ -884,87 +886,85 @@ useEffect(() => {
 
         {/* Mobile Content */}
         <div 
-  className="py-6"
-  //style={getMobileMargins(index)}
-
-
->
-  <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
-
-  <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0 flex-wrap">
-    <div className="flex items-center gap-1">
-      <RoughNotationText
-        type="underline"
-        color="#4A7E74"
-        strokeWidth={2}
-        animationDelay={roughAnimationsReady ? 200 : 0}
-        disabled={!allowRoughAnimations || !roughAnimationsReady}
-        trigger={annotationTrigger}
-      >
-        {event.date}
-      </RoughNotationText>
-    </div>
-    <span className="hidden sm:inline mx-2">·</span>
-    <span>{event.time}</span>
-    <span className="hidden sm:inline mx-2">·</span>
-    <div className="flex items-center gap-1">
-      <span className="text-xs sm:text-sm">
-        {event.venueName || event.location}
-      </span>
-    </div>
-  </div>
-
-  <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
-    {shouldTruncate && !showFullDescription ? (
-      <>
-        {event.description.substring(0, DESCRIPTION_LIMIT)}...
-        <button
-          onClick={() => setShowFullDescription(true)}
-          className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+          className="py-6 px-4 sm:px-6 md:px-8"
+          //style={getMobileMargins(index)}
         >
-          Show more
-        </button>
-      </>
-    ) : (
-      <>
-        {event.description}
-        {shouldTruncate && (
-          <button
-            onClick={() => setShowFullDescription(false)}
-            className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
-          >
-            Show less
-          </button>
-        )}
-      </>
-    )}
-  </div>
+          <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
 
-  {/* Mobile Map section */}
-  {showFullDescription && (
-    <motion.div
-      className="mb-4"
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: 'auto', opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="w-full" style={{ height: '250px' }}>
-        <LocationMap
-          location={event.location}
-          isVisible={showFullDescription}
-          style={{ height: '100%', width: '100%' }}
-        />
-      </div>
-    </motion.div>
-  )}
+          <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0 flex-wrap">
+            <div className="flex items-center gap-1">
+              <RoughNotationText
+                type="underline"
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 200 : 0}
+                disabled={!allowRoughAnimations || !roughAnimationsReady}
+                trigger={annotationTrigger}
+              >
+                {event.date}
+              </RoughNotationText>
+            </div>
+            <span className="hidden sm:inline mx-2">·</span>
+            <span>{event.time}</span>
+            <span className="hidden sm:inline mx-2">·</span>
+            <div className="flex items-center gap-1">
+              <span className="text-xs sm:text-sm">
+                {event.venueName || event.location}
+              </span>
+            </div>
+          </div>
 
-  {/* Event meta info - Mobile - no underline for spots left */}
-  <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-    <span className="px-2 py-1">
-      {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-    </span>
-  </div>
+          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+            {shouldTruncate && !showFullDescription ? (
+              <>
+                {event.description.substring(0, DESCRIPTION_LIMIT)}...
+                <button
+                  onClick={() => setShowFullDescription(true)}
+                  className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                >
+                  Show more
+                </button>
+              </>
+            ) : (
+              <>
+                {event.description}
+                {shouldTruncate && (
+                  <button
+                    onClick={() => setShowFullDescription(false)}
+                    className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                  >
+                    Show less
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Mobile Map section */}
+          {showFullDescription && (
+            <motion.div
+              className="mb-4"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="w-full" style={{ height: '250px' }}>
+                <LocationMap
+                  location={event.location}
+                  isVisible={showFullDescription}
+                  style={{ height: '100%', width: '100%' }}
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Event meta info - Mobile - no underline for spots left */}
+          <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
+            <span className="px-2 py-1">
+              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+            </span>
+          </div>
 
           {/* Status messages */}
           {authError && (

@@ -12,16 +12,16 @@ import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 const getBorderClasses = (index) => {
   // All cards get bottom border + alternating left/right borders
   if (index % 2 === 0) {
-    // Odd events (1st, 3rd, 5th...) - bottom + left borders
-    return "border-b-4 border-l-4 border-black";
+    // Even index (0, 2, 4...) - bottom + left borders with bottom-left rounded corner
+    return "border-b-2 border-l-2 border-black rounded-bl-3xl";
   } else {
-    // Even events (2nd, 4th, 6th...) - bottom + right borders
-    return "border-b-4 border-r-4 border-black";
+    // Odd index (1, 3, 5...) - bottom + right borders with bottom-right rounded corner
+    return "border-b-2 border-r-2 border-black rounded-br-3xl";
   }
 };
 
 
-function EventCard({ event, user, onAuthNeeded, index = 0, onPositionUpdate }) {
+function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -56,7 +56,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, onPositionUpdate }) {
   const cardRef = useRef(null); // NEW: Ref for the main card container
   const [contentHeight, setContentHeight] = useState(0);
 
-  const { updateEventCardPosition } = useEventCardPosition();
+  const { updateEventCardPosition, getMobileMargins } = useEventCardPosition();
 
   // Determine if image should be on left or right based on index
   const isImageLeft = index % 2 === 0;
@@ -71,12 +71,11 @@ useEffect(() => {
 
   const updatePosition = () => {
     const rect = cardRef.current.getBoundingClientRect();
-    updateEventCardPosition(rect);
+    updateEventCardPosition(rect, index);
   };
 
   updatePosition();
 
-  
   
   const resizeObserver = new ResizeObserver(updatePosition);
   resizeObserver.observe(cardRef.current);
@@ -87,7 +86,7 @@ useEffect(() => {
     resizeObserver.disconnect();
     window.removeEventListener('resize', updatePosition);
   };
-}, [updateEventCardPosition]);
+}, [updateEventCardPosition, index]);
 
   // Animation variants for slide-in effects
   const imageVariants = {
@@ -677,7 +676,7 @@ useEffect(() => {
   // Main event card with responsive layout
   return (
     <motion.div
-      ref={cardRef} // NEW: Add ref to the main container
+      ref={cardRef} // add ref to the main container
       className={`bg-white overflow-hidden ${getBorderClasses(index)}`}
       variants={containerVariants}
       initial={shouldAnimate ? "hidden" : "false"}
@@ -865,7 +864,8 @@ useEffect(() => {
 
       {/* Mobile Layout */}
       <motion.div
-        className="lg:hidden"
+        ref={cardRef}
+        className="lg:hidden mx-4 sm:mx-6 md:mx-8"
         variants={shouldAnimate ? mobileVariants : {}}
         initial={shouldAnimate ? "hidden" : "false"}
         animate={shouldAnimate ? undefined : "false"}
@@ -883,83 +883,88 @@ useEffect(() => {
         </div>
 
         {/* Mobile Content */}
-        <div className="p-6">
-          <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
+        <div 
+  className="py-6"
+  //style={getMobileMargins(index)}
 
-          <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0 flex-wrap">
-            <div className="flex items-center gap-1">
-              <RoughNotationText
-                type="underline"
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 200 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
-              >
-                {event.date}
-              </RoughNotationText>
-            </div>
-            <span className="hidden sm:inline mx-2">·</span>
-            <span>{event.time}</span>
-            <span className="hidden sm:inline mx-2">·</span>
-            <div className="flex items-center gap-1">
-              <span className="text-xs sm:text-sm">
-                {event.venueName || event.location}
-              </span>
-            </div>
-          </div>
 
-          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
-            {shouldTruncate && !showFullDescription ? (
-              <>
-                {event.description.substring(0, DESCRIPTION_LIMIT)}...
-                <button
-                  onClick={() => setShowFullDescription(true)}
-                  className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
-                >
-                  Show more
-                </button>
-              </>
-            ) : (
-              <>
-                {event.description}
-                {shouldTruncate && (
-                  <button
-                    onClick={() => setShowFullDescription(false)}
-                    className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
-                  >
-                    Show less
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+>
+  <h3 className="text-xl sm:text-2xl font-light text-black mb-3">{event.title}</h3>
 
-          {/* Mobile Map section */}
-          {showFullDescription && (
-            <motion.div
-              className="mb-4"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="w-full" style={{ height: '250px' }}>
-                <LocationMap
-                  location={event.location}
-                  isVisible={showFullDescription}
-                  style={{ height: '100%', width: '100%' }}
-                />
-              </div>
-            </motion.div>
-          )}
+  <div className="flex flex-col sm:flex-row sm:items-center text-sm text-black opacity-70 mb-4 gap-1 sm:gap-0 flex-wrap">
+    <div className="flex items-center gap-1">
+      <RoughNotationText
+        type="underline"
+        color="#4A7E74"
+        strokeWidth={2}
+        animationDelay={roughAnimationsReady ? 200 : 0}
+        disabled={!allowRoughAnimations || !roughAnimationsReady}
+        trigger={annotationTrigger}
+      >
+        {event.date}
+      </RoughNotationText>
+    </div>
+    <span className="hidden sm:inline mx-2">·</span>
+    <span>{event.time}</span>
+    <span className="hidden sm:inline mx-2">·</span>
+    <div className="flex items-center gap-1">
+      <span className="text-xs sm:text-sm">
+        {event.venueName || event.location}
+      </span>
+    </div>
+  </div>
 
-          {/* Event meta info - Mobile - no underline for spots left */}
-          <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            <span className="px-2 py-1">
-              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-            </span>
-          </div>
+  <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+    {shouldTruncate && !showFullDescription ? (
+      <>
+        {event.description.substring(0, DESCRIPTION_LIMIT)}...
+        <button
+          onClick={() => setShowFullDescription(true)}
+          className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+        >
+          Show more
+        </button>
+      </>
+    ) : (
+      <>
+        {event.description}
+        {shouldTruncate && (
+          <button
+            onClick={() => setShowFullDescription(false)}
+            className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+          >
+            Show less
+          </button>
+        )}
+      </>
+    )}
+  </div>
+
+  {/* Mobile Map section */}
+  {showFullDescription && (
+    <motion.div
+      className="mb-4"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="w-full" style={{ height: '250px' }}>
+        <LocationMap
+          location={event.location}
+          isVisible={showFullDescription}
+          style={{ height: '100%', width: '100%' }}
+        />
+      </div>
+    </motion.div>
+  )}
+
+  {/* Event meta info - Mobile - no underline for spots left */}
+  <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
+    <span className="px-2 py-1">
+      {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+    </span>
+  </div>
 
           {/* Status messages */}
           {authError && (

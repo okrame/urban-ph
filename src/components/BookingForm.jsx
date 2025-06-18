@@ -390,7 +390,6 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           >
             {loading ? (
               <>
-                <LoadingSpinner size={16} color="#ffffff" />
                 <span>Hold on...</span>
               </>
             ) : (

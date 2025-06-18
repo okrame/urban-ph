@@ -42,8 +42,9 @@ function Info() {
     if (!eventCardPosition || !eventCardPosition.width) {
       return -200;
     }
+    const borderOffset = 7.5;
 
-    return eventCardPosition.left + (squareSize / 2);
+    return eventCardPosition.left + borderOffset + (squareSize / 2);
 
   };
 
@@ -139,7 +140,7 @@ function Info() {
 
       {/* Italian text - positioned where square 1 crosses square 2, appears AFTER phase 1 */}
       <motion.div
-        className="absolute text-sm sm:text-base md:text-lg max-w-xs sm:max-w-sm md:max-w-md text-black leading-relaxed text-justify"
+        className="absolute text-base sm:text-lg md:text-xl max-w-xs sm:max-w-sm md:max-w-md text-black leading-relaxed text-justify"
         style={{
           left: '51%',
           top: '50%',

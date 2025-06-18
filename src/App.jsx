@@ -260,7 +260,7 @@ function App() {
   return (
     // WRAP EVERYTHING WITH THE PROVIDER:
     <EventCardPositionProvider>
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-white">
         {/* Hero section with integrated navigation */}
         <Hero 
           user={user} 

@@ -46,6 +46,19 @@ const getImageRoundingMobile = (index) => {
   if (index === 0) return "rounded-tr-2xl";
   return index % 2 === 1 ? "rounded-tl-2xl" : "rounded-tr-2xl";
 };
+
+
+const getImageRoundingDesktop = (index) => {
+  if (index % 2 === 0) {
+    // Even index - matches container's bottom-left rounding
+    return "rounded-bl-[22px]";
+  } else {
+    // Odd index - matches container's bottom-right rounding  
+    return "rounded-br-[22px]";
+  }
+};
+
+
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -161,22 +174,22 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
   // Mobile animation variants (simpler, no horizontal movement)
   const mobileVariants = {
-  hidden: {
-    opacity: 0
-  },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-      onComplete: () => {
-        setCardVisible(true);
-        // Start rough notation animations after a short delay
-        setTimeout(() => setRoughAnimationsReady(true), 200);
+    hidden: {
+      opacity: 0
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut",
+        onComplete: () => {
+          setCardVisible(true);
+          // Start rough notation animations after a short delay
+          setTimeout(() => setRoughAnimationsReady(true), 200);
+        }
       }
     }
-  }
-};
+  };
   // Effect to measure content height when description is expanded
   useEffect(() => {
     if (showFullDescription && contentRef.current) {
@@ -222,8 +235,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const getMapHeight = () => {
     if (!showFullDescription) return 0;
 
-    // Base height for the main image (384px = h-96)
-    const baseImageHeight = 384;
     // Maximum map height (350px for expanded view)
     const maxMapHeight = 350;
     // Minimum map height for readability
@@ -715,11 +726,11 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           variants={shouldAnimate ? imageVariants : {}}
         >
           {/* Main image */}
-          <div className="h-96">
+          <div className="h-96 overflow-hidden">
             <img
               src={getImageSource()}
               alt={event.title}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${getImageRoundingDesktop(index)}`}
               onError={handleImageError}
             />
           </div>
@@ -897,14 +908,14 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
       >
         {/* Mobile Image - Smaller height */}
-      <div className={`w-full h-48 sm:h-56 overflow-hidden ${getImageRoundingMobile(index)}`}>
-        <img
-          src={getImageSource()}
-          alt={event.title}
-          className="w-full h-full object-cover"
-          onError={handleImageError}
-        />
-      </div>
+        <div className={`w-full h-48 sm:h-56 overflow-hidden ${getImageRoundingMobile(index)}`}>
+          <img
+            src={getImageSource()}
+            alt={event.title}
+            className="w-full h-full object-cover"
+            onError={handleImageError}
+          />
+        </div>
 
         {/* Mobile Content */}
         <div

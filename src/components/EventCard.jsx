@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
+import CelebratoryToast from './CelebratoryToast';
 import RoughNotationText from './RoughNotationText';
 import LoadingSpinner from './LoadingSpinner';
 import EventCardDesktopLayout from './EventCard/EventCardDesktopLayout';
@@ -26,11 +27,15 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // State management via custom hook
   const state = useEventCardState(event, user);
   
+  // Additional state for celebration
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState('');
+  
   // Position tracking
   const { updateEventCardPosition } = useEventCardPosition();
   
-  // Handlers via custom hook
-  const handlers = useEventCardHandlers({
+  // Enhanced handlers with celebration
+  const baseHandlers = useEventCardHandlers({
     event,
     user,
     onAuthNeeded,
@@ -39,7 +44,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     isBooked: state.isBooked,
     bookingStatus: state.bookingStatus,
     applicablePrice: state.applicablePrice,
-    bookingFormData: state.bookingFormData, // Add this missing parameter
+    bookingFormData: state.bookingFormData,
     setLoading: state.setLoading,
     setAuthError: state.setAuthError,
     setAuthRequested: state.setAuthRequested,
@@ -58,6 +63,50 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     setImageError: state.setImageError
   });
 
+  // Enhanced handlers with celebration triggers
+  const handlers = {
+    ...baseHandlers,
+    
+    handleFormSubmit: async (formData) => {
+      try {
+        const result = await baseHandlers.handleFormSubmit(formData);
+        
+        // If no payment required, show celebration immediately
+        if (!state.showPaymentModal && result?.success) {
+          setCelebrationMessage('Booking Confirmed!');
+          setShowCelebration(true);
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('Form submission error:', error);
+        throw error;
+      }
+    },
+    
+    handlePaymentSuccess: async (paymentData) => {
+      try {
+        const result = await baseHandlers.handlePaymentSuccess(paymentData);
+        
+        // Show celebration after successful payment
+        if (result?.success) {
+          setCelebrationMessage('Payment Successful!');
+          setShowCelebration(true);
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('Payment success error:', error);
+        throw error;
+      }
+    },
+    
+    handleCelebrationComplete: () => {
+      setShowCelebration(false);
+      setCelebrationMessage('');
+    }
+  };
+
   // Derived values
   const isImageLeft = index % 2 === 0;
   const { isClosedForBooking, isFullyBooked, isInteractiveButton } = getButtonState(
@@ -66,6 +115,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     state.loading, 
     state.isBookable
   );
+
+  // Check if event should appear as "completed/booked"
+  const isEventBooked = state.isBooked && state.bookingStatus !== 'cancelled';
+  const shouldShowBookedState = isEventBooked && !state.showBookingForm && !state.showPaymentModal;
 
   // Position tracking effect
   useEffect(() => {
@@ -176,19 +229,36 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     return null;
   }
 
+  // Container styling based on booking status
+  const getContainerClasses = () => {
+    let baseClasses = "bg-white overflow-hidden transition-all duration-700 ease-in-out";
+    
+    if (shouldShowBookedState) {
+      // Apply reduced opacity and saturation for booked events
+      baseClasses += " opacity-60 saturate-50 grayscale-[0.2]";
+    }
+    
+    return baseClasses;
+  };
+
   // Render the main event card component
   const eventCardComponent = (
     <motion.div
       ref={state.cardRef}
-      className="bg-white overflow-hidden"
+      className={getContainerClasses()}
       // Always ensure the card is visible regardless of animation state
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: shouldShowBookedState ? 0.6 : 1 }}
+      animate={{ 
+        opacity: shouldShowBookedState ? 0.6 : 1,
+        filter: shouldShowBookedState ? "saturate(0.5) grayscale(0.2)" : "saturate(1) grayscale(0)"
+      }}
+      transition={{ duration: 0.7, ease: "easeInOut" }}
       // Keep original variants for initial load animations if enabled
       variants={state.shouldAnimate ? containerVariants : undefined}
       whileInView={state.shouldAnimate ? "visible" : undefined}
       viewport={state.shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
+
       {/* Desktop Layout */}
       <EventCardDesktopLayout
         event={event}
@@ -226,6 +296,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         handleBookEvent={handlers.handleBookEvent}
         isBooked={state.isBooked}
         loading={state.loading}
+        shouldShowBookedState={shouldShowBookedState}
       />
 
       {/* Mobile Layout */}
@@ -263,15 +334,18 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         handleBookEvent={handlers.handleBookEvent}
         isBooked={state.isBooked}
         loading={state.loading}
+        shouldShowBookedState={shouldShowBookedState}
       />
     </motion.div>
   );
 
-  // Show booking form - keep event card visible underneath
-  if (state.showBookingForm) {
-    return (
-      <>
-        {eventCardComponent}
+  return (
+    <>
+      {/* Main Event Card */}
+      {eventCardComponent}
+
+      {/* Booking Form Modal */}
+      {state.showBookingForm && (
         <BookingForm
           onSubmit={handlers.handleFormSubmit}
           onCancel={handlers.handleCancelForm}
@@ -284,15 +358,10 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
             userMembershipStatus: state.userMembershipStatus
           }}
         />
-      </>
-    );
-  }
+      )}
 
-  // Show payment modal - keep event card visible underneath
-  if (state.showPaymentModal) {
-    return (
-      <>
-        {eventCardComponent}
+      {/* Payment Modal */}
+      {state.showPaymentModal && (
         <PaymentModal
           isOpen={state.showPaymentModal}
           onClose={handlers.handlePaymentCancel}
@@ -304,12 +373,16 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           onPaymentSuccess={handlers.handlePaymentSuccess}
           onPaymentCancel={handlers.handlePaymentCancel}
         />
-      </>
-    );
-  }
+      )}
 
-  // Default: just show the event card
-  return eventCardComponent;
+      {/* Celebratory Toast */}
+      <CelebratoryToast
+        isVisible={showCelebration}
+        onComplete={handlers.handleCelebrationComplete}
+        message={celebrationMessage}
+      />
+    </>
+  );
 }
 
 export default EventCard;

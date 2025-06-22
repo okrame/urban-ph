@@ -190,7 +190,7 @@ function Info() {
           lineHeight: isMobile ? '1.5' : undefined,
         }}
       >
-        Le nostre cacce fotografiche sono <strong>esplorazioni di quartieri</strong> e non solo, delineate da temi elaborati da esperti in vari settori, che vanno dalla cultura, alla storia, all'urbanistica, all'ecologia, alla psicologia, per citarne qualcuno. I partecipanti, scoprono le realtà di quartiere interpretando i temi tramite la fotografia, condividendo poi immagini ed esperienze nel corso di <strong>aperitivi in centri culturali locali</strong>.
+        Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences.
       </motion.div>
     </section>
   );

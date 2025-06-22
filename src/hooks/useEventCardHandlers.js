@@ -10,6 +10,7 @@ export const useEventCardHandlers = ({
   isBooked,
   bookingStatus,
   applicablePrice,
+  bookingFormData, // Add this parameter
   setLoading,
   setAuthError,
   setAuthRequested,
@@ -165,16 +166,21 @@ export const useEventCardHandlers = ({
     try {
       console.log("Payment approved:", paymentData);
 
+      // Check if we have booking form data
+      if (!bookingFormData) {
+        throw new Error("Booking form data is missing. Please try booking again.");
+      }
+
       const sanitizedPaymentDetails = {
-        paymentId: paymentData.paymentDetails?.paymentId || '',
-        payerID: paymentData.paymentDetails?.payerID || null,
-        payerEmail: paymentData.paymentDetails?.payerEmail || '',
+        paymentId: paymentData.paymentDetails?.paymentId || paymentData.id || '',
+        payerID: paymentData.paymentDetails?.payerID || paymentData.payer?.payer_id || null,
+        payerEmail: paymentData.paymentDetails?.payerEmail || paymentData.payer?.email_address || '',
         status: 'COMPLETED',
         amount: applicablePrice,
         currency: event.paymentCurrency || 'EUR',
-        createTime: paymentData.paymentDetails?.createTime || new Date().toISOString(),
-        updateTime: paymentData.paymentDetails?.updateTime || new Date().toISOString(),
-        orderId: paymentData.paymentDetails?.orderId || null
+        createTime: paymentData.paymentDetails?.createTime || paymentData.create_time || new Date().toISOString(),
+        updateTime: paymentData.paymentDetails?.updateTime || paymentData.update_time || new Date().toISOString(),
+        orderId: paymentData.paymentDetails?.orderId || paymentData.id || null
       };
 
       const result = await bookEventSimple(event.id, {

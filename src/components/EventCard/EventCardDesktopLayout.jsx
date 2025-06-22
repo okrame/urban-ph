@@ -155,12 +155,7 @@ const EventCardDesktopLayout = ({
             </div>
           )}
 
-          {bookingStatus === 'cancelled' && (
-            <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
-              <p className="font-medium text-black text-sm">Your previous booking was cancelled</p>
-              <p className="text-xs text-black opacity-70 mt-1">You can book again if you wish.</p>
-            </div>
-          )}
+          {bookingStatus === 'cancelled' }
 
           {isFullyBooked && bookingStatus !== 'cancelled' && (
             <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>

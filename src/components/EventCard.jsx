@@ -39,6 +39,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     isBooked: state.isBooked,
     bookingStatus: state.bookingStatus,
     applicablePrice: state.applicablePrice,
+    bookingFormData: state.bookingFormData, // Add this missing parameter
     setLoading: state.setLoading,
     setAuthError: state.setAuthError,
     setAuthRequested: state.setAuthRequested,
@@ -175,85 +176,16 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     return null;
   }
 
-  // Show booking form
-  if (state.showBookingForm) {
-    return (
-      <motion.div
-        ref={state.cardRef}
-        className={`bg-white overflow-hidden`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
-        {state.authError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-            {state.authError}
-          </div>
-        )}
-        <BookingForm
-          onSubmit={handlers.handleFormSubmit}
-          onCancel={handlers.handleCancelForm}
-          loading={state.loading}
-          isFirstTime={state.isFirstTimeBooking}
-          existingData={state.existingUserData}
-          event={{
-            ...event,
-            paymentAmount: state.applicablePrice,
-            userMembershipStatus: state.userMembershipStatus
-          }}
-        />
-      </motion.div>
-    );
-  }
-
-  // Show payment modal
-  if (state.showPaymentModal) {
-    const eventForPayment = {
-      ...event,
-      paymentAmount: state.applicablePrice
-    };
-
-    return (
-      <>
-        <motion.div
-          ref={state.cardRef}
-          className="bg-white overflow-hidden"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="text-xl font-light mb-4 text-black">{event.title}</h3>
-          <p className="text-center text-gray-600 text-sm">
-            Please complete the payment to confirm your booking.
-          </p>
-          {state.authError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-              {state.authError}
-            </div>
-          )}
-        </motion.div>
-
-        <PaymentModal
-          isOpen={state.showPaymentModal}
-          onClose={handlers.handlePaymentCancel}
-          event={eventForPayment}
-          userData={state.bookingFormData}
-          onPaymentSuccess={handlers.handlePaymentSuccess}
-          onPaymentCancel={handlers.handlePaymentCancel}
-        />
-      </>
-    );
-  }
-
-  // Main event card
-  return (
+  // Render the main event card component
+  const eventCardComponent = (
     <motion.div
       ref={state.cardRef}
       className="bg-white overflow-hidden"
-      variants={containerVariants}
-      initial={state.shouldAnimate ? "hidden" : "false"}
-      animate={state.shouldAnimate ? undefined : "false"}
+      // Always ensure the card is visible regardless of animation state
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      // Keep original variants for initial load animations if enabled
+      variants={state.shouldAnimate ? containerVariants : undefined}
       whileInView={state.shouldAnimate ? "visible" : undefined}
       viewport={state.shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
@@ -334,6 +266,50 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       />
     </motion.div>
   );
+
+  // Show booking form - keep event card visible underneath
+  if (state.showBookingForm) {
+    return (
+      <>
+        {eventCardComponent}
+        <BookingForm
+          onSubmit={handlers.handleFormSubmit}
+          onCancel={handlers.handleCancelForm}
+          loading={state.loading}
+          isFirstTime={state.isFirstTimeBooking}
+          existingData={state.existingUserData}
+          event={{
+            ...event,
+            paymentAmount: state.applicablePrice,
+            userMembershipStatus: state.userMembershipStatus
+          }}
+        />
+      </>
+    );
+  }
+
+  // Show payment modal - keep event card visible underneath
+  if (state.showPaymentModal) {
+    return (
+      <>
+        {eventCardComponent}
+        <PaymentModal
+          isOpen={state.showPaymentModal}
+          onClose={handlers.handlePaymentCancel}
+          event={{
+            ...event,
+            paymentAmount: state.applicablePrice
+          }}
+          userData={state.bookingFormData}
+          onPaymentSuccess={handlers.handlePaymentSuccess}
+          onPaymentCancel={handlers.handlePaymentCancel}
+        />
+      </>
+    );
+  }
+
+  // Default: just show the event card
+  return eventCardComponent;
 }
 
 export default EventCard;

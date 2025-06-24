@@ -106,7 +106,7 @@ export const useEventCardHandlers = ({
       if (!bookable) {
         setAuthError(reason);
         setLoading(false);
-        return;
+        return { success: false, message: reason };
       }
 
       const userData = {
@@ -131,6 +131,7 @@ export const useEventCardHandlers = ({
       if (requiresPayment) {
         setShowBookingForm(false);
         setShowPaymentModal(true);
+        return { success: true, requiresPayment: true }; // Return success but payment required
       } else {
         const result = await bookEventSimple(event.id, userData);
 
@@ -147,17 +148,23 @@ export const useEventCardHandlers = ({
             setBookingJustCompleted(false);
             setAnnotationTrigger(prev => prev + 1);
           }, 300);
+
+          return { success: true, requiresPayment: false }; // Return success for celebration
         } else {
           setAuthError(result.message || "Booking failed. Please try again.");
+          return { success: false, message: result.message || "Booking failed. Please try again." };
         }
       }
     } catch (error) {
       console.error("Error preparing for booking:", error);
       setAuthError("An error occurred. Please try again.");
+      return { success: false, message: "An error occurred. Please try again." };
     } finally {
       setLoading(false);
     }
   };
+
+  // E aggiorna anche handlePaymentSuccess per restituire il risultato:
 
   const handlePaymentSuccess = async (paymentData) => {
     setLoading(true);
@@ -201,12 +208,15 @@ export const useEventCardHandlers = ({
           setBookingJustCompleted(false);
           setAnnotationTrigger(prev => prev + 1);
         }, 500);
+
+        return { success: true }; // Return success for celebration
       } else {
         throw new Error(result.message || "Unknown error during booking");
       }
     } catch (error) {
       console.error("Error completing booking:", error);
       setAuthError("An error occurred during booking. Please contact support with your payment ID.");
+      return { success: false, message: "An error occurred during booking" };
     } finally {
       setLoading(false);
     }

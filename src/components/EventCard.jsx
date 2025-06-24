@@ -14,7 +14,7 @@ import { useEventCardState } from '../hooks/useEventCardState';
 import { useEventCardHandlers } from '../hooks/useEventCardHandlers';
 
 // Utils
-import { 
+import {
   containerVariants,
   createImageVariants,
   createContentVariants,
@@ -26,14 +26,14 @@ import {
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // State management via custom hook
   const state = useEventCardState(event, user);
-  
+
   // Additional state for celebration
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState('');
-  
+
   // Position tracking
   const { updateEventCardPosition } = useEventCardPosition();
-  
+
   // Enhanced handlers with celebration
   const baseHandlers = useEventCardHandlers({
     event,
@@ -66,41 +66,41 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Enhanced handlers with celebration triggers
   const handlers = {
     ...baseHandlers,
-    
+
     handleFormSubmit: async (formData) => {
       try {
         const result = await baseHandlers.handleFormSubmit(formData);
-        
-        // If no payment required, show celebration immediately
-        if (!state.showPaymentModal && result?.success) {
+
+        // Show celebration only if booking is completed (no payment required)
+        if (result?.success && !result?.requiresPayment) {
           setCelebrationMessage('Booking Confirmed!');
           setShowCelebration(true);
         }
-        
+
         return result;
       } catch (error) {
         console.error('Form submission error:', error);
         throw error;
       }
     },
-    
+
     handlePaymentSuccess: async (paymentData) => {
       try {
         const result = await baseHandlers.handlePaymentSuccess(paymentData);
-        
+
         // Show celebration after successful payment
         if (result?.success) {
           setCelebrationMessage('Payment Successful!');
           setShowCelebration(true);
         }
-        
+
         return result;
       } catch (error) {
         console.error('Payment success error:', error);
         throw error;
       }
     },
-    
+
     handleCelebrationComplete: () => {
       setShowCelebration(false);
       setCelebrationMessage('');
@@ -110,9 +110,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Derived values
   const isImageLeft = index % 2 === 0;
   const { isClosedForBooking, isFullyBooked, isInteractiveButton } = getButtonState(
-    state.isBooked, 
-    state.bookingStatus, 
-    state.loading, 
+    state.isBooked,
+    state.bookingStatus,
+    state.loading,
     state.isBookable
   );
 
@@ -178,12 +178,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Animation variants
   const imageVariants = createImageVariants(isImageLeft);
   const contentVariants = createContentVariants(
-    isImageLeft, 
-    state.setCardVisible, 
+    isImageLeft,
+    state.setCardVisible,
     state.setRoughAnimationsReady
   );
   const mobileVariants = createMobileVariants(
-    state.setCardVisible, 
+    state.setCardVisible,
     state.setRoughAnimationsReady
   );
 
@@ -214,12 +214,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     }
 
     return getButtonText(
-      state.isBooked, 
-      state.bookingStatus, 
-      state.loading, 
-      state.isBookable, 
-      state.eventStatus, 
-      user, 
+      state.isBooked,
+      state.bookingStatus,
+      state.loading,
+      state.isBookable,
+      state.eventStatus,
+      user,
       state.bookableReason
     );
   };
@@ -232,12 +232,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Container styling based on booking status
   const getContainerClasses = () => {
     let baseClasses = "bg-white overflow-hidden transition-all duration-700 ease-in-out";
-    
+
     if (shouldShowBookedState) {
       // Apply reduced opacity and saturation for booked events
       baseClasses += " opacity-60 saturate-50 grayscale-[0.2]";
     }
-    
+
     return baseClasses;
   };
 
@@ -248,7 +248,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       className={getContainerClasses()}
       // Always ensure the card is visible regardless of animation state
       initial={{ opacity: shouldShowBookedState ? 0.6 : 1 }}
-      animate={{ 
+      animate={{
         opacity: shouldShowBookedState ? 0.6 : 1,
         filter: shouldShowBookedState ? "saturate(0.5) grayscale(0.2)" : "saturate(1) grayscale(0)"
       }}
@@ -284,12 +284,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         isClosedForBooking={isClosedForBooking}
         getButtonContent={getButtonContent}
         getButtonText={() => getButtonText(
-          state.isBooked, 
-          state.bookingStatus, 
-          state.loading, 
-          state.isBookable, 
-          state.eventStatus, 
-          user, 
+          state.isBooked,
+          state.bookingStatus,
+          state.loading,
+          state.isBookable,
+          state.eventStatus,
+          user,
           state.bookableReason
         )}
         isInteractiveButton={isInteractiveButton}
@@ -322,12 +322,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         isClosedForBooking={isClosedForBooking}
         getButtonContent={getButtonContent}
         getButtonText={() => getButtonText(
-          state.isBooked, 
-          state.bookingStatus, 
-          state.loading, 
-          state.isBookable, 
-          state.eventStatus, 
-          user, 
+          state.isBooked,
+          state.bookingStatus,
+          state.loading,
+          state.isBookable,
+          state.eventStatus,
+          user,
           state.bookableReason
         )}
         isInteractiveButton={isInteractiveButton}

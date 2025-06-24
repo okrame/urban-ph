@@ -1,28 +1,29 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Star, Heart, CheckCircle } from 'lucide-react';
+import { Camera, Heart, CheckCircle } from 'lucide-react';
 
 function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!" }) {
-  const [sparkles, setSparkles] = useState([]);
+  const [cameras, setCameras] = useState([]);
 
-  // Generate random sparkles
+  // Generate random cameras with different sizes
   useEffect(() => {
     if (isVisible) {
-      const newSparkles = Array.from({ length: 20 }, (_, i) => ({
+      const newCameras = Array.from({ length: 15 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: Math.random() * 2 + 1,
-        delay: Math.random() * 0.5,
-        duration: Math.random() * 2 + 1.5,
-        icon: i % 4 === 0 ? Star : Sparkles
+        size: Math.random() * 1.5 + 0.8, // Varie grandezze da 0.8 a 2.3
+        delay: Math.random() * 0.8,
+        duration: Math.random() * 2.5 + 2,
+        flashDelay: Math.random() * 1.5,
+        color: i % 3 === 0 ? '#3b82f6' : i % 3 === 1 ? '#6366f1' : '#8b5cf6'
       }));
-      setSparkles(newSparkles);
+      setCameras(newCameras);
 
-      // Auto-complete after 3 seconds
+      // Auto-complete after 4 seconds
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 3000);
+      }, 4000);
 
       return () => clearTimeout(timer);
     }
@@ -38,48 +39,87 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Background overlay with subtle gradient */}
+          {/* Background overlay with camera-inspired gradient */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10"
+            className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           />
 
-          {/* Sparkles */}
-          {sparkles.map((sparkle) => {
-            const IconComponent = sparkle.icon;
-            return (
-              <motion.div
-                key={sparkle.id}
-                className="absolute text-yellow-400"
-                style={{
-                  left: `${sparkle.x}%`,
-                  top: `${sparkle.y}%`,
-                  fontSize: `${sparkle.size}rem`
-                }}
-                initial={{ 
-                  opacity: 0, 
-                  scale: 0, 
-                  rotate: 0,
-                  y: 20 
-                }}
-                animate={{ 
-                  opacity: [0, 1, 1, 0],
-                  scale: [0, 1.2, 1, 0.8],
-                  rotate: [0, 180, 360],
-                  y: [20, -10, -30]
-                }}
-                transition={{
-                  duration: sparkle.duration,
-                  delay: sparkle.delay,
-                  ease: "easeOut"
-                }}
-              >
-                <IconComponent size={sparkle.size * 16} />
-              </motion.div>
-            );
-          })}
+          {/* Floating cameras with flash effects */}
+          {cameras.map((camera) => (
+            <motion.div
+              key={camera.id}
+              className="absolute"
+              style={{
+                left: `${camera.x}%`,
+                top: `${camera.y}%`,
+                fontSize: `${camera.size}rem`
+              }}
+              initial={{ 
+                opacity: 0, 
+                scale: 0, 
+                rotate: -180
+              }}
+              animate={{ 
+                opacity: [0, 1, 1, 0.8],
+                scale: [0, 1.3, 1, 1.1],
+                rotate: [0, 15, -10, 5],
+                y: [20, -15, -25, -10]
+              }}
+              transition={{
+                duration: camera.duration,
+                delay: camera.delay,
+                ease: "easeOut"
+              }}
+            >
+              {/* Camera with flash effect */}
+              <div className="relative">
+                <motion.div
+                  animate={{
+                    filter: [
+                      `drop-shadow(0 0 8px ${camera.color}60) brightness(1.2)`,
+                      `drop-shadow(0 0 16px ${camera.color}90) brightness(1.8)`,
+                      `drop-shadow(0 0 8px ${camera.color}60) brightness(1.2)`
+                    ]
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    delay: camera.flashDelay,
+                    repeat: Infinity,
+                    repeatDelay: 2
+                  }}
+                >
+                  <Camera 
+                    size={camera.size * 20} 
+                    style={{ color: camera.color }}
+                  />
+                </motion.div>
+                
+                {/* Flash overlay effect */}
+                <motion.div
+                  className="absolute inset-0"
+                  initial={{ opacity: 0, scale: 1 }}
+                  animate={{
+                    opacity: [0, 0.8, 0],
+                    scale: [1, 1.4, 1.8]
+                  }}
+                  transition={{
+                    duration: 0.3,
+                    delay: camera.flashDelay,
+                    repeat: Infinity,
+                    repeatDelay: 2
+                  }}
+                >
+                  <Camera 
+                    size={camera.size * 20} 
+                    className="text-white/70"
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
+          ))}
 
           {/* Main celebration message */}
           <motion.div
@@ -152,7 +192,7 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
               You'll receive a confirmation email shortly
             </motion.p>
 
-            {/* Floating hearts */}
+            {/* Floating heart */}
             <motion.div
               className="absolute -top-2 -right-2"
               animate={{ 
@@ -168,11 +208,13 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
               <Heart size={20} className="text-red-400 fill-red-400" />
             </motion.div>
 
+            {/* Floating camera corner */}
             <motion.div
               className="absolute -bottom-2 -left-2"
               animate={{ 
                 y: [-3, -12, -3],
-                rotate: [0, -8, 8, 0]
+                rotate: [0, -8, 8, 0],
+                scale: [1, 1.1, 1]
               }}
               transition={{
                 duration: 2.5,
@@ -181,33 +223,69 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
                 delay: 0.5
               }}
             >
-              <Sparkles size={16} className="text-blue-400" />
+              <div className="relative">
+                <motion.div
+                  animate={{
+                    filter: [
+                      'drop-shadow(0 0 4px #3b82f680) brightness(1.2)',
+                      'drop-shadow(0 0 8px #3b82f6b0) brightness(1.6)',
+                      'drop-shadow(0 0 4px #3b82f680) brightness(1.2)'
+                    ]
+                  }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: Infinity,
+                    repeatDelay: 1.5
+                  }}
+                >
+                  <Camera size={16} className="text-blue-500" />
+                </motion.div>
+              </div>
             </motion.div>
           </motion.div>
 
-          {/* Additional floating sparkles around the message */}
-          {Array.from({ length: 8 }, (_, i) => (
+          {/* Additional floating cameras around the message */}
+          {Array.from({ length: 6 }, (_, i) => (
             <motion.div
-              key={`extra-${i}`}
+              key={`extra-camera-${i}`}
               className="absolute"
               style={{
-                left: `${45 + (Math.random() - 0.5) * 20}%`,
-                top: `${45 + (Math.random() - 0.5) * 20}%`,
+                left: `${45 + (Math.random() - 0.5) * 25}%`,
+                top: `${45 + (Math.random() - 0.5) * 25}%`,
               }}
               initial={{ opacity: 0, scale: 0 }}
               animate={{ 
-                opacity: [0, 1, 0],
-                scale: [0, 1, 0],
-                y: [0, -30],
-                rotate: [0, 360]
+                opacity: [0, 1, 0.7, 0],
+                scale: [0, 1.2, 1, 0.8],
+                y: [0, -40],
+                rotate: [0, 180, 360]
               }}
               transition={{
-                duration: 2,
-                delay: 0.6 + i * 0.1,
+                duration: 3,
+                delay: 0.8 + i * 0.2,
                 ease: "easeOut"
               }}
             >
-              <Sparkles size={12} className="text-purple-400" />
+              <motion.div
+                animate={{
+                  filter: [
+                    'drop-shadow(0 0 6px #6366f160) brightness(1.3)',
+                    'drop-shadow(0 0 12px #6366f190) brightness(1.7)',
+                    'drop-shadow(0 0 6px #6366f160) brightness(1.3)'
+                  ]
+                }}
+                transition={{
+                  duration: 0.4,
+                  delay: i * 0.3,
+                  repeat: Infinity,
+                  repeatDelay: 2.5
+                }}
+              >
+                <Camera 
+                  size={10 + (i % 3) * 4} 
+                  className="text-indigo-500" 
+                />
+              </motion.div>
             </motion.div>
           ))}
         </motion.div>

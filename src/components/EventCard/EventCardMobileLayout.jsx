@@ -35,16 +35,42 @@ const EventCardMobileLayout = ({
   isInteractiveButton,
   handleBookEvent,
   isBooked,
-  loading
+  loading,
+  shouldShowBookedState // Add this prop
 }) => {
   const shouldTruncate = shouldTruncateDescription(event.description);
   const isImageLeft = index % 2 === 0;
+
+  // Content styling based on booking status (applied to inner content, not borders)
+  const getContentClasses = () => {
+    let baseClasses = "transition-all duration-700 ease-in-out";
+    
+    if (shouldShowBookedState) {
+      baseClasses += " opacity-60 saturate-50 grayscale-[0.2]";
+    }
+    
+    return baseClasses;
+  };
+
+  // Content animation props for booking state
+  const getContentAnimationProps = () => {
+    if (!shouldShowBookedState) return {};
+    
+    return {
+      initial: { opacity: 0.6 },
+      animate: { 
+        opacity: 0.6,
+        filter: "saturate(0.5) grayscale(0.2)"
+      },
+      transition: { duration: 0.7, ease: "easeInOut" }
+    };
+  };
 
   return (
     <motion.div
       style={{ marginLeft: "7.5px", marginRight: "7px" }}
       ref={cardRef}
-      className={`lg:hidden sm:mx-6 md:mx-8 ${getBorderClassesMobile(index)}`}
+      className={`lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden ${getBorderClassesMobile(index)}`}
       variants={shouldAnimate ? mobileVariants : {}}
       initial={shouldAnimate ? "hidden" : false}
       animate={shouldAnimate ? undefined : false}
@@ -52,7 +78,10 @@ const EventCardMobileLayout = ({
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
       {/* Mobile Header Section - Image + Basic Info */}
-      <div className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}>
+      <motion.div 
+        className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getContentClasses()}`}
+        {...getContentAnimationProps()}
+      >
         {/* Image Half */}
         <div className={`w-1/2 h-full overflow-hidden ${getImageRoundingMobile(index)}`}>
           <img
@@ -84,10 +113,13 @@ const EventCardMobileLayout = ({
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Mobile Content - Description and Actions */}
-      <div className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}>
+      <motion.div 
+        className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)} ${getContentClasses()}`}
+        {...getContentAnimationProps()}
+      >
         <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
           {shouldTruncate && !showFullDescription ? (
             <>
@@ -147,7 +179,11 @@ const EventCardMobileLayout = ({
           </div>
         )}
 
-        {bookingStatus === 'cancelled'}
+        {bookingStatus === 'cancelled' && (
+          <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
+            <p className="font-medium">Booking Cancelled</p>
+          </div>
+        )}
 
         {isFullyBooked && bookingStatus !== 'cancelled' && (
           <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
@@ -214,7 +250,7 @@ const EventCardMobileLayout = ({
             )}
           </button>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 };

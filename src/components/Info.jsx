@@ -55,8 +55,9 @@ function Info() {
   if (!eventCardPosition || !eventCardPosition.width) {
     return -200;
   }
-  const isMobile = window.innerWidth < 768;
-  const borderOffset = isMobile ? 7.5 : 0;
+  //const isMobile = window.innerWidth < 768;
+  const borderOffset = 7.5; //isMobile ? 7.5 : 0;
+  
   return eventCardPosition.left + borderOffset + (squareSize / 2);
 };
 
@@ -107,6 +108,11 @@ function Info() {
       (-squareSize * 0.45) + (squareSize / 2) + 20  // Final right edge + small margin
     ]
   );
+
+  const titleDesktopY = useTransform(
+  square2Y,
+  (latest) => latest - (squareSize / 2) - 60 // 20px above the top border
+);
 
   // Italian text positioning - calculate positions for both mobile and desktop
   const italianTextX = useTransform(progressPhase1, [0, 1], [squareSize * 0.1, squareSize * 0.05]);
@@ -162,9 +168,9 @@ function Info() {
         className="absolute text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
         style={{
           left: isMobile ? '50%' : '50%',
-          top: isMobile ? '50%' : '29%',
+          top: isMobile ? '50%' : '50%',
           x: isMobile ? square1RightX : '-50%',
-          y: isMobile ? square2TopY : '-50%',
+          y: isMobile ? square2TopY : titleDesktopY,
           opacity: textOpacity,
           scale: textScale,
         }}

@@ -93,6 +93,55 @@ export const createNewEvent = async (eventData) => {
   }
 };
 
+export const updateEvent = async (eventId, eventData) => {
+  try {
+    const eventRef = doc(db, 'events', eventId);
+    const eventDoc = await getDoc(eventRef);
+    
+    if (!eventDoc.exists()) {
+      throw new Error('Event not found');
+    }
+    
+    const existingData = eventDoc.data();
+    
+    // Prepare update data
+    const updateData = {
+      ...eventData,
+      updatedAt: serverTimestamp()
+    };
+    
+    // Validazione dei campi obbligatori
+    const requiredFields = ['title', 'type', 'date', 'time', 'location', 'description', 'spots'];
+    for (const field of requiredFields) {
+      if (!updateData[field]) {
+        throw new Error(`Missing required field: ${field}`);
+      }
+    }
+    
+    // Validazione del tipo
+    const validTypes = ['hunt', 'workshop', 'exhibition'];
+    if (!validTypes.includes(updateData.type)) {
+      throw new Error(`Invalid event type: ${updateData.type}. Must be one of: ${validTypes.join(', ')}`);
+    }
+    
+    // Preserve existing fields that shouldn't be overridden
+    updateData.attendees = existingData.attendees || [];
+    updateData.createdAt = existingData.createdAt;
+    
+    // If spotsLeft is provided, use it; otherwise calculate it
+    if (updateData.spotsLeft === undefined) {
+      const currentBookings = (existingData.attendees || []).length;
+      updateData.spotsLeft = Math.max(0, updateData.spots - currentBookings);
+    }
+    
+    await updateDoc(eventRef, updateData);
+    return true;
+  } catch (error) {
+    console.error('Error updating event:', error);
+    throw error;
+  }
+};
+
 // Elimina un evento (solo admin)
 export const deleteEvent = async (eventId) => {
   try {

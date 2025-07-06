@@ -56,7 +56,7 @@ function Info() {
     return -200;
   }
   //const isMobile = window.innerWidth < 768;
-  const borderOffset = 7.5; //isMobile ? 7.5 : 0;
+  const borderOffset = isMobile ? 7.5 : 0;
   
   return eventCardPosition.left + borderOffset + (squareSize / 2);
 };

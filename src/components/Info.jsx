@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
+import huntImage from '../assets/hunts/1.jpeg';
 
 function Info() {
   const ref = useRef(null);
@@ -163,6 +164,23 @@ function Info() {
         transition={{ duration: 0.3, delay: 0.1 }}
       />
 
+      {/* Image at intersection left edge */}
+      <motion.img
+        src={huntImage}
+        alt="Hunt"
+        className={`absolute ${isMobile ? 'max-w-[160px] max-h-[160px]' : 'max-w-[260px] max-h-[260px]'} object-contain rounded-lg shadow-lg`}
+        style={{
+          left: '50%',
+          top: '50%',
+          x: isMobile ? '-165%' : '-290%',
+          y: '-50%',
+          opacity: textOpacity,
+          scale: textScale,
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isInView ? 1 : 0 }}
+      />
+
       {/* "Hunts" text - responsive positioning */}
       <motion.div
         className="absolute text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
@@ -196,7 +214,7 @@ function Info() {
           lineHeight: isMobile ? '1.5' : undefined,
         }}
       >
-        Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences.
+        Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ''aperitivo'' in <strong>super-local venues</strong>, where you can share your photos and experiences.
       </motion.div>
     </section>
   );

@@ -9,6 +9,8 @@ import AnimateLogo from '../components/AnimateLogo';
 function Hero({ user, onSignInClick }) {
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const startLetterRef = useRef(null);
   const endTextRef = useRef(null);
   const authButtonRef = useRef(null);
@@ -33,6 +35,17 @@ function Hero({ user, onSignInClick }) {
     checkAdminStatus();
   }, [user]);
 
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -53,6 +66,15 @@ function Hero({ user, onSignInClick }) {
     e.preventDefault();
     const section = document.getElementById('current-events-section');
     section && section.scrollIntoView({ behavior: 'smooth' });
+    setIsMobileMenuOpen(false); // Close mobile menu after navigation
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -87,7 +109,7 @@ function Hero({ user, onSignInClick }) {
         className="absolute z-20"
         style={{
           left: '54.5%',
-          top: '60%',
+          top: isMobile ? '56%' : '60%',
           transform: 'translate(-50%, -50%)',
         }}
       >
@@ -99,8 +121,8 @@ function Hero({ user, onSignInClick }) {
         </p>
       </div>
 
-      {/* Navigation Overlay */}
-      <div className="absolute top-0 left-0 right-0 z-30 p-8">
+      {/* Desktop Navigation Overlay */}
+      <div className="absolute top-0 left-0 right-0 z-30 p-8 hidden md:block">
         <div className="flex justify-between items-start">
           {/* Left side navigation and main text content container */}
           <div className="flex flex-col items-start">
@@ -191,7 +213,7 @@ function Hero({ user, onSignInClick }) {
             <div
               className="max-w-md text-right"
               style={{
-                transform: 'translateY(580px)',
+                transform: 'translateY(510px)',
               }}
             >
               <p ref={endTextRef} className="text-lg md:text-xl opacity-90 mb-8" style={{ color: '#FFFADE' }}>
@@ -202,9 +224,118 @@ function Hero({ user, onSignInClick }) {
         </div>
       </div>
 
+      {/* Mobile Navigation */}
+      <div className="absolute top-0 left-0 right-0 z-30 p-4 md:hidden">
+        <div className="flex justify-between items-start">
+          {/* Main Text Content - Mobile positioning (moved up and left) */}
+          <div className="text-left flex items-start">
+            <h1
+              className="font-medium leading-tight"
+              style={{ color: '#FFFADE' }}
+            >
+              <div className="text-3xl sm:text-4xl">ESPLORARE</div>
+              <div className="text-3xl sm:text-4xl">IL CORPO</div>
+              <div className="text-3xl sm:text-4xl">
+                URBAN<span ref={startLetterRef}>O</span>
+              </div>
+            </h1>
+          </div>
+
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={toggleMobileMenu}
+            className="text-[#FFFADE] hover:text-white transition-colors duration-200 p-2 flex-shrink-0"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-black bg-opacity-90 backdrop-blur-sm">
+            <div className="flex flex-col p-4 space-y-4">
+              <button
+                onClick={scrollToCurrentEvents}
+                className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+              >
+                .ourEvents
+              </button>
+              <Link
+                to="/about"
+                onClick={closeMobileMenu}
+                className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+              >
+                .aboutUs
+              </Link>
+              {user && isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={closeMobileMenu}
+                  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+                >
+                  Admin
+                </Link>
+              )}
+              <hr className="border-[#FFFADE] opacity-30" />
+              {user ? (
+                <div className="flex flex-col space-y-2">
+                  <span className="text-[#FFFADE] text-sm">
+                    {user.displayName || user.email}
+                  </span>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      closeMobileMenu();
+                    }}
+                    className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    handleSignIn();
+                    closeMobileMenu();
+                  }}
+                  disabled={loading}
+                  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium flex items-center"
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-[#FFFADE]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom text - Mobile and Desktop */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 px-4 md:hidden">
+        <p className="text-lg opacity-90 text-center" style={{ color: '#FFFADE' }}>
+          La città è di tuttə, così come l'arte e la fotografia.
+        </p>
+      </div>
+
       {/* Scroll Arrow */}
       <div
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 md:block hidden"
       >
         <button
           onClick={scrollToCurrentEvents}
@@ -212,6 +343,21 @@ function Hero({ user, onSignInClick }) {
           aria-label="Scroll to current events"
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Scroll Arrow - positioned higher to avoid overlap with bottom text */}
+      <div
+        className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-20 md:hidden"
+      >
+        <button
+          onClick={scrollToCurrentEvents}
+          className="text-white focus:outline-none animate-bounce"
+          aria-label="Scroll to current events"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </button>

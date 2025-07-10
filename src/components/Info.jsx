@@ -1,30 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
-import huntImage from '../assets/hunts/1.jpeg';
+import ImageFiller from './ImageFiller';
 
 function Info() {
   const ref = useRef(null);
   const isInView = useInView(ref, { threshold: 0.1, once: false });
-  
+
   const { eventCardPosition } = useEventCardPosition();
-  
+
   // PARAMETRO PER REGOLARE I VERTICI SMUSSATI
   const borderRadius = 30;
-  
+
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
-  
+
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
+      setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  
+
   // Scroll-based animation - starts earlier, ends much sooner
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -45,7 +45,7 @@ function Info() {
       const size = Math.max(vw, vh) * 2;
       setSquareSize(size);
     };
-    
+
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
@@ -53,23 +53,21 @@ function Info() {
 
   // Get target position accounting for square size
   const getSquare2Target = () => {
-  if (!eventCardPosition || !eventCardPosition.width) {
-    return -200;
-  }
-  //const isMobile = window.innerWidth < 768;
-  const borderOffset = isMobile ? 7.5 : 0;
-  
-  return eventCardPosition.left + borderOffset + (squareSize / 2);
-};
+    if (!eventCardPosition || !eventCardPosition.width) {
+      return -200;
+    }
+    const borderOffset = isMobile ? 7.5 : 7.5;
+    return eventCardPosition.left + borderOffset + (squareSize / 2);
+  };
 
   // PHASE 1: Movement to overlapped area
   // Square 1 (green): moves to overlap position and STOPS there
   const square1X = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
   const square1Y = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
-  
+
   // Square 2: Two separate phases
   const square2Target = getSquare2Target();
-  
+
   // Combine phases: use phase 1 until complete, then phase 2
   const square2X = useTransform(
     [progressPhase1, progressPhase2],
@@ -83,7 +81,7 @@ function Info() {
       }
     }
   );
-  
+
   const square2Y = useTransform(progressPhase1, [0, 1], [squareSize * 0.35, squareSize * 0.45]);
 
   // Text "Hunts" - appears AFTER phase 1 is complete (during phase 2)
@@ -99,7 +97,7 @@ function Info() {
       (squareSize * 0.45) - (squareSize / 2) - 35  // Final top - margin
     ]
   );
-  
+
   // Mobile "Hunts" horizontal positioning - just right of square 1's right edge
   const square1RightX = useTransform(
     progressPhase1,
@@ -111,18 +109,18 @@ function Info() {
   );
 
   const titleDesktopY = useTransform(
-  square2Y,
-  (latest) => latest - (squareSize / 2) - 60 // 20px above the top border
-);
+    square2Y,
+    (latest) => latest - (squareSize / 2) - 60 // 20px above the top border
+  );
 
   // Italian text positioning - calculate positions for both mobile and desktop
   const italianTextX = useTransform(progressPhase1, [0, 1], [squareSize * 0.1, squareSize * 0.05]);
-  const italianTextY = useTransform(progressPhase1, [0, 1], [squareSize * 0.35 - squareSize/2 + 20, squareSize * 0.45 - squareSize/2 + 20]);
-  
+  const italianTextY = useTransform(progressPhase1, [0, 1], [squareSize * 0.35 - squareSize / 2 + 20, squareSize * 0.45 - squareSize / 2 + 20]);
+
   // Mobile Italian text positioning - below square 1's bottom edge
   const square1BottomY = useTransform(
-    progressPhase1, 
-    [0, 1], 
+    progressPhase1,
+    [0, 1],
     [
       (-squareSize * 0.35) + (squareSize / 2) + 20, // Initial bottom + reduced margin
       (-squareSize * 0.45) + (squareSize / 2) + 20  // Final bottom + reduced margin
@@ -132,7 +130,11 @@ function Info() {
   const italianTextOpacity = useTransform(progressPhase2, [0, 0.4], [0, 1]);
 
   return (
-    <section ref={ref} className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+    <section 
+      ref={ref} 
+      className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white"
+      style={{ position: 'relative' }} // Fix for Framer Motion scroll offset warning
+    >
 
       {/* Top-left square - outline only with rounded corners */}
       <motion.div
@@ -164,21 +166,16 @@ function Info() {
         transition={{ duration: 0.3, delay: 0.1 }}
       />
 
-      {/* Image at intersection left edge */}
-      <motion.img
-        src={huntImage}
-        alt="Hunt"
-        className={`absolute ${isMobile ? 'max-w-[160px] max-h-[160px]' : 'max-w-[260px] max-h-[260px]'} object-contain rounded-lg shadow-lg`}
-        style={{
-          left: '50%',
-          top: '50%',
-          x: isMobile ? '-165%' : '-290%',
-          y: '-50%',
-          opacity: textOpacity,
-          scale: textScale,
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isInView ? 1 : 0 }}
+      <ImageFiller
+        square1X={square1X}
+        square1Y={square1Y}
+        square2X={square2X}
+        square2Y={square2Y}
+        squareSize={squareSize}
+        borderRadius={borderRadius}
+        isInView={isInView}
+        progressPhase1={progressPhase1}
+        progressPhase2={progressPhase2}
       />
 
       {/* "Hunts" text - responsive positioning */}

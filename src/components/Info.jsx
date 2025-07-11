@@ -194,7 +194,7 @@ function Info() {
 
       {/* Title text */}
       <motion.div
-        className="absolute text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
+        className="absolute text-[1.26rem] sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
         style={{
           left: isMobile ? '47%' : '50%',
           top: isMobile ? '50%' : '50%',

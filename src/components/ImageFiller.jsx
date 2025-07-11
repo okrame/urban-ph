@@ -1,4 +1,4 @@
-import { motion, useTransform } from 'framer-motion';
+import { motion, useTransform, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import hunt1 from '../assets/hunts/1.jpeg';
 import hunt2 from '../assets/hunts/2.png';
@@ -19,6 +19,9 @@ const ImageFiller = ({
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
+  
+  // State for enlarged image
+  const [enlargedImageIndex, setEnlargedImageIndex] = useState(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -29,6 +32,19 @@ const ImageFiller = ({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Disable scrolling when image is enlarged
+  useEffect(() => {
+    if (enlargedImageIndex !== null) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [enlargedImageIndex]);
   
   // Calculate intersection area coordinates and dimensions
   const intersectionLeft = useTransform(
@@ -194,8 +210,6 @@ const ImageFiller = ({
     }
   );
 
-
-
   // Calculate if conditions are met (boolean)
   const shouldShow = useTransform(
     [progressPhase1, progressPhase2, intersectionWidth, intersectionHeight],
@@ -225,14 +239,36 @@ const ImageFiller = ({
     { src: hunt5, alt: "Hunt 5", pos: image5Pos, width: image5Width, height: image5Height, delay: 0.6 }
   ];
 
+  const handleImageClick = (index) => {
+    setEnlargedImageIndex(index);
+  };
+
+  const handleCloseEnlarged = () => {
+    setEnlargedImageIndex(null);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      handleCloseEnlarged();
+    }
+  };
+
+  useEffect(() => {
+    if (enlargedImageIndex !== null) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [enlargedImageIndex]);
+
   return (
     <>
+      {/* Regular gallery images - no layoutId to avoid conflicts */}
       {images.map((img, index) => (
         <motion.img
           key={index}
           src={img.src}
           alt={img.alt}
-          className="absolute object-cover rounded-md pointer-events-none"
+          className="absolute object-cover rounded-md cursor-pointer"
           style={{
             left: '50%',
             top: '50%',
@@ -252,8 +288,77 @@ const ImageFiller = ({
             delay: showImages ? img.delay : 0,
             ease: "easeOut"
           }}
+          onClick={() => handleImageClick(index)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.98 }}
         />
       ))}
+
+      {/* Enlarged image overlay - completely separate from grid */}
+      <AnimatePresence mode="wait">
+        {enlargedImageIndex !== null && (
+          <>
+            {/* Overlay backdrop */}
+            <motion.div
+              className="fixed inset-0 bg-black z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.85 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onClick={handleCloseEnlarged}
+            />
+
+            {/* Enlarged image container */}
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onClick={handleCloseEnlarged}
+            >
+              <motion.img
+                src={images[enlargedImageIndex].src}
+                alt={images[enlargedImageIndex].alt}
+                className="object-contain rounded-lg shadow-2xl"
+                style={{
+                  maxWidth: isMobile ? '90vw' : '85vw',
+                  maxHeight: isMobile ? '75vh' : '80vh',
+                }}
+                initial={{ 
+                  scale: 0.3,
+                  opacity: 0
+                }}
+                animate={{ 
+                  scale: 1,
+                  opacity: 1
+                }}
+                exit={{ 
+                  scale: 0.3,
+                  opacity: 0
+                }}
+                transition={{ 
+                  duration: 0.35,
+                  ease: [0.25, 0.46, 0.45, 0.94]
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              
+              {/* Close button */}
+              <motion.button
+                className="absolute top-6 right-6 text-white text-xl font-bold bg-black bg-opacity-60 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-80 transition-colors backdrop-blur-sm"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ delay: 0.15, duration: 0.2 }}
+                onClick={handleCloseEnlarged}
+              >
+                ×
+              </motion.button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 };

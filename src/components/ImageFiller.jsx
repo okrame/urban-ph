@@ -12,11 +12,23 @@ const ImageFiller = ({
   square2X, 
   square2Y, 
   squareSize, 
-  borderRadius, 
   isInView,
   progressPhase1,
   progressPhase2 
 }) => {
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Calculate intersection area coordinates and dimensions
   const intersectionLeft = useTransform(
@@ -77,9 +89,10 @@ const ImageFiller = ({
     ([top, bottom]) => (top + bottom) / 2
   );
 
-  // Calculate grid dimensions based on intersection size
-  const gridPadding = 20;
-  const gridGap = 10;
+  // UPDATED: Separate horizontal and vertical gaps with mobile responsiveness
+  const gridPadding = isMobile ? 12 : 20;
+  const horizontalGap = isMobile ? 4 : 8;   // Gap between images horizontally
+  const verticalGap = isMobile ? 6 : 12;    // Gap between rows vertically
   
   const availableWidth = useTransform(
     intersectionWidth,
@@ -91,21 +104,22 @@ const ImageFiller = ({
     (height) => height - (gridPadding * 2)
   );
   
-  // Calculate image sizes for 4-column grid
+  // UPDATED: Use horizontalGap for width calculations
   const image1Width = useTransform(
     availableWidth,
-    (width) => (width - (gridGap * 3)) / 4
+    (width) => (width - (horizontalGap * 3)) / 4
   );
   
   const otherImageWidth = useTransform(
     availableWidth,
-    (width) => (width - (gridGap * 3)) / 4
+    (width) => (width - (horizontalGap * 3)) / 4
   );
   
+  // UPDATED: Use verticalGap for height calculations
   const imageHeight = useTransform(
     [availableHeight, otherImageWidth],
     ([height, width]) => {
-      const rowHeight = (height - gridGap) / 2;
+      const rowHeight = (height - verticalGap) / 2;
       return Math.min(rowHeight, width * 1);
     }
   );
@@ -126,7 +140,7 @@ const ImageFiller = ({
     ([centerY, gridHeight]) => centerY - gridHeight / 2
   );
   
-  // Grid positions
+  // UPDATED: Grid positions with separate horizontal/vertical gaps
   const getImagePosition = (col, row) => ({
     x: useTransform(
       [gridStartX, image1Width, otherImageWidth],
@@ -134,13 +148,13 @@ const ImageFiller = ({
         if (col === 0) {
           return startX;
         } else {
-          return startX + img1Width + gridGap + (col - 1) * (otherWidth + gridGap);
+          return startX + img1Width + horizontalGap + (col - 1) * (otherWidth + horizontalGap);
         }
       }
     ),
     y: useTransform(
       [gridStartY, imageHeight],
-      ([startY, imgHeight]) => startY + row * (imgHeight + gridGap)
+      ([startY, imgHeight]) => startY + row * (imgHeight + verticalGap)
     )
   });
   
@@ -153,21 +167,34 @@ const ImageFiller = ({
   const image3Pos = getImagePosition(2, 0);
   const image4Pos = getImagePosition(3, 0);
   
+  // UPDATED: Use appropriate gaps for image5 positioning
   const image5Pos = {
     x: useTransform(
       [gridStartX, image1Width],
-      ([startX, img1Width]) => startX + img1Width + gridGap
+      ([startX, img1Width]) => startX + img1Width + horizontalGap
     ),
     y: useTransform(
       [gridStartY, imageHeight],
-      ([startY, imgHeight]) => startY + imgHeight + gridGap
+      ([startY, imgHeight]) => startY + imgHeight + verticalGap
     )
   };
   
+  // UPDATED: Use horizontalGap for width calculation
   const image5Width = useTransform(
     [availableWidth, image1Width],
-    ([totalWidth, img1Width]) => totalWidth - img1Width - gridGap
+    ([totalWidth, img1Width]) => totalWidth - img1Width - horizontalGap
   );
+
+  // FIXED: Calculate proper height for image 5 to fill remaining space
+  const image5Height = useTransform(
+    [availableHeight, imageHeight],
+    ([totalHeight, topRowHeight]) => {
+      // Total available height minus top row height minus vertical gap
+      return totalHeight - topRowHeight - verticalGap;
+    }
+  );
+
+
 
   // Calculate if conditions are met (boolean)
   const shouldShow = useTransform(
@@ -195,7 +222,7 @@ const ImageFiller = ({
     { src: hunt2, alt: "Hunt 2", pos: image2Pos, width: otherImageWidth, height: imageHeight, delay: 0.15 },
     { src: hunt3, alt: "Hunt 3", pos: image3Pos, width: otherImageWidth, height: imageHeight, delay: 0.3 },
     { src: hunt4, alt: "Hunt 4", pos: image4Pos, width: otherImageWidth, height: imageHeight, delay: 0.45 },
-    { src: hunt5, alt: "Hunt 5", pos: image5Pos, width: image5Width, height: imageHeight, delay: 0.6 }
+    { src: hunt5, alt: "Hunt 5", pos: image5Pos, width: image5Width, height: image5Height, delay: 0.6 }
   ];
 
   return (

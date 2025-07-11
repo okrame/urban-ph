@@ -178,7 +178,7 @@ function Info() {
 
       {/* "Hunts" text */}
       <motion.div
-        className="absolute text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
+        className="absolute text-2xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
         style={{
           left: isMobile ? '50%' : '50%',
           top: isMobile ? '50%' : '50%',
@@ -192,7 +192,7 @@ function Info() {
       </motion.div>
 
       {/* Italian text */}
-      <motion.div
+            <motion.div
         className="absolute text-base sm:text-lg md:text-xl max-w-xs sm:max-w-sm md:max-w-md text-black leading-relaxed"
         style={{
           left: isMobile ? '50%' : '51%',
@@ -200,9 +200,16 @@ function Info() {
           x: isMobile ? '-50%' : italianTextX,
           y: isMobile ? square1BottomY : italianTextY,
           opacity: italianTextOpacity,
+          textAlign: 'justify', // Always justified
+          maxWidth: isMobile ? '85vw' : undefined,
+          width: isMobile ? '85vw' : undefined,
+          paddingLeft: isMobile ? '1.5rem' : '0',
+          paddingRight: isMobile ? '1.5rem' : '0',
+          fontSize: isMobile ? '0.95rem' : undefined,
+          lineHeight: isMobile ? '1.5' : undefined,
         }}
       >
-        La città è di tuttə, così come l'arte e la fotografia.
+        Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ''aperitivo'' in <strong>super-local venues</strong>, where you can share your photos and experiences.
       </motion.div>
     </section>
   );

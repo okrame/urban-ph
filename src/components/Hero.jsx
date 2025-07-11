@@ -233,9 +233,9 @@ function Hero({ user, onSignInClick }) {
               className="font-medium leading-tight"
               style={{ color: '#FFFADE' }}
             >
-              <div className="text-3xl sm:text-4xl">ESPLORARE</div>
-              <div className="text-3xl sm:text-4xl">IL CORPO</div>
-              <div className="text-3xl sm:text-4xl">
+              <div className="text-4xl sm:text-4xl">ESPLORARE</div>
+              <div className="text-4xl sm:text-4xl">IL CORPO</div>
+              <div className="text-4xl sm:text-4xl">
                 URBAN<span ref={startLetterRef}>O</span>
               </div>
             </h1>
@@ -327,7 +327,7 @@ function Hero({ user, onSignInClick }) {
       </div>
 
       {/* Bottom text - Mobile and Desktop */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 px-4 md:hidden">
+      <div className="absolute bottom-0 left-0 right-0 z-20 px-5 md:hidden">
         <p className="text-lg opacity-90 text-center" style={{ color: '#FFFADE' }}>
           La città è di tuttə, così come l'arte e la fotografia.
         </p>

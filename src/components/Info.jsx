@@ -6,6 +6,8 @@ import { useDisplayDetection } from '../hooks/useDisplayDetection';
 import ImageFiller from './ImageFiller';
 
 function Info() {
+  const [activityKind, setActivityKind] = useState('hunts');
+  
   const ref = useRef(null);
   const isInView = useInView(ref, { threshold: 0.1, once: false });
 
@@ -127,6 +129,20 @@ function Info() {
 
   const italianTextOpacity = useTransform(progressPhase2, [0, 0.4], [0, 1]);
 
+  // Content data
+  const content = {
+    hunts: {
+      title: "Hunts",
+      text: "Our photo hunts offer a unique opportunity to explore the soul of the city in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an 'aperitivo' in super-local venues, where you can share your photos and experiences."
+    },
+    workshops: {
+      title: "Workshops",
+      text: "Master the art of photography with our hands-on workshops led by professional photographers. Learn composition, lighting, and editing techniques in small groups. From beginner basics to advanced techniques, our workshops cover street photography, portrait sessions, and mobile photography. Each session includes practical exercises, personalized feedback, and access to professional equipment."
+    }
+  };
+
+  const currentContent = content[activityKind];
+
   return (
     <section 
       ref={ref} 
@@ -176,11 +192,11 @@ function Info() {
         progressPhase2={progressPhase2}
       />
 
-      {/* "Hunts" text */}
+      {/* Title text */}
       <motion.div
-        className="absolute text-2xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
+        className="absolute text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
         style={{
-          left: isMobile ? '50%' : '50%',
+          left: isMobile ? '47%' : '50%',
           top: isMobile ? '50%' : '50%',
           x: isMobile ? square1RightX : '-50%',
           y: isMobile ? square2TopY : titleDesktopY,
@@ -188,11 +204,49 @@ function Info() {
           scale: textScale,
         }}
       >
-        Hunts
+        <motion.span
+          key={currentContent.title}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
+          {currentContent.title}
+        </motion.span>
       </motion.div>
 
+      {/* Accordion arrow anchored to green square right edge */}
+      <motion.button
+        onClick={() => setActivityKind(activityKind === 'hunts' ? 'workshops' : 'hunts')}
+        className="absolute p-2 hover:bg-gray-200/50 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
+        aria-label={`Switch to ${activityKind === 'hunts' ? 'workshops' : 'hunts'}`}
+        aria-expanded={activityKind === 'workshops'}
+        style={{
+          left: '50%',
+          top: isMobile ? '60%' : '50.5%',
+          x: useTransform(square1X, (x) => x + (squareSize / 2) + 20),
+          y: isMobile ? square2TopY : titleDesktopY,
+          opacity: textOpacity,
+          scale: textScale,
+        }}
+      >
+        <svg
+          width={isMobile ? "18" : "20"}
+          height={isMobile ? "18" : "20"}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-gray-700"
+        >
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </motion.button>
+
       {/* Italian text */}
-            <motion.div
+      <motion.div
         className="absolute text-base sm:text-lg md:text-xl max-w-xs sm:max-w-sm md:max-w-md text-black leading-relaxed"
         style={{
           left: isMobile ? '50%' : '51%',
@@ -200,7 +254,7 @@ function Info() {
           x: isMobile ? '-50%' : italianTextX,
           y: isMobile ? square1BottomY : italianTextY,
           opacity: italianTextOpacity,
-          textAlign: 'justify', // Always justified
+          textAlign: 'justify',
           maxWidth: isMobile ? '85vw' : undefined,
           width: isMobile ? '85vw' : undefined,
           paddingLeft: isMobile ? '1.5rem' : '0',
@@ -209,7 +263,15 @@ function Info() {
           lineHeight: isMobile ? '1.5' : undefined,
         }}
       >
-        Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ''aperitivo'' in <strong>super-local venues</strong>, where you can share your photos and experiences.
+        <motion.span
+          key={currentContent.text}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
+        >
+          {currentContent.text}
+        </motion.span>
       </motion.div>
     </section>
   );

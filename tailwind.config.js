@@ -4,6 +4,17 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+  'after:content-[""]',
+  'after:w-20',
+  'after:h-1',
+  'after:bg-black',
+  'after:absolute',
+  'after:bottom-0',
+  'after:left-0',
+  'after:right-0',
+  'after:translate-y-1',
+],
   theme: {
     extend: {
       animation: {

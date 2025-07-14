@@ -236,7 +236,7 @@ const ImageFiller = ({
     { src: hunt2, alt: "Hunt 2", pos: image2Pos, width: otherImageWidth, height: imageHeight, delay: 0.15 },
     { src: hunt3, alt: "Hunt 3", pos: image3Pos, width: otherImageWidth, height: imageHeight, delay: 0.3 },
     { src: hunt4, alt: "Hunt 4", pos: image4Pos, width: otherImageWidth, height: imageHeight, delay: 0.45 },
-    { src: hunt5, alt: "Hunt 5", pos: image5Pos, width: image5Width, height: image5Height, delay: 0.6 }
+    { src: hunt5, alt: "Hunt 5", pos: image5Pos, width: image5Width, height: image5Height, delay: 0.35 }
   ];
 
   const handleImageClick = (index) => {

@@ -20,6 +20,12 @@ export const useDisplayDetection = () => {
       const isLikelyMacBookDisplay = dpr === 2.0;
       const isExternalDisplay = !isLikelyMacBookDisplay;
 
+      console.log('Display Detection:', {
+        devicePixelRatio: dpr,
+        isHighDPI,
+        isExternalDisplay
+      });
+
       // Calculate dynamic border offset based on display characteristics
       const calculateBorderOffset = () => {
         // For MacBook internal display (DPR = 2.0): use 0

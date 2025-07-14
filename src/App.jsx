@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Hero from './components/Hero';
 import Info from './components/Info';
+import AboutUs from './components/AboutUs';
 import EventCard from './components/EventCard';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
@@ -9,7 +10,8 @@ import { getActiveEvents } from '../firebase/firestoreServices';
 import { createUserProfile } from '../firebase/userServices';
 import { bookEventSimple } from '../firebase/firestoreServices';
 import AuthModal from './components/AuthModal';
-import { EventCardPositionProvider } from './contexts/EventCardPositionContext';
+import { EventCardPositionProvider, useEventCardPosition } from './contexts/EventCardPositionContext';
+
 
 
 function App() {
@@ -19,6 +21,7 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [paymentNotification, setPaymentNotification] = useState(null);
+  
 
   useEffect(() => {
     console.log("App component mounted");
@@ -319,15 +322,53 @@ function App() {
           </div>
         )}
         
-        <main>
-        <section id="current-events-section" className="pb-16 max-w-6xl mx-auto">
-            {/* <h2 className="text-3xl font-bold text-center mb-12">.Events</h2> */}
-            
-            {events.length > 0 ? (
-              <div className="space-y-0">
-                {events.slice(0, 3).map((event, index) => (
+<EventsSection 
+  events={events}
+  user={user}
+  setSelectedEvent={setSelectedEvent}
+  setShowAuthModal={setShowAuthModal}
+/>
+
+        {/* about us with animated squares */}
+        <AboutUs />
+        
+        <footer className="bg-gray-800 text-white text-center py-6">
+          <p>© {new Date().getFullYear()} Urban Photo Hunts. All rights reserved.</p>
+        </footer>
+      </div>
+    </EventCardPositionProvider>
+  );
+}
+
+function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
+  const { eventCardPosition, isPositionReady } = useEventCardPosition();
+  
+  // Custom breakpoint detection - hide extensions earlier than mobile
+  const [shouldShowExtensions, setShouldShowExtensions] = useState(false);
+
+  useEffect(() => {
+    const checkShouldShowExtensions = () => {
+      // Personalizza questo valore per nascondere le estensioni prima del mobile
+      // 1024px = lg breakpoint (invece di 768px md)
+      // 1200px = xl-small (più restrittivo)
+      // 1100px = custom breakpoint
+      setShouldShowExtensions(window.innerWidth >= 1100); 
+    };
+
+    checkShouldShowExtensions();
+    window.addEventListener('resize', checkShouldShowExtensions);
+    return () => window.removeEventListener('resize', checkShouldShowExtensions);
+  }, []);
+
+  return (
+    <main>
+      <section id="current-events-section" className="pb-16 overflow-visible">
+        <div className="max-w-6xl mx-auto overflow-visible px-4">
+          {events.length > 0 ? (
+            <div className="space-y-0 overflow-visible relative">
+              {events.slice(0, 3).map((event, index, array) => (
+                <div key={event.id} className="overflow-visible relative">
                   <EventCard 
-                    key={event.id}
                     event={event} 
                     user={user}
                     onAuthNeeded={() => {
@@ -335,37 +376,64 @@ function App() {
                       setShowAuthModal(true);
                     }}
                     index={index}
-                    // No onPositionUpdate prop needed - uses context
+                    isLastEvent={index === array.length - 1}
                   />
-                ))}
-                
-                {events.length > 3 && (
-                  <div className="text-center mt-8 pt-8">
-                    <Link 
-                      to="/events" 
-                      className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                    >
-                      View all {events.length} events
-                      <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                      </svg>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center p-8 bg-white rounded-lg shadow">
-                <p className="text-gray-600">No events available at the moment. Check back soon!</p>
-              </div>
-            )}
-          </section>
-        </main>
-        
-        <footer className="bg-gray-800 text-white text-center py-6">
-          <p>© {new Date().getFullYear()} Urban Photo Hunts. All rights reserved.</p>
-        </footer>
-      </div>
-    </EventCardPositionProvider>
+                  
+                  {/* Estensioni per l'ultima card - SOLO SU DESKTOP CON BREAKPOINT PERSONALIZZATO */}
+                  {index === array.length - 1 && 
+                   isPositionReady && 
+                   eventCardPosition.width > 0 && 
+                   shouldShowExtensions && ( // Condizione personalizzata invece di !isMobile
+
+                    <>
+                      {/* Per card con immagine a sinistra (index dispari) - linea verso sinistra */}
+                      {index % 2 === 1 && (
+                        <div 
+                          className="absolute bottom-0 left-0 h-0.5 bg-black z-10"
+                          style={{ 
+                            width: `${eventCardPosition.width * 0.50}px`, 
+                            transform: 'translateX(-100%)' 
+                          }}
+                        ></div>
+                      )}
+                      
+                      {/* Per card con immagine a destra (index pari) - linea verso destra */}
+                      {index % 2 === 0 && (
+                        <div 
+                          className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
+                          style={{ 
+                            width: `${eventCardPosition.width * 0.50}px`,
+                            transform: 'translateX(100%)' 
+                          }}
+                        ></div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+              
+              {events.length > 3 && (
+                <div className="text-center mt-8 pt-8">
+                  <Link 
+                    to="/events" 
+                    className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    View all {events.length} events
+                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                    </svg>
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center p-8 bg-white rounded-lg shadow">
+              <p className="text-gray-600">No events available at the moment. Check back soon!</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }
 

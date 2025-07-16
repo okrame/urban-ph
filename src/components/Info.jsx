@@ -133,11 +133,12 @@ function Info() {
   const content = {
     hunts: {
       title: "Hunts",
-      text: "Our photo hunts offer a unique opportunity to explore the soul of the city in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an 'aperitivo' in super-local venues, where you can share your photos and experiences."
+      text:  "Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences."
+
     },
     workshops: {
       title: "Workshops",
-      text: "Master the art of photography with our hands-on workshops led by professional photographers. Learn composition, lighting, and editing techniques in small groups. From beginner basics to advanced techniques, our workshops cover street photography, portrait sessions, and mobile photography. Each session includes practical exercises, personalized feedback, and access to professional equipment."
+      text: "The workshops we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>, <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, and more. We are always open to new collaborations."
     }
   };
 
@@ -264,14 +265,14 @@ function Info() {
         }}
       >
         <motion.span
-          key={currentContent.text}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -15 }}
-          transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
-        >
-          {currentContent.text}
-        </motion.span>
+  key={currentContent.text}
+  initial={{ opacity: 0, y: 15 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -15 }}
+  transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
+  dangerouslySetInnerHTML={{ __html: currentContent.text }}
+/>
+
       </motion.div>
     </section>
   );

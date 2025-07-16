@@ -1,167 +1,90 @@
-// src/components/AboutUs.jsx
-import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useScroll, useTransform } from 'framer-motion';
-import { useEventCardPosition } from '../contexts/EventCardPositionContext';
-import { useDisplayDetection } from '../hooks/useDisplayDetection';
+import React, { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 
-function AboutUs() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { threshold: 0.1, once: false });
+export default function AboutUs() {
+  const sectionRef = useRef(null);
 
-  const { eventCardPosition } = useEventCardPosition();
-  const { borderOffset, devicePixelRatio, isExternalDisplay } = useDisplayDetection();
-
-  // Match Info.jsx border radius
-  const borderRadius = 30;
-
-  // Mobile detection
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Scroll-based animation
   const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"]
+    target: sectionRef,
+    offset: ["start end", "start center"]
   });
 
-  const progressPhase1 = useTransform(scrollYProgress, [0.1, 0.4], [0, 1]);
-
-  // Square size matching Info.jsx
-  const [squareSize, setSquareSize] = useState(400);
-
-  useEffect(() => {
-    const updateSize = () => {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const size = Math.max(vw, vh) * 2;
-      setSquareSize(size);
-    };
-
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  // Calculate the position (left side) from Info.jsx black square
-  const getStartingPosition = () => {
-    if (!eventCardPosition || !eventCardPosition.width) {
-      return 0;
-    }
-    
-    const dynamicBorderOffset = isMobile 
-      ? borderOffset * devicePixelRatio 
-      : borderOffset;
-      
-    // If the black square is at right + offset, we want left - offset - squareSize
-    const basePosition = eventCardPosition.left - dynamicBorderOffset - squareSize;
-    
-    return basePosition;
-  };
-
-  const startingX = getStartingPosition();
-
-  // Animation values
-  const contentX = useTransform(progressPhase1, [0, 1], [startingX, 0]);
-  const contentOpacity = useTransform(progressPhase1, [0, 0.3, 1], [0, 0.5, 1]);
-  const contentScale = useTransform(progressPhase1, [0, 1], [0.9, 1]);
+  const width = useTransform(scrollYProgress, [0, 1], ["100vw", "40vw"]);
 
   return (
-    <section 
-      ref={ref} 
-      className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-white to-gray-50"
+    <section
+      ref={sectionRef}
+      className="relative w-full flex flex-col items-center justify-start bg-transparent"
+      style={{ minHeight: "80vh", height: "600px" }}
     >
-      {/* Black square border continuation */}
-      <motion.div
-        className="absolute border-2 border-black"
-        style={{
-          width: squareSize,
-          height: squareSize,
-          left: '50%',
-          top: '30%',
-          x: startingX,
-          y: '-80%',
-          borderRadius: `${borderRadius}px`,
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isInView ? 1 : 0 }}
-        transition={{ duration: 0.3 }}
-      />
+      <div style={{ height: "48px" }} />
 
-      {/* Main content container */}
-      <motion.div
-        className="absolute max-w-2xl px-6"
-        style={{
-          left: '50%',
-          top: '50%',
-          x: contentX,
-          y: '-50%',
-          opacity: contentOpacity,
-          scale: contentScale,
-        }}
-      >
-        {/* Title */}
-        <motion.h2
-          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-black mb-8"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: isInView ? 1 : 0, y: isInView ? 0 : 30 }}
-          transition={{ duration: 0.9, delay: 0.4 }}
-        >
-          About Us
-        </motion.h2>
-
-        {/* Description */}
+      {/* Spezzato in due rettangoli */}
+      <div className="relative flex items-center justify-center" style={{ width: "100%", height: "56px" }}>
+        {/* Primo segmento */}
         <motion.div
-          className="space-y-6 text-lg sm:text-xl text-gray-700 leading-relaxed"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: isInView ? 1 : 0, y: isInView ? 0 : 30 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          <p>
-            We are passionate photographers and storytellers who believe that every corner of the world 
-            has a unique story to tell. Our mission is to help you discover these hidden narratives 
-            through the lens of your camera.
-          </p>
-          
-          <p>
-            Founded by a team of professional photographers and local guides, we combine technical 
-            expertise with intimate knowledge of the places we explore. Each hunt and workshop is 
-            carefully crafted to offer both artistic growth and authentic cultural experiences.
-          </p>
-          
-          <p>
-            Whether you're capturing the golden hour light dancing on ancient walls or the spontaneous 
-            moments of daily life, we're here to guide you towards creating images that matter.
-          </p>
-        </motion.div>
-
-        {/* Call to action */}
+          className="border-l-2 border-b-2 border-black"
+          style={{
+            width: width,
+            height: "28px",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            background: "transparent",
+            borderTop: "none",
+            borderRight: "none",
+            borderRadius: 0,
+            boxSizing: "border-box"
+          }}
+        />
+        {/* Secondo segmento */}
         <motion.div
-          className="mt-12 flex flex-col sm:flex-row gap-4"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: isInView ? 1 : 0, y: isInView ? 0 : 30 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-        >
-          <button className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-200 transform hover:scale-105 font-medium">
-            Join Our Next Hunt
-          </button>
-          <button className="px-8 py-3 border-2 border-black text-black rounded-lg hover:bg-black hover:text-white transition-all duration-200 transform hover:scale-105 font-medium">
-            View Our Work
-          </button>
-        </motion.div>
-      </motion.div>
+          className="border-r-2 border-t-2 border-black"
+          style={{
+            width: width,
+            height: "28px",
+            position: "absolute",
+            right: 0,
+            bottom: 0,
+            background: "transparent",
+            borderBottom: "none",
+            borderLeft: "none",
+            borderRadius: 0,
+            boxSizing: "border-box"
+          }}
+        />
+        {/* Testo al centro */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">
+          <span className="text-black font-semibold text-lg uppercase tracking-wide bg-white px-4">
+            About Us
+          </span>
+        </div>
+      </div>
 
+      {/* Testo nella metà sinistra */}
+      <div className="w-full max-w-6xl mx-auto mt-16 px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <p className="text-gray-700 text-justify leading-relaxed">
+              Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a cultural association dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
+            </p>
+          </div>
+        </div>
+      </div>
 
+      {/* 5 placeholder per immagini di profilo */}
+      <div className="w-full max-w-6xl mx-auto mt-16 px-6">
+        <div className="grid grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((index) => (
+            <div key={index} className="flex flex-col items-center">
+              <div className="w-full aspect-square bg-gray-200 rounded-full mb-3 flex items-center justify-center">
+                <span className="text-gray-500 text-sm">Profile {index}</span>
+              </div>
+              <span className="text-gray-700 text-sm text-center">Nome {index}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
-
-export default AboutUs;

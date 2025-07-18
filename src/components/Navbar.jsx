@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
-import UPHLogo from '../assets/UPH_logo.png';
+import UPHLogo from '../assets/UPH_Logo.png';
 
 function Navbar({ user, onSignInClick, loading }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

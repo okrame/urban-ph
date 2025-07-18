@@ -21,22 +21,33 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [paymentNotification, setPaymentNotification] = useState(null);
-  
+
+
+  const getVerticalLinePosition = () => {
+    if (events.length === 0) return 30; // Default position
+
+    const lastEventIndex = Math.min(events.length - 1, 2); // Only consider first 3 events
+    const isLastEventImageLeft = lastEventIndex % 2 === 0;
+
+    return isLastEventImageLeft ? 30 : 70; // 30% if image left, 70% if image right
+  };
+
+
 
   useEffect(() => {
     console.log("App component mounted");
-    
+
     // Check if we're on GitHub Pages
     const isGitHubPages = window.location.hostname.includes('github.io');
     if (isGitHubPages) {
       console.log("Running on GitHub Pages");
     }
-    
+
     // Initialize Firebase data (only run once)
     setupFirebase().catch(err => {
       console.error("Failed to initialize database:", err);
     });
-    
+
     // Load events
     const loadEvents = async () => {
       try {
@@ -46,11 +57,11 @@ function App() {
         console.error("Error loading events:", error);
       }
     };
-    
+
     // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       console.log("Auth state changed:", currentUser ? "User logged in" : "No user");
-      
+
       if (currentUser) {
         // Create/update user profile when user logs in
         try {
@@ -59,13 +70,13 @@ function App() {
           console.error("Error creating user profile:", error);
         }
       }
-      
+
       setUser(currentUser);
       setLoading(false);
     });
 
     loadEvents();
-    
+
     // Handle PayPal redirect
     const handlePayPalRedirect = async () => {
       // Parse the URL parameters from hash 
@@ -73,21 +84,21 @@ function App() {
       const hashParts = window.location.hash.split('?');
       if (hashParts.length > 1) {
         const urlParams = new URLSearchParams(hashParts[1]);
-        
+
         // Check for payment status
         const paymentSuccess = urlParams.get('payment-success');
         const paymentCancelled = urlParams.get('payment-cancelled');
         const orderId = urlParams.get('order_id');
-        
+
         // Successful payment
         if (paymentSuccess === 'true') {
           console.log("Payment success detected in URL");
-          
+
           // Get the stored booking data
           const pendingBookingJSON = localStorage.getItem('pendingBooking');
           if (pendingBookingJSON) {
             const pendingBooking = JSON.parse(pendingBookingJSON);
-            
+
             // Check if orderId matches (for security)
             if (orderId && pendingBooking.orderId !== orderId) {
               console.warn("Order ID mismatch, possible tampering attempt");
@@ -97,16 +108,16 @@ function App() {
               });
               return;
             }
-            
+
             // Ensure we have a user logged in
             if (user) {
               setLoading(true);
-              
+
               try {
                 // Create the payment details object
                 const paymentDetails = {
                   // IMPORTANT: Explicitly set status to COMPLETED
-                  status: 'COMPLETED', 
+                  status: 'COMPLETED',
                   paymentId: urlParams.get('tx') || orderId || 'DIRECT_PAYMENT',
                   payerID: urlParams.get('st') || 'UNKNOWN',
                   payerEmail: pendingBooking.userData.email || '',
@@ -116,12 +127,12 @@ function App() {
                   updateTime: new Date().toISOString(),
                   orderId: orderId
                 };
-                
+
                 // Process the booking payment
                 const { processBookingPayment } = await import('../firebase/paypalServices');
                 if (typeof processBookingPayment === 'function') {
                   await processBookingPayment(pendingBooking, paymentDetails);
-                  
+
                   // Show success message
                   setPaymentNotification({
                     type: 'success',
@@ -137,17 +148,17 @@ function App() {
                       status: 'COMPLETED' // Ensure status is COMPLETED
                     }
                   });
-                  
+
                   // Show success message
                   setPaymentNotification({
                     type: 'success',
                     message: 'Payment received! Your booking is confirmed.'
                   });
                 }
-                
+
                 // Clean up
                 localStorage.removeItem('pendingBooking');
-                
+
                 // Reload events to show updated booking status
                 loadEvents();
               } catch (error) {
@@ -173,7 +184,7 @@ function App() {
               message: 'Payment received but booking details are missing. Please contact support.'
             });
           }
-        } 
+        }
         // Cancelled payment
         else if (paymentCancelled === 'true') {
           console.log("Payment cancellation detected in URL");
@@ -182,16 +193,16 @@ function App() {
             type: 'info',
             message: 'Payment was cancelled.'
           });
-          
+
           localStorage.removeItem('pendingBooking');
         }
-        
+
         // Remove query parameters from URL
         const baseHash = window.location.hash.split('?')[0];
         window.history.replaceState({}, document.title, window.location.pathname + baseHash);
       }
     };
-    
+
     // Handle scroll to events if needed
     const checkScrollToEvents = () => {
       const hashParts = window.location.hash.split('?');
@@ -208,13 +219,13 @@ function App() {
         }
       }
     };
-    
+
     // Only run these when the user is set (logged in or not)
     if (!loading) {
       handlePayPalRedirect();
       checkScrollToEvents();
     }
-    
+
     return () => unsubscribe();
   }, [user, loading]); // Depend on user and loading to run after auth is determined
 
@@ -224,7 +235,7 @@ function App() {
       const timer = setTimeout(() => {
         setPaymentNotification(null);
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [paymentNotification]);
@@ -232,30 +243,30 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center #A1B4A4">
-      <div className="text-center">
-  <svg
-    className="animate-spin h-10 w-10 mx-auto mb-4"
-    style={{ color: '#FFFADE' }}
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <circle
-    className="opacity-25"
-    cx="12"
-    cy="12"
-    r="10"
-    stroke="currentColor"
-    strokeWidth="4"
-    ></circle>
-    <path
-    className="opacity-75"
-    fill="currentColor"
-    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-    ></path>
-  </svg>
-        <p className="text-xl" style={{ color: '#FFFADE' }}>...</p>
-      </div>
+        <div className="text-center">
+          <svg
+            className="animate-spin h-10 w-10 mx-auto mb-4"
+            style={{ color: '#FFFADE' }}
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <p className="text-xl" style={{ color: '#FFFADE' }}>...</p>
+        </div>
       </div>
     );
   }
@@ -265,29 +276,28 @@ function App() {
     <EventCardPositionProvider>
       <div className="min-h-screen bg-white">
         {/* Hero section with integrated navigation */}
-        <Hero 
-          user={user} 
+        <Hero
+          user={user}
           onSignInClick={() => setShowAuthModal(true)}
         />
-        
+
         {/* Info section with animated squares */}
         <Info />
-        
+
         {/* Auth Modal */}
-        <AuthModal 
-          isOpen={showAuthModal} 
-          onClose={() => setShowAuthModal(false)} 
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
           event={selectedEvent}
         />
-        
+
         {/* Payment notification */}
         {paymentNotification && (
-          <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-md ${
-            paymentNotification.type === 'success' ? 'bg-green-100 text-green-800' :
+          <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-md ${paymentNotification.type === 'success' ? 'bg-green-100 text-green-800' :
             paymentNotification.type === 'error' ? 'bg-red-100 text-red-800' :
-            paymentNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-blue-100 text-blue-800'
-          }`}>
+              paymentNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-blue-100 text-blue-800'
+            }`}>
             <div className="flex items-center">
               {paymentNotification.type === 'success' && (
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -310,8 +320,8 @@ function App() {
                 </svg>
               )}
               <span>{paymentNotification.message}</span>
-              <button 
-                className="ml-4 text-gray-500 hover:text-gray-700" 
+              <button
+                className="ml-4 text-gray-500 hover:text-gray-700"
                 onClick={() => setPaymentNotification(null)}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,17 +331,17 @@ function App() {
             </div>
           </div>
         )}
-        
-<EventsSection 
-  events={events}
-  user={user}
-  setSelectedEvent={setSelectedEvent}
-  setShowAuthModal={setShowAuthModal}
-/>
+
+        <EventsSection
+          events={events}
+          user={user}
+          setSelectedEvent={setSelectedEvent}
+          setShowAuthModal={setShowAuthModal}
+        />
 
         {/* about us with animated squares */}
-        <AboutUs />
-        
+        <AboutUs verticalLinePosition={getVerticalLinePosition()} />
+
         <footer className="bg-gray-800 text-white text-center py-6">
           <p>© {new Date().getFullYear()} Urban Photo Hunts. All rights reserved.</p>
         </footer>
@@ -342,17 +352,13 @@ function App() {
 
 function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
   const { eventCardPosition, isPositionReady } = useEventCardPosition();
-  
+
   // Custom breakpoint detection - hide extensions earlier than mobile
   const [shouldShowExtensions, setShouldShowExtensions] = useState(false);
 
   useEffect(() => {
     const checkShouldShowExtensions = () => {
-      // Personalizza questo valore per nascondere le estensioni prima del mobile
-      // 1024px = lg breakpoint (invece di 768px md)
-      // 1200px = xl-small (più restrittivo)
-      // 1100px = custom breakpoint
-      setShouldShowExtensions(window.innerWidth >= 1100); 
+      setShouldShowExtensions(window.innerWidth >= 1100);
     };
 
     checkShouldShowExtensions();
@@ -362,14 +368,14 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
 
   return (
     <main>
-      <section id="current-events-section" className="pb-16 overflow-visible">
-        <div className="max-w-6xl mx-auto overflow-visible px-4">
+      <section id="current-events-section" className="pb-16">
+        <div className="max-w-6xl mx-auto px-4">
           {events.length > 0 ? (
-            <div className="space-y-0 overflow-visible relative">
+            <div className="space-y-0 relative">
               {events.slice(0, 3).map((event, index, array) => (
-                <div key={event.id} className="overflow-visible relative">
-                  <EventCard 
-                    event={event} 
+                <div key={event.id} className="relative">
+                  <EventCard
+                    event={event}
                     user={user}
                     onAuthNeeded={() => {
                       setSelectedEvent(event);
@@ -378,44 +384,82 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
                     index={index}
                     isLastEvent={index === array.length - 1}
                   />
-                  
-                  {/* Estensioni per l'ultima card - SOLO SU DESKTOP CON BREAKPOINT PERSONALIZZATO */}
-                  {index === array.length - 1 && 
-                   isPositionReady && 
-                   eventCardPosition.width > 0 && 
-                   shouldShowExtensions && ( // Condizione personalizzata invece di !isMobile
 
-                    <>
-                      {/* Per card con immagine a sinistra (index dispari) - linea verso sinistra */}
-                      {index % 2 === 1 && (
-                        <div 
-                          className="absolute bottom-0 left-0 h-0.5 bg-black z-10"
-                          style={{ 
-                            width: `${eventCardPosition.width * 0.50}px`, 
-                            transform: 'translateX(-100%)' 
+                  {/* Estensioni per l'ultima card - SOLO SU DESKTOP CON BREAKPOINT PERSONALIZZATO */}
+                  {index === array.length - 1 &&
+                    isPositionReady &&
+                    eventCardPosition.width > 0 &&
+                    shouldShowExtensions && ( // Condizione personalizzata invece di !isMobile
+
+                      <>
+                        {/* Per card con immagine a sinistra (index dispari) - linea verso sinistra */}
+                        {index % 2 === 1 && (
+                          <div
+                            className="absolute bottom-0 left-0 h-0.5 bg-black z-10"
+                            style={{
+                              width: `${eventCardPosition.width * 0.50}px`,
+                              transform: 'translateX(-100%)'
+                            }}
+                          ></div>
+                        )}
+
+                        {/* Per card con immagine a destra (index pari) - linea verso destra */}
+                        {index % 2 === 0 && (
+                          <div
+                            className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
+                            style={{
+                              width: `${eventCardPosition.width * 0.50}px`,
+                              transform: 'translateX(100%)'
+                            }}
+                          ></div>
+                        )}
+                        {/* Vertical line from separation point */}
+                        <div
+                          className="absolute bg-black z-10"
+                          style={{
+                            width: '2px',
+                            height: '400px', // Adjust this value as needed
+                            //left: `${eventCardPosition.width * 0.30}px`,
+                            left: index % 2 === 0
+                              ? `${eventCardPosition.width * 0.30}px` // Image on left: 30% from left
+                              : `${eventCardPosition.width * 0.70}px`, // Image on right: 70% from left    
+                            top: '150%', // Start from bottom of the card
+                            marginTop: '0px'
                           }}
                         ></div>
-                      )}
-                      
-                      {/* Per card con immagine a destra (index pari) - linea verso destra */}
-                      {index % 2 === 0 && (
-                        <div 
-                          className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
-                          style={{ 
-                            width: `${eventCardPosition.width * 0.50}px`,
-                            transform: 'translateX(100%)' 
+                        <svg
+                          className="absolute z-50"
+                          style={{
+                            left: index % 2 === 0
+                              ? `${eventCardPosition.width * 0.30}px`
+                              : `${eventCardPosition.width * 0.70}px`,
+                            top: 'calc(100% + 16px)', 
+                            pointerEvents: 'none',
                           }}
-                        ></div>
-                      )}
-                    </>
-                  )}
+                          width="2"
+                          height="400"
+                        >
+                          <line
+                            x1="1"
+                            y1="0"
+                            x2="1"
+                            y2="400"
+                            stroke="black"
+                            strokeWidth="2"
+                            strokeDasharray="14, 20"
+                          />
+                        </svg>
+
+
+                      </>
+                    )}
                 </div>
               ))}
-              
+
               {events.length > 3 && (
                 <div className="text-center mt-8 pt-8">
-                  <Link 
-                    to="/events" 
+                  <Link
+                    to="/events"
                     className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
                   >
                     View all {events.length} events

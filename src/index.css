@@ -9,3 +9,8 @@ html {
 body {
   @apply font-sans;
 }
+
+/* Root container overflow fix */
+#root {
+  overflow-x: hidden; /* Add this */
+}

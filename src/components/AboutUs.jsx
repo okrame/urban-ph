@@ -28,6 +28,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   return (
     <section
       ref={sectionRef}
+      data-section="about-us"
       className="relative w-full flex flex-col items-center justify-start bg-transparent"
       style={{ minHeight: "80vh" }}
     >

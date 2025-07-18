@@ -1,79 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
-import { getUserProfile } from '../../firebase/userServices';
-import UPHLogo from '../assets/UPH_Logo.png';
+import UPHLogo from '../assets/UPH_logo.png';
 
-function Navbar({ user, onSignInClick }) {
+function Navbar({ user, onSignInClick, loading }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
-
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        try {
-          const userProfile = await getUserProfile(user.uid);
-          setIsAdmin(userProfile?.role === 'admin');
-        } catch (error) {
-          console.error("Error checking admin status:", error);
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, [user]);
-
-  // Effect to prevent scrolling when menu is open
-  useEffect(() => {
-    if (isMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isMenuOpen]);
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setIsMenuOpen(false);
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error('Error signing out:', error);
     }
   };
 
   const handleSignIn = () => {
-    setLoading(true);
-    // Instead of handling sign-in directly, trigger the auth modal
     if (onSignInClick) {
       onSignInClick();
     }
-    setLoading(false);
-    if (isMenuOpen) {
-      setIsMenuOpen(false);
-    }
   };
 
-  // Function to scroll to current events section
+  // Check if user is admin
+  const isAdmin = user?.email && [
+    'lucianodidonatto@gmail.com',
+    'federica@federica.com'
+  ].includes(user.email);
+
   const scrollToCurrentEvents = (e) => {
     e.preventDefault();
-    const currentEventsSection = document.getElementById('current-events-section');
-    if (currentEventsSection) {
-      currentEventsSection.scrollIntoView({ behavior: 'smooth' });
+    const eventsSection = document.getElementById('current-events-section');
+    if (eventsSection) {
+      eventsSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  // Check if a nav link is active
+  // New function to scroll to AboutUs component
+  const scrollToAboutUs = (e) => {
+    e.preventDefault();
+    
+    // If we're not on the home page, navigate there first
+    if (location.pathname !== '/') {
+      window.location.hash = '/#/?scrollToAbout=true';
+      return;
+    }
+    
+    // Find the AboutUs section and scroll to it
+    const aboutSection = document.querySelector('[data-section="about-us"]');
+    if (aboutSection) {
+      aboutSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const isActive = (path) => {
     if (path === '/' && location.pathname === '/') {
       return true;
@@ -119,12 +98,12 @@ function Navbar({ user, onSignInClick }) {
             >
               .ourEvents
             </Link>
-            <Link 
-              to="/about" 
-              className={isActive('/about') ? 'text-[#AFACFB] border-b-2 border-[#AFACFB] px-4 py-3' : 'text-gray-600 hover:text-[#AFACFB] px-4 py-3'}
+            <button 
+              onClick={scrollToAboutUs}
+              className="text-gray-600 hover:text-[#AFACFB] px-4 py-3 transition-colors duration-200"
             >
               .aboutUs
-            </Link>
+            </button>
             {user && isAdmin && (
               <Link 
                 to="/admin" 
@@ -229,13 +208,15 @@ function Navbar({ user, onSignInClick }) {
             >
               Events
             </Link>
-            <Link
-              to="/about"
-              className={`block px-3 py-2 rounded ${isActive('/about') ? 'bg-[#AFACFB]/10 text-[#AFACFB]' : 'text-gray-700 hover:bg-[#AFACFB]/10 hover:text-[#AFACFB]'}`}
-              onClick={() => setIsMenuOpen(false)}
+            <button
+              onClick={(e) => {
+                scrollToAboutUs(e);
+                setIsMenuOpen(false);
+              }}
+              className="block w-full text-left px-3 py-2 rounded text-gray-700 hover:bg-[#AFACFB]/10 hover:text-[#AFACFB] transition-colors duration-200"
             >
               About Us
-            </Link>
+            </button>
             {user && isAdmin && (
               <Link
                 to="/admin"
@@ -291,7 +272,17 @@ function Navbar({ user, onSignInClick }) {
                   disabled={loading}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#AFACFB] hover:bg-[#9B97F5]"
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </>
+                ) : (
+                  <>Sign In</>
+                )}
                 </button>
               </div>
             )}

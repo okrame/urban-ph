@@ -81,6 +81,14 @@ function Hero({ user, onSignInClick }) {
     setIsMobileMenuOpen(false); // Close mobile menu after navigation
   };
 
+  const scrollToAboutUs = (e) => {
+    e.preventDefault();
+    const aboutSection = document.querySelector('[data-section="about-us"]');
+    if (aboutSection) {
+      aboutSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -146,12 +154,12 @@ function Hero({ user, onSignInClick }) {
               >
                 .ourEvents
               </button>
-              <Link
-                to="/about"
+              <button
+                onClick={scrollToAboutUs}
                 className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
               >
                 .aboutUs
-              </Link>
+              </button>
               {user && isAdmin && (
                 <Link
                   to="/admin"
@@ -325,8 +333,7 @@ function Hero({ user, onSignInClick }) {
                 }}
               >
                 <Link
-                  to="/about"
-                  onClick={closeMobileMenu}
+                  onClick={scrollToAboutUs}
                   className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left block"
                 >
                   .aboutUs

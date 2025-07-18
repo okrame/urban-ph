@@ -208,12 +208,25 @@ function App() {
       const hashParts = window.location.hash.split('?');
       if (hashParts.length > 1) {
         const urlParams = new URLSearchParams(hashParts[1]);
+
+        // Check for scroll to events
         if (urlParams.get('scrollToEvents') === 'true') {
           // Delay the scroll slightly to ensure the page is fully rendered
           setTimeout(() => {
             const eventsSection = document.getElementById('current-events-section');
             if (eventsSection) {
               eventsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 400);
+        }
+
+        // Check for scroll to about us
+        if (urlParams.get('scrollToAbout') === 'true') {
+          // Delay the scroll slightly to ensure the page is fully rendered
+          setTimeout(() => {
+            const aboutSection = document.querySelector('[data-section="about-us"]');
+            if (aboutSection) {
+              aboutSection.scrollIntoView({ behavior: 'smooth' });
             }
           }, 400);
         }
@@ -433,7 +446,7 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
                             left: index % 2 === 0
                               ? `${eventCardPosition.width * 0.30}px`
                               : `${eventCardPosition.width * 0.70}px`,
-                            top: 'calc(100% + 16px)', 
+                            top: 'calc(100% + 16px)',
                             pointerEvents: 'none',
                           }}
                           width="2"

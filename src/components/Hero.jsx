@@ -1,10 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { getUserProfile } from '../../firebase/userServices';
 import gianicolo from '../assets/gianicolo.jpg';
 import AnimateLogo from '../components/AnimateLogo';
+
+// Animated burger menu lines
+const Path = props => (
+  <motion.path
+    fill="transparent"
+    strokeWidth="2"
+    stroke="#FFFADE"
+    strokeLinecap="round"
+    {...props}
+  />
+);
 
 function Hero({ user, onSignInClick }) {
   const [loading, setLoading] = useState(false);
@@ -241,96 +253,152 @@ function Hero({ user, onSignInClick }) {
             </h1>
           </div>
 
-          {/* Hamburger Menu Button */}
-          <button
+          {/* Animated Hamburger Menu Button */}
+          <motion.button
             onClick={toggleMobileMenu}
             className="text-[#FFFADE] hover:text-white transition-colors duration-200 p-2 flex-shrink-0"
             aria-label="Toggle menu"
+            initial={false}
+            animate={isMobileMenuOpen ? "open" : "closed"}
           >
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isMobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
+            <svg width="40" height="40" viewBox="0 0 23 23">
+              <Path
+                variants={{
+                  closed: { d: "M 2 2.5 L 20 2.5" },
+                  open: { d: "M 3 16.5 L 17 2.5" }
+                }}
+              />
+              <Path
+                d="M 2 9.423 L 20 9.423"
+                variants={{
+                  closed: { opacity: 1 },
+                  open: { opacity: 0 }
+                }}
+                transition={{ duration: 0.1 }}
+              />
+              <Path
+                variants={{
+                  closed: { d: "M 2 16.346 L 20 16.346" },
+                  open: { d: "M 3 2.5 L 17 16.346" }
+                }}
+              />
             </svg>
-          </button>
+          </motion.button>
         </div>
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-black bg-opacity-90 backdrop-blur-sm">
-            <div className="flex flex-col p-4 space-y-4">
-              <button
+          <motion.div 
+            className="absolute top-full left-0 right-0 bg-black bg-opacity-90 backdrop-blur-sm"
+            initial={{ clipPath: "circle(30px at calc(100% - 40px) 40px)", opacity: 0 }}
+            animate={{ clipPath: "circle(1000px at calc(100% - 40px) 40px)", opacity: 1 }}
+            exit={{ clipPath: "circle(30px at calc(100% - 40px) 40px)", opacity: 0 }}
+            transition={{
+              type: "spring",
+              stiffness: 20,
+              restDelta: 2
+            }}
+          >
+            <motion.div 
+              className="flex flex-col p-4 space-y-4"
+              initial="closed"
+              animate="open"
+              variants={{
+                open: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } },
+                closed: { transition: { staggerChildren: 0.05, staggerDirection: -1 } }
+              }}
+            >
+              <motion.button
                 onClick={scrollToCurrentEvents}
                 className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+                variants={{
+                  open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                  closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                }}
               >
                 .ourEvents
-              </button>
-              <Link
-                to="/about"
-                onClick={closeMobileMenu}
-                className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+              </motion.button>
+              <motion.div
+                variants={{
+                  open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                  closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                }}
               >
-                .aboutUs
-              </Link>
-              {user && isAdmin && (
                 <Link
-                  to="/admin"
+                  to="/about"
                   onClick={closeMobileMenu}
-                  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+                  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left block"
                 >
-                  Admin
+                  .aboutUs
                 </Link>
+              </motion.div>
+              {user && isAdmin && (
+                <motion.div
+                  variants={{
+                    open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                    closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                  }}
+                >
+                  <Link
+                    to="/admin"
+                    onClick={closeMobileMenu}
+                    className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left block"
+                  >
+                    Admin
+                  </Link>
+                </motion.div>
               )}
-              <hr className="border-[#FFFADE] opacity-30" />
+              <motion.hr 
+                className="border-[#FFFADE] opacity-30"
+                variants={{
+                  open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                  closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                }}
+              />
               {user ? (
-                <div className="flex flex-col space-y-2">
-                  <span className="text-[#FFFADE] text-sm">
-                    {user.displayName || user.email}
-                  </span>
-                  <button
+                <>
+                  <motion.span 
+                    className="text-[#FFFADE] text-lg"
+                    variants={{
+                      open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                      closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                    }}
+                  >
+                    Welcome, {user.displayName || user.email}
+                  </motion.span>
+                  <motion.button
                     onClick={() => {
                       handleSignOut();
                       closeMobileMenu();
                     }}
-                    className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+                    className="bg-transparent border border-[#FFFADE] text-[#FFFADE] hover:bg-[#FFFADE] hover:text-black px-4 py-2 rounded transition-colors duration-200"
+                    variants={{
+                      open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                      closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                    }}
                   >
                     Sign Out
-                  </button>
-                </div>
+                  </motion.button>
+                </>
               ) : (
-                <button
+                <motion.button
                   onClick={() => {
                     handleSignIn();
                     closeMobileMenu();
                   }}
                   disabled={loading}
-                  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium flex items-center"
+                  className="bg-transparent border border-[#FFFADE] text-[#FFFADE] hover:bg-[#FFFADE] hover:text-black px-4 py-2 rounded transition-colors duration-200"
+                  variants={{
+                    open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                    closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                  }}
                 >
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-[#FFFADE]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </button>
+                  {loading ? 'Loading...' : 'Sign In'}
+                </motion.button>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
-      </div>
-
-      {/* Bottom text - Mobile and Desktop */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 px-5 md:hidden">
-        <p className="text-lg opacity-90 text-center" style={{ color: '#FFFADE' }}>
-          La città è di tuttə, così come l'arte e la fotografia.
-        </p>
       </div>
 
       {/* Scroll Arrow */}

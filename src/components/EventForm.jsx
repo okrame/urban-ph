@@ -1,3 +1,4 @@
+// src/components/EventForm.jsx
 import { useState, useEffect, useRef } from 'react';
 import { createNewEvent } from '../../firebase/adminServices';
 import { getEventBookingsCount, determineEventStatus } from '../../firebase/firestoreServices';
@@ -13,6 +14,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     date: '',
     time: '',
     location: '',
+    venueName: '', // New field for custom venue name
     description: '',
     spots: 10,
     image: '',
@@ -24,6 +26,15 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     paymentCurrency: initialValues.paymentCurrency || 'EUR',
     ...initialValues
   });
+
+  // Location autocomplete state
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [selectedLocationIndex, setSelectedLocationIndex] = useState(-1);
+  const locationInputRef = useRef(null);
+  const suggestionsRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   // Date picker related state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -51,6 +62,177 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Image state for Storage
   const [imageUrl, setImageUrl] = useState(initialValues.image || '');
 
+  // Location search function
+  const searchLocations = async (query) => {
+    if (!query || query.length < 3) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    setLocationLoading(true);
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=IT`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch locations');
+      }
+      
+      const data = await response.json();
+      
+      // Format suggestions for better display
+      const suggestions = data.map(item => ({
+        display_name: item.display_name,
+        formatted: formatLocationDisplay(item),
+        lat: item.lat,
+        lon: item.lon,
+        raw: item
+      }));
+      
+      setLocationSuggestions(suggestions);
+      setShowLocationSuggestions(suggestions.length > 0);
+      setSelectedLocationIndex(-1);
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // Format location display for better readability
+  const formatLocationDisplay = (location) => {
+    const address = location.address || {};
+    const parts = [];
+    
+    // Add specific place name if available
+    if (address.amenity || address.shop || address.tourism) {
+      parts.push(address.amenity || address.shop || address.tourism);
+    }
+    
+    // Add street address
+    if (address.house_number && address.road) {
+      parts.push(`${address.road} ${address.house_number}`);
+    } else if (address.road) {
+      parts.push(address.road);
+    }
+    
+    // Add neighborhood/suburb
+    if (address.suburb || address.neighbourhood) {
+      parts.push(address.suburb || address.neighbourhood);
+    }
+    
+    // Add city
+    if (address.city || address.town || address.village) {
+      parts.push(address.city || address.town || address.village);
+    }
+    
+    // Add province/state
+    if (address.province || address.state) {
+      parts.push(address.province || address.state);
+    }
+    
+    return parts.slice(0, 3).join(', ') || location.display_name;
+  };
+
+  // Handle location input change with debouncing
+  const handleLocationChange = (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, location: value });
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout for search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchLocations(value);
+    }, 300); // 300ms delay
+  };
+
+  // Handle location suggestion selection
+  const handleLocationSelect = (suggestion) => {
+    setFormData({ 
+      ...formData, 
+      location: suggestion.formatted,
+      venueName: extractVenueName(suggestion) // Auto-populate venue name from suggestion
+    });
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+    setSelectedLocationIndex(-1);
+    
+    // Focus back to input
+    if (locationInputRef.current) {
+      locationInputRef.current.focus();
+    }
+  };
+
+  // Extract venue name from OpenStreetMap suggestion
+  const extractVenueName = (suggestion) => {
+    const address = suggestion.raw.address || {};
+    
+    // Priority order for venue names
+    if (address.amenity) return address.amenity;
+    if (address.shop) return address.shop;
+    if (address.tourism) return address.tourism;
+    if (address.leisure) return address.leisure;
+    if (address.historic) return address.historic;
+    if (address.building && address.building !== 'yes') return address.building;
+    
+    // If no specific venue name, use the formatted address
+    return suggestion.formatted;
+  };
+
+  // Handle keyboard navigation for location suggestions
+  const handleLocationKeyDown = (e) => {
+    if (!showLocationSuggestions) return;
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedLocationIndex(prev => 
+          prev < locationSuggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedLocationIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedLocationIndex >= 0 && locationSuggestions[selectedLocationIndex]) {
+          handleLocationSelect(locationSuggestions[selectedLocationIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowLocationSuggestions(false);
+        setSelectedLocationIndex(-1);
+        break;
+    }
+  };
+
+  // Handle clicks outside location suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target) &&
+        !locationInputRef.current.contains(event.target)
+      ) {
+        setShowLocationSuggestions(false);
+        setSelectedLocationIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Parse and set initial date/time values
   useEffect(() => {
     // Update form when initialValues changes
@@ -60,6 +242,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       date: '',
       time: '',
       location: '',
+      venueName: '',
       description: '',
       spots: 10,
       image: '',
@@ -290,7 +473,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       setCursorPosition(e.target.selectionStart);
     }
 
-    // FIXED: Special handling for payment amounts - allow 0 and empty values
+    // Special handling for payment amounts - allow 0 and empty values
     if (name === 'memberPrice' || name === 'nonMemberPrice') {
       // Allow empty string (user is typing)
       if (value === '') {
@@ -300,23 +483,23 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         });
         return;
       }
-      
+
       const numValue = parseFloat(value);
-      
+
       // For member price: allow 0 or positive numbers
       if (name === 'memberPrice') {
         if (isNaN(numValue) || numValue < 0) {
           return; // Don't update invalid amounts
         }
       }
-      
-      // For non-member price: must be positive (> 0) when not empty
+
+      // For non-member price: allow 0 or positive numbers
       if (name === 'nonMemberPrice') {
         if (isNaN(numValue) || numValue < 0) {
           return; // Don't update invalid amounts
         }
       }
-      
+
       // Update with the numeric value
       setFormData({
         ...formData,
@@ -382,26 +565,39 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
-      // FIXED: Updated payment validation to allow €0 for members
+      // Validate location - ensure it's not empty
+      if (!formData.location.trim()) {
+        setError('Please enter a valid location address');
+        setLoading(false);
+        return;
+      }
+
+      // Validate venue name - ensure it's not empty
+      if (!formData.venueName.trim()) {
+        setError('Please enter a venue name');
+        setLoading(false);
+        return;
+      }
+
       if (formData.isPaid) {
         // Member price can be 0 or greater, but must be a valid number (not empty string)
         const memberPrice = typeof formData.memberPrice === 'string' ? 
           parseFloat(formData.memberPrice) : formData.memberPrice;
-          
+
         if (formData.memberPrice === '' || formData.memberPrice === null || 
             formData.memberPrice === undefined || isNaN(memberPrice) || memberPrice < 0) {
           setError('Please enter a valid member price (can be 0 for free member access)');
           setLoading(false);
           return;
         }
-        
-        // Non-member price must be greater than 0
+
+        // Non-member price can be 0 or greater
         const nonMemberPrice = typeof formData.nonMemberPrice === 'string' ? 
           parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice;
-          
-        if (formData.nonMemberPrice === '' || !formData.nonMemberPrice || 
-            nonMemberPrice <= 0 || isNaN(nonMemberPrice)) {
-          setError('Please enter a valid non-member price greater than 0');
+
+        if (formData.nonMemberPrice === '' || formData.nonMemberPrice === null || 
+            formData.nonMemberPrice === undefined || isNaN(nonMemberPrice) || nonMemberPrice < 0) {
+          setError('Please enter a valid non-member price (can be 0 for free access)');
           setLoading(false);
           return;
         }
@@ -410,15 +606,14 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       // Prepare the form data
       let updatedFormData = {
         ...formData,
-        // FIXED: Set pricing fields only if isPaid is true, ensuring numbers are properly converted
-        // Store the actual pricing values, even if one is 0 (as long as isPaid is true)
+        // Set pricing fields only if isPaid is true, ensuring numbers are properly converted
         memberPrice: formData.isPaid ? (typeof formData.memberPrice === 'string' ? parseFloat(formData.memberPrice) : formData.memberPrice) : null,
         nonMemberPrice: formData.isPaid ? (typeof formData.nonMemberPrice === 'string' ? parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice) : null,
         paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
         // Use uploaded image URL
         image: imageUrl
       };
-      
+
       // Remove isPaid as it's not needed in the database
       delete updatedFormData.isPaid;
 
@@ -426,34 +621,26 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       const actualStatus = determineEventStatus(updatedFormData.date, updatedFormData.time);
 
       if (initialValues.id) {
-        // Update existing event
-        const eventRef = doc(db, 'events', initialValues.id);
-        const eventDoc = await getDoc(eventRef);
-
-        if (!eventDoc.exists()) {
-          throw new Error("Event not found");
-        }
-
-        // Keep existing spots availability data
-        const currentData = eventDoc.data();
-
+        // Update existing event using updateEvent function
+        const { updateEvent } = await import('../../firebase/adminServices');
+        
         // Calculate spotsLeft correctly as total spots minus bookings
         const spotsLeft = updatedFormData.spots - bookingsCount;
 
         // If the image wasn't changed, keep the existing image URL
         if (!isImageChanged) {
-          updatedFormData.image = currentData.image;
+          const eventRef = doc(db, 'events', initialValues.id);
+          const eventDoc = await getDoc(eventRef);
+          if (eventDoc.exists()) {
+            const currentData = eventDoc.data();
+            updatedFormData.image = currentData.image;
+          }
         }
 
-        // Update event with new data but preserve some fields
-        await updateDoc(eventRef, {
+        await updateEvent(initialValues.id, {
           ...updatedFormData,
-          // Keep necessary fields from existing event
-          status: actualStatus, // Override with calculated status
-          spotsLeft: spotsLeft, // Correctly calculated available spots
-          attendees: currentData.attendees || [],
-          createdAt: currentData.createdAt,
-          updatedAt: serverTimestamp()
+          status: actualStatus,
+          spotsLeft: spotsLeft
         });
 
         console.log("Event updated successfully with status:", actualStatus);
@@ -461,8 +648,8 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         // Create new event with calculated status
         await createNewEvent({
           ...updatedFormData,
-          status: actualStatus, // Set the calculated status
-          spotsLeft: updatedFormData.spots // Initialize spotsLeft equal to total spots (no bookings yet)
+          status: actualStatus,
+          spotsLeft: updatedFormData.spots
         });
         console.log("Event created successfully with status:", actualStatus);
       }
@@ -762,18 +949,91 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </p>
           </div>
 
+          {/* Enhanced location input with autocomplete */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Location Address
+            </label>
+            <div className="relative">
+              <input
+                ref={locationInputRef}
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleLocationChange}
+                onKeyDown={handleLocationKeyDown}
+                onFocus={() => {
+                  if (locationSuggestions.length > 0) {
+                    setShowLocationSuggestions(true);
+                  }
+                }}
+                className="w-full p-2 border rounded pr-8"
+                placeholder="Start typing an address in Italy..."
+                required
+              />
+              {locationLoading && (
+                <div className="absolute right-2 top-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+              )}
+              {!locationLoading && formData.location && (
+                <div className="absolute right-2 top-2 text-gray-400">
+                  📍
+                </div>
+              )}
+            </div>
+            
+            {/* Location suggestions dropdown */}
+            {showLocationSuggestions && locationSuggestions.length > 0 && (
+              <div 
+                ref={suggestionsRef}
+                className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+              >
+                {locationSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                      index === selectedLocationIndex 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleLocationSelect(suggestion)}
+                  >
+                    <div className="font-medium text-sm text-gray-900">
+                      {suggestion.formatted}
+                    </div>
+                    {suggestion.formatted !== suggestion.display_name && (
+                      <div className="text-xs text-gray-500 mt-1 truncate">
+                        {suggestion.display_name}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <p className="text-xs text-gray-500 mt-1">
+              Mappable address for location services (required for map display)
+            </p>
+          </div>
+
+          {/* Venue Name field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location
+              Venue Name
             </label>
             <input
               type="text"
-              name="location"
-              value={formData.location}
+              name="venueName"
+              value={formData.venueName}
               onChange={handleChange}
               className="w-full p-2 border rounded"
+              placeholder="e.g., Caffè delle Arti, Studio Fotografico Roma..."
               required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Display name for the venue (shown to users)
+            </p>
           </div>
 
           <div>
@@ -882,9 +1142,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                           value={formData.nonMemberPrice === '' ? '' : formData.nonMemberPrice}
                           onChange={handleChange}
                           step="0.01"
-                          min="0.01"
+                          min="0"
                           className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                          placeholder="0.01"
+                          placeholder="0.00"
                           required={formData.isPaid}
                         />
                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -892,7 +1152,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Price for new/past year members (must be greater than €0)
+                        Price for new/past year members (can be €0 for free access)
                       </p>
                     </div>
                   </div>
@@ -907,7 +1167,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                       value={formData.paymentCurrency}
                       onChange={handleChange}
                       className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      disabled /* For now, we only support EUR */
+                      disabled
                     >
                       <option value="EUR">EUR - Euro</option>
                     </select>

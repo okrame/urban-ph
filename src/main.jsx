@@ -6,7 +6,6 @@ import App from './App.jsx'
 import './index.css'
 import EventsPage from './pages/EventsPage.jsx'
 import AdminPanel from './pages/AdminPanel.jsx'
-import AboutUs from './pages/AboutUs.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 // PayPal initial options
@@ -26,10 +25,6 @@ const router = createHashRouter([
   {
     path: '/events',
     element: <EventsPage />,
-  },
-  {
-    path: '/about',
-    element: <AboutUs />,
   },
   {
     path: '/admin',

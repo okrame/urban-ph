@@ -6,32 +6,51 @@ import hunt3 from '../assets/hunts/3.jpeg';
 import hunt4 from '../assets/hunts/4.jpeg';
 import hunt5 from '../assets/hunts/5.jpeg';
 
-const ImageFiller = ({ 
-  square1X, 
-  square1Y, 
-  square2X, 
-  square2Y, 
-  squareSize, 
+const ImageFiller = ({
+  square1X,
+  square1Y,
+  square2X,
+  square2Y,
+  squareSize,
   isInView,
   progressPhase1,
-  progressPhase2 
+  progressPhase2
 }) => {
-  
-  // Mobile detection
-  const [isMobile, setIsMobile] = useState(false);
-  
-  // State for enlarged image
-  const [enlargedImageIndex, setEnlargedImageIndex] = useState(null);
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [scaleFactor, setScaleFactor] = useState(1);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const updateDimensions = () => {
+      const width = window.innerWidth;
+      setWindowWidth(width);
+
+      // Progressive scaling based on device width
+      if (width <= 375) {
+        // iPhone mini, Galaxy S8 and smaller
+        setScaleFactor(0.7);
+      } else if (width <= 414) {
+        // iPhone standard sizes
+        setScaleFactor(0.8);
+      } else if (width <= 768) {
+        // Larger phones and small tablets
+        setScaleFactor(0.9);
+      } else {
+        // Desktop and larger
+        setScaleFactor(1);
+      }
     };
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
   }, []);
+
+  // Update isMobile check (computed value, not state)
+  const isMobile = windowWidth < 768;
+
+  // State for enlarged image
+  const [enlargedImageIndex, setEnlargedImageIndex] = useState(null);
 
   // Disable scrolling when image is enlarged
   useEffect(() => {
@@ -40,12 +59,12 @@ const ImageFiller = ({
     } else {
       document.body.style.overflow = 'unset';
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [enlargedImageIndex]);
-  
+
   // Calculate intersection area coordinates and dimensions
   const intersectionLeft = useTransform(
     [square1X, square2X],
@@ -105,58 +124,60 @@ const ImageFiller = ({
     ([top, bottom]) => (top + bottom) / 2
   );
 
-  // UPDATED: Separate horizontal and vertical gaps with mobile responsiveness
-  const gridPadding = isMobile ? 12 : 20;
-  const horizontalGap = isMobile ? 4 : 8;   // Gap between images horizontally
-  const verticalGap = isMobile ? 6 : 12;    // Gap between rows vertically
-  
+  // Scaled responsive values
+  const gridPadding = Math.round((isMobile ? 12 : 20) * scaleFactor);
+  const horizontalGap = Math.round((isMobile ? 4 : 8) * scaleFactor);
+  const verticalGap = Math.round((isMobile ? 6 : 12) * scaleFactor);
+
   const availableWidth = useTransform(
     intersectionWidth,
-    (width) => width - (gridPadding * 2)
+    (width) => (width - (gridPadding * 2)) //* scaleFactor
   );
-  
+
   const availableHeight = useTransform(
     intersectionHeight,
-    (height) => height - (gridPadding * 2)
+    (height) => (height - (gridPadding * 2)) //* scaleFactor
   );
-  
-  // UPDATED: Use horizontalGap for width calculations
+
+  // Enhanced minimum size constraints for very small devices
+  const minImageWidth = windowWidth <= 375 ? 20 : 40;
+  const minImageHeight = windowWidth <= 375 ? 20 : 40;
+
   const image1Width = useTransform(
     availableWidth,
-    (width) => (width - (horizontalGap * 3)) / 4
+    (width) => Math.max(minImageWidth, (width - (horizontalGap * 3)) / 4)
   );
-  
+
   const otherImageWidth = useTransform(
     availableWidth,
-    (width) => (width - (horizontalGap * 3)) / 4
+    (width) => Math.max(minImageWidth, (width - (horizontalGap * 3)) / 4)
   );
-  
-  // UPDATED: Use verticalGap for height calculations
+
   const imageHeight = useTransform(
     [availableHeight, otherImageWidth],
     ([height, width]) => {
       const rowHeight = (height - verticalGap) / 2;
-      return Math.min(rowHeight, width * 1);
+      return Math.max(minImageHeight, Math.min(rowHeight, width * 1));
     }
   );
-  
+
   const image1Height = useTransform(
     availableHeight,
     (totalHeight) => totalHeight
   );
-  
+
   // Calculate positions for grid items
   const gridStartX = useTransform(
     [intersectionCenterX, availableWidth],
     ([centerX, gridWidth]) => centerX - gridWidth / 2
   );
-  
+
   const gridStartY = useTransform(
     [intersectionCenterY, availableHeight],
     ([centerY, gridHeight]) => centerY - gridHeight / 2
   );
-  
-  // UPDATED: Grid positions with separate horizontal/vertical gaps
+
+  // Grid positions with separate horizontal/vertical gaps
   const getImagePosition = (col, row) => ({
     x: useTransform(
       [gridStartX, image1Width, otherImageWidth],
@@ -173,7 +194,7 @@ const ImageFiller = ({
       ([startY, imgHeight]) => startY + row * (imgHeight + verticalGap)
     )
   });
-  
+
   // Image positions
   const image1Pos = {
     x: gridStartX,
@@ -182,8 +203,8 @@ const ImageFiller = ({
   const image2Pos = getImagePosition(1, 0);
   const image3Pos = getImagePosition(2, 0);
   const image4Pos = getImagePosition(3, 0);
-  
-  // UPDATED: Use appropriate gaps for image5 positioning
+
+  // Use appropriate gaps for image5 positioning
   const image5Pos = {
     x: useTransform(
       [gridStartX, image1Width],
@@ -194,14 +215,14 @@ const ImageFiller = ({
       ([startY, imgHeight]) => startY + imgHeight + verticalGap
     )
   };
-  
-  // UPDATED: Use horizontalGap for width calculation
+
+  // Use horizontalGap for width calculation
   const image5Width = useTransform(
     [availableWidth, image1Width],
     ([totalWidth, img1Width]) => totalWidth - img1Width - horizontalGap
   );
 
-  // FIXED: Calculate proper height for image 5 to fill remaining space
+  // Calculate proper height for image 5 to fill remaining space
   const image5Height = useTransform(
     [availableHeight, imageHeight],
     ([totalHeight, topRowHeight]) => {
@@ -214,7 +235,9 @@ const ImageFiller = ({
   const shouldShow = useTransform(
     [progressPhase1, progressPhase2, intersectionWidth, intersectionHeight],
     ([phase1, phase2, width, height]) => {
-      return isInView && phase1 >= 1 && phase2 > 0.3 && width > 200 && height > 150;
+      const minWidth = windowWidth <= 375 ? 150 : 200;
+      const minHeight = windowWidth <= 375 ? 100 : 150;
+      return isInView && phase1 >= 1 && phase2 > 0.3 && width > minWidth && height > minHeight;
     }
   );
 
@@ -226,7 +249,7 @@ const ImageFiller = ({
     const unsubscribe = shouldShow.on('change', (latest) => {
       setShowImages(latest);
     });
-    
+
     return unsubscribe;
   }, [shouldShow]);
 
@@ -277,14 +300,16 @@ const ImageFiller = ({
             width: img.width,
             height: img.height,
             transform: 'translate(-50%, -50%)',
+            borderTopLeftRadius: index === 0 ? '20px' : '12px',
+            borderBottomRightRadius: index === 4 ? '20px' : '12px'
           }}
           initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ 
+          animate={{
             opacity: showImages ? 1 : 0,
             scale: showImages ? 1 : 0.8
           }}
-          transition={{ 
-            duration: 0.5, 
+          transition={{
+            duration: 0.5,
             delay: showImages ? img.delay : 0,
             ease: "easeOut"
           }}
@@ -325,25 +350,25 @@ const ImageFiller = ({
                   maxWidth: isMobile ? '90vw' : '85vw',
                   maxHeight: isMobile ? '75vh' : '80vh',
                 }}
-                initial={{ 
+                initial={{
                   scale: 0.3,
                   opacity: 0
                 }}
-                animate={{ 
+                animate={{
                   scale: 1,
                   opacity: 1
                 }}
-                exit={{ 
+                exit={{
                   scale: 0.3,
                   opacity: 0
                 }}
-                transition={{ 
+                transition={{
                   duration: 0.35,
                   ease: [0.25, 0.46, 0.45, 0.94]
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
-              
+
               {/* Close button */}
               <motion.button
                 className="absolute top-6 right-6 text-white text-xl font-bold bg-black bg-opacity-60 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-80 transition-colors backdrop-blur-sm"

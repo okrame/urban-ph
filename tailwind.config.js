@@ -27,6 +27,10 @@ export default {
       fontFamily: {
         sans: ['"Nunito Sans"', 'sans-serif'],
       },
+       screens: {
+        'xs': '375px', // iPhone Mini e simili
+        'xxs': '320px', // Galaxy S8 e più piccoli
+      },
     },
   },
   plugins: [],

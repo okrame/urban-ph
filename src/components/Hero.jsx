@@ -109,37 +109,57 @@ function Hero({ user, onSignInClick }) {
       </div>
 
       {/* Logo - with animation */}
-      <div
-        className="absolute z-25"
-        style={{
-          left: '51.3%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-        }}
-      >
-        <AnimateLogo 
-          className="w-32 h-auto md:w-40 lg:w-48"
-          animationDelay={1000}
-          animationDuration={4000}
-        />
-      </div>
+<div
+  className="absolute z-25"
+  style={{
+    left: '51.3%',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+  }}
+>
+  <AnimateLogo 
+    className="w-28 h-auto xs:w-32 sm:w-32 md:w-40 lg:w-48" // Ridotto per dispositivi molto piccoli
+    animationDelay={700}
+    animationDuration={4000}
+  />
+</div>
 
-      {/* Urban pH text below logo */}
-      <div
-        className="absolute z-20"
-        style={{
-          left: '54.5%',
-          top: isMobile ? '56%' : '60%',
-          transform: 'translate(-50%, -50%)',
-        }}
-      >
-        <p
-          className="text-lg md:text-xl font-light text-center"
-          style={{ color: 'white' }}
-        >
-          Urban pH
-        </p>
-      </div>
+{/* Urban pH text below logo - con gap fisso dinamico */}
+<div
+  className="absolute z-20"
+  style={{
+    left: '54.5%',
+    // Gap fisso basato su dimensioni dello schermo e orientamento
+    top: (() => {
+      const screenHeight = window.innerHeight;
+      const screenWidth = window.innerWidth;
+      
+      // Dispositivi molto piccoli 
+      if (screenWidth <= 375 || screenHeight <= 667) {
+        return 'calc(50% + 3rem + 0.5rem)'; 
+      }
+      // Mobile standard
+      else if (screenWidth < 768) {
+        return 'calc(50% + 3.5rem + 0.5rem)'; 
+      }
+      else if (screenWidth < 1024) {
+        return 'calc(50% + 5rem + 0.3rem)'; 
+      }
+      // Desktop large
+      else {
+        return 'calc(50% + 5rem + 0.3rem)'; 
+      }
+    })(),
+    transform: 'translate(-50%, -50%)',
+  }}
+>
+  <p
+    className="text-base xs:text-lg md:text-xl font-light text-center" // Testo più piccolo su dispositivi mini
+    style={{ color: 'white' }}
+  >
+    Urban pH
+  </p>
+</div>
 
       {/* Desktop Navigation Overlay */}
       <div className="absolute top-0 left-0 right-0 z-30 p-8 hidden md:block">
@@ -436,6 +456,12 @@ function Hero({ user, onSignInClick }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </button>
+      </div>
+      {/* Paragrafo mobile: FISSATO IN BASSO SOPRA L'IMMAGINE */}
+      <div className="absolute bottom-[2px] left-0 right-0 z-20 md:hidden flex justify-center">
+        <p className="text-[#FFFADE] text-base sm:text-lg font-light text-center bg-black/40 px-2 py-1 rounded-md w-fit mx-auto pointer-events-none select-none">
+          La città è di tuttə, così come l'arte e la fotografia.
+        </p>
       </div>
     </section>
   );

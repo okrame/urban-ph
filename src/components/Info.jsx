@@ -1,23 +1,20 @@
 // src/components/Info.jsx
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useScroll, useTransform } from 'framer-motion';
+import { motion, useInView, useScroll, useTransform, useMotionValue } from 'framer-motion';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 import { useDisplayDetection } from '../hooks/useDisplayDetection';
 import ImageFiller from './ImageFiller';
 
 function Info() {
   const [activityKind, setActivityKind] = useState('hunts');
-  
+
   const ref = useRef(null);
   const isInView = useInView(ref, { threshold: 0.1, once: false });
 
   const { eventCardPosition } = useEventCardPosition();
   const { borderOffset, devicePixelRatio, isExternalDisplay } = useDisplayDetection();
 
-  // PARAMETRO PER REGOLARE I VERTICI SMUSSATI
   const borderRadius = 30;
-
-  // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -30,7 +27,6 @@ function Info() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Scroll-based animation
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start end", "end start"]
@@ -39,14 +35,13 @@ function Info() {
   const progressPhase1 = useTransform(scrollYProgress, [0.1, 0.3], [0, 1]);
   const progressPhase2 = useTransform(scrollYProgress, [0.35, 0.6], [0, 1]);
 
-  // Massive squares - 200% of viewport
   const [squareSize, setSquareSize] = useState(400);
 
   useEffect(() => {
     const updateSize = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const size = Math.max(vw, vh) * 2;
+      const size = vw < 768 ? Math.max(vw, vh) * 2.1 : Math.max(vw, vh) * 2;
       setSquareSize(size);
     };
 
@@ -55,19 +50,12 @@ function Info() {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Get target position with dynamic border offset
   const getSquare2Target = () => {
-    if (!eventCardPosition || !eventCardPosition.width) {
-      return -200;
-    }
-    
-    // Use dynamic borderOffset from the display detection hook
+    if (!eventCardPosition || !eventCardPosition.width) return -200;
     const dynamicBorderOffset = isMobile ? 7.5 : borderOffset;
-    
     return eventCardPosition.left + dynamicBorderOffset + (squareSize / 2);
   };
 
-  // PHASE 1: Movement to overlapped area
   const square1X = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
   const square1Y = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
 
@@ -86,11 +74,9 @@ function Info() {
 
   const square2Y = useTransform(progressPhase1, [0, 1], [squareSize * 0.35, squareSize * 0.45]);
 
-  // Text animations
   const textOpacity = useTransform(progressPhase2, [0, 0.3], [0, 1]);
   const textScale = useTransform(progressPhase2, [0, 0.3], [0.5, 1]);
 
-  // Mobile positioning calculations
   const square2TopY = useTransform(
     progressPhase1,
     [0, 1],
@@ -109,12 +95,8 @@ function Info() {
     ]
   );
 
-  const titleDesktopY = useTransform(
-    square2Y,
-    (latest) => latest - (squareSize / 2) - 60
-  );
+  const titleDesktopY = useTransform(square2Y, (latest) => latest - (squareSize / 2) - 60);
 
-  // Italian text positioning
   const italianTextX = useTransform(progressPhase1, [0, 1], [squareSize * 0.1, squareSize * 0.05]);
   const italianTextY = useTransform(progressPhase1, [0, 1], [squareSize * 0.35 - squareSize / 2 + 20, squareSize * 0.45 - squareSize / 2 + 20]);
 
@@ -129,29 +111,35 @@ function Info() {
 
   const italianTextOpacity = useTransform(progressPhase2, [0, 0.4], [0, 1]);
 
-  // Content data
   const content = {
     hunts: {
       title: "Hunts",
-      text:  "Our photo hunts offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences."
-
+      text: "<span class='text-2xl font-bold inline'>Photo hunts</span> offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences."
     },
     workshops: {
       title: "Workshops",
-      text: "The workshops we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>, <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, and more. We are always open to new collaborations."
+      text: "<span class='text-2xl font-bold inline'>The workshops</span> we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>, <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, and more. We are always open to new collaborations."
     }
   };
 
   const currentContent = content[activityKind];
 
-  return (
-    <section 
-      ref={ref} 
-      className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white"
-      style={{ position: 'relative' }}
-    >
+  const verticalLetterHeight = isMobile ? 12 : 0; // stima, regola a piacere!
+  const letters = currentContent.title.length;
+  const offset = verticalLetterHeight * (letters - 1);
 
-      {/* Top-left square */}
+  // Nuova motion value per la posizione Y del titolo su mobile
+  const mobileTitleY = useTransform(
+    square2TopY,
+    (y) => y + (isMobile ? -offset : 0)
+  );
+
+  return (
+    <section ref={ref} className="relative flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+      <div className="w-full" style={{
+        height: isMobile ? squareSize * 0.60 : squareSize * 0.35
+      }} />
+
       <motion.div
         className="absolute border-2 border-green-800"
         style={{
@@ -159,14 +147,13 @@ function Info() {
           height: squareSize,
           x: square1X,
           y: square1Y,
-          borderRadius: `${borderRadius}px`,
+          borderRadius: borderRadius
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: isInView ? 1 : 0 }}
         transition={{ duration: 0.3 }}
       />
 
-      {/* Bottom-right square */}
       <motion.div
         className="absolute border-2 border-black"
         style={{
@@ -174,7 +161,7 @@ function Info() {
           height: squareSize,
           x: square2X,
           y: square2Y,
-          borderRadius: `${borderRadius}px`,
+          borderRadius: borderRadius
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: isInView ? 1 : 0 }}
@@ -193,14 +180,13 @@ function Info() {
         progressPhase2={progressPhase2}
       />
 
-      {/* Title text */}
       <motion.div
         className="absolute text-[1.26rem] sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-black text-center"
         style={{
           left: isMobile ? '47%' : '50%',
           top: isMobile ? '50%' : '50%',
           x: isMobile ? square1RightX : '-50%',
-          y: isMobile ? square2TopY : titleDesktopY,
+          y: isMobile ? mobileTitleY : titleDesktopY,
           opacity: textOpacity,
           scale: textScale,
         }}
@@ -211,12 +197,22 @@ function Info() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
+          style={
+            isMobile
+              ? {
+                writingMode: "vertical-lr",
+                textOrientation: "mixed", // opzionale, migliora la resa
+                letterSpacing: "0.09em",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+              }
+              : undefined
+          }
         >
           {currentContent.title}
         </motion.span>
       </motion.div>
 
-      {/* Accordion arrow anchored to green square right edge */}
       <motion.button
         onClick={() => setActivityKind(activityKind === 'hunts' ? 'workshops' : 'hunts')}
         className="absolute p-2 hover:bg-gray-200/50 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
@@ -228,7 +224,7 @@ function Info() {
           x: useTransform(square1X, (x) => x + (squareSize / 2) + 20),
           y: isMobile ? square2TopY : titleDesktopY,
           opacity: textOpacity,
-          scale: textScale,
+          scale: textScale
         }}
       >
         <svg
@@ -246,7 +242,6 @@ function Info() {
         </svg>
       </motion.button>
 
-      {/* Italian text */}
       <motion.div
         className="absolute text-base sm:text-lg md:text-xl max-w-xs sm:max-w-sm md:max-w-md text-black leading-relaxed"
         style={{
@@ -261,18 +256,17 @@ function Info() {
           paddingLeft: isMobile ? '1.5rem' : '0',
           paddingRight: isMobile ? '1.5rem' : '0',
           fontSize: isMobile ? '0.95rem' : undefined,
-          lineHeight: isMobile ? '1.5' : undefined,
+          lineHeight: isMobile ? '1.5' : undefined
         }}
       >
         <motion.span
-  key={currentContent.text}
-  initial={{ opacity: 0, y: 15 }}
-  animate={{ opacity: 1, y: 0 }}
-  exit={{ opacity: 0, y: -15 }}
-  transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
-  dangerouslySetInnerHTML={{ __html: currentContent.text }}
-/>
-
+          key={currentContent.text}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
+          dangerouslySetInnerHTML={{ __html: currentContent.text }}
+        />
       </motion.div>
     </section>
   );

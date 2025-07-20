@@ -109,57 +109,57 @@ function Hero({ user, onSignInClick }) {
       </div>
 
       {/* Logo - with animation */}
-<div
-  className="absolute z-25"
-  style={{
-    left: '51.3%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-  }}
->
-  <AnimateLogo 
-    className="w-28 h-auto xs:w-32 sm:w-32 md:w-40 lg:w-48" // Ridotto per dispositivi molto piccoli
-    animationDelay={700}
-    animationDuration={4000}
-  />
-</div>
+      <div
+        className="absolute z-25"
+        style={{
+          left: '51.3%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+      >
+        <AnimateLogo
+          className="w-28 h-auto xs:w-32 sm:w-32 md:w-40 lg:w-48" // Ridotto per dispositivi molto piccoli
+          animationDelay={700}
+          animationDuration={4000}
+        />
+      </div>
 
-{/* Urban pH text below logo - con gap fisso dinamico */}
-<div
-  className="absolute z-20"
-  style={{
-    left: '54.5%',
-    // Gap fisso basato su dimensioni dello schermo e orientamento
-    top: (() => {
-      const screenHeight = window.innerHeight;
-      const screenWidth = window.innerWidth;
-      
-      // Dispositivi molto piccoli 
-      if (screenWidth <= 375 || screenHeight <= 667) {
-        return 'calc(50% + 3rem + 0.5rem)'; 
-      }
-      // Mobile standard
-      else if (screenWidth < 768) {
-        return 'calc(50% + 3.5rem + 0.5rem)'; 
-      }
-      else if (screenWidth < 1024) {
-        return 'calc(50% + 5rem + 0.3rem)'; 
-      }
-      // Desktop large
-      else {
-        return 'calc(50% + 5rem + 0.3rem)'; 
-      }
-    })(),
-    transform: 'translate(-50%, -50%)',
-  }}
->
-  <p
-    className="text-base xs:text-lg md:text-xl font-light text-center" // Testo più piccolo su dispositivi mini
-    style={{ color: 'white' }}
-  >
-    Urban pH
-  </p>
-</div>
+      {/* Urban pH text below logo - con gap fisso dinamico */}
+      <div
+        className="absolute z-20"
+        style={{
+          left: '54.5%',
+          // Gap fisso basato su dimensioni dello schermo e orientamento
+          top: (() => {
+            const screenHeight = window.innerHeight;
+            const screenWidth = window.innerWidth;
+
+            // Dispositivi molto piccoli 
+            if (screenWidth <= 375 || screenHeight <= 667) {
+              return 'calc(50% + 3rem + 0.5rem)';
+            }
+            // Mobile standard
+            else if (screenWidth < 768) {
+              return 'calc(50% + 3.5rem + 0.5rem)';
+            }
+            else if (screenWidth < 1024) {
+              return 'calc(50% + 5rem + 0.3rem)';
+            }
+            // Desktop large
+            else {
+              return 'calc(50% + 5rem + 0.3rem)';
+            }
+          })(),
+          transform: 'translate(-50%, -50%)',
+        }}
+      >
+        <p
+          className="text-base xs:text-lg md:text-xl font-light text-center" // Testo più piccolo su dispositivi mini
+          style={{ color: 'white' }}
+        >
+          Urban pH
+        </p>
+      </div>
 
       {/* Desktop Navigation Overlay */}
       <div className="absolute top-0 left-0 right-0 z-30 p-8 hidden md:block">
@@ -250,13 +250,12 @@ function Hero({ user, onSignInClick }) {
             </div>
 
             {/* Right side text content - now anchored to auth button */}
-            <div
-              className="max-w-md text-right"
-              style={{
-                transform: 'translateY(510px)',
-              }}
-            >
-              <p ref={endTextRef} className="text-lg md:text-xl opacity-90 mb-8" style={{ color: '#FFFADE' }}>
+            <div className="absolute bottom-[-450px] right-0 z-20 hidden md:flex justify-end w-full pointer-events-none">
+              <p
+                ref={endTextRef}
+                className="text-lg md:text-xl opacity-90 mb-8 mr-10"
+                style={{ color: '#FFFADE' }}
+              >
                 La città è di tuttə, così come l'arte e la fotografia.
               </p>
             </div>
@@ -316,7 +315,7 @@ function Hero({ user, onSignInClick }) {
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <motion.div 
+          <motion.div
             className="absolute top-full left-0 right-0 bg-black bg-opacity-90 backdrop-blur-sm"
             initial={{ clipPath: "circle(30px at calc(100% - 40px) 40px)", opacity: 0 }}
             animate={{ clipPath: "circle(1000px at calc(100% - 40px) 40px)", opacity: 1 }}
@@ -327,7 +326,7 @@ function Hero({ user, onSignInClick }) {
               restDelta: 2
             }}
           >
-            <motion.div 
+            <motion.div
               className="flex flex-col p-4 space-y-4"
               initial="closed"
               animate="open"
@@ -375,7 +374,7 @@ function Hero({ user, onSignInClick }) {
                   </Link>
                 </motion.div>
               )}
-              <motion.hr 
+              <motion.hr
                 className="border-[#FFFADE] opacity-30"
                 variants={{
                   open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
@@ -384,7 +383,7 @@ function Hero({ user, onSignInClick }) {
               />
               {user ? (
                 <>
-                  <motion.span 
+                  <motion.span
                     className="text-[#FFFADE] text-lg"
                     variants={{
                       open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },

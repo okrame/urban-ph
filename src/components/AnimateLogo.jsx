@@ -11,13 +11,32 @@ function AnimateLogo({
   // Animation states
   const [revealedAreas, setRevealedAreas] = useState([]);
   const [animationStarted, setAnimationStarted] = useState(false);
+  const [animationCompleted, setAnimationCompleted] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const logoContainerRef = useRef(null);
   const animationRef = useRef(null);
   const resizeTimeoutRef = useRef(null);
+  const initialSizeRef = useRef(null);
+
+  // Detect if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Function to reset and restart animation
   const resetAndRestartAnimation = useCallback(() => {
+    // Don't restart if animation was already completed once and we're on mobile
+    if (animationCompleted && isMobile) {
+      return;
+    }
+
     // Cancel any existing animation
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
@@ -33,12 +52,30 @@ function AnimateLogo({
     setTimeout(() => {
       setAnimationStarted(true);
       startLogoAnimation();
-    }, 50); // Reduced delay
-  }, []); 
+    }, 50);
+  }, [animationCompleted, isMobile]); 
 
-  // Handle window resize with immediate hiding
+  // Handle window resize with improved mobile detection
   useEffect(() => {
     const handleResize = () => {
+      const currentContainer = logoContainerRef.current?.getBoundingClientRect();
+      
+      // Don't restart animation on mobile after first completion
+      if (isMobile && animationCompleted) {
+        return;
+      }
+
+      // Check if this is a significant resize (not just mobile scroll/touch)
+      if (initialSizeRef.current && currentContainer) {
+        const widthChange = Math.abs(currentContainer.width - initialSizeRef.current.width);
+        const heightChange = Math.abs(currentContainer.height - initialSizeRef.current.height);
+        
+        // Only reset if there's a significant size change (more than 10px)
+        if (widthChange < 10 && heightChange < 10) {
+          return;
+        }
+      }
+
       if (!isResizing && animationStarted) {
         setIsResizing(true);
         setRevealedAreas([]); 
@@ -53,12 +90,14 @@ function AnimateLogo({
         clearTimeout(resizeTimeoutRef.current);
       }
 
-      // Set a new timeout to restart animation after resize stops
+      // Use longer timeout on mobile to avoid false positives
+      const timeoutDuration = isMobile ? 500 : 100;
+      
       resizeTimeoutRef.current = setTimeout(() => {
-        if (animationStarted) {
+        if (animationStarted && !animationCompleted) {
           resetAndRestartAnimation();
         }
-      }, 100); 
+      }, timeoutDuration); 
     };
 
     window.addEventListener('resize', handleResize);
@@ -69,7 +108,7 @@ function AnimateLogo({
         clearTimeout(resizeTimeoutRef.current);
       }
     };
-      }, [animationStarted, isResizing, resetAndRestartAnimation]);
+  }, [animationStarted, isResizing, resetAndRestartAnimation, isMobile, animationCompleted]);
 
   // Initialize logo animation
   useEffect(() => {
@@ -94,6 +133,14 @@ function AnimateLogo({
     
     if (!currentContainer || !recordedSize) return;
     
+    // Store initial size for resize comparison
+    if (!initialSizeRef.current) {
+      initialSizeRef.current = {
+        width: currentContainer.width,
+        height: currentContainer.height
+      };
+    }
+    
     const scaleX = currentContainer.width / recordedSize.width;
     const scaleY = currentContainer.height / recordedSize.height;
     
@@ -111,7 +158,11 @@ function AnimateLogo({
     };
     
     const animate = () => {
-      if (currentIndex >= coordinates.length) return;
+      if (currentIndex >= coordinates.length) {
+        // Animation completed
+        setAnimationCompleted(true);
+        return;
+      }
       
       const currentTime = Date.now() - animationStartTime;
       const progress = Math.min(currentTime / animationDuration, 1);
@@ -141,6 +192,9 @@ function AnimateLogo({
       
       if (currentIndex < coordinates.length) {
         animationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Animation completed
+        setAnimationCompleted(true);
       }
     };
     

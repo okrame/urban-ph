@@ -368,16 +368,19 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
 
   // Custom breakpoint detection - hide extensions earlier than mobile
   const [shouldShowExtensions, setShouldShowExtensions] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const checkShouldShowExtensions = () => {
+    const checkSizes = () => {
       setShouldShowExtensions(window.innerWidth >= 1100);
+      setIsMobile(window.innerWidth < 768);
     };
-
-    checkShouldShowExtensions();
-    window.addEventListener('resize', checkShouldShowExtensions);
-    return () => window.removeEventListener('resize', checkShouldShowExtensions);
+    checkSizes();
+    window.addEventListener('resize', checkSizes);
+    return () => window.removeEventListener('resize', checkSizes);
   }, []);
+
+
 
   return (
     <main>
@@ -401,69 +404,74 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
                   {/* Estensioni per l'ultima card - SOLO SU DESKTOP CON BREAKPOINT PERSONALIZZATO */}
                   {index === array.length - 1 &&
                     isPositionReady &&
-                    eventCardPosition.width > 0 &&
-                    shouldShowExtensions && ( // Condizione personalizzata invece di !isMobile
-
+                    eventCardPosition.width > 0 && (
                       <>
-                        {/* Per card con immagine a sinistra (index dispari) - linea verso sinistra */}
-                        {index % 2 === 1 && (
-                          <div
-                            className="absolute bottom-0 left-0 h-0.5 bg-black z-10"
-                            style={{
-                              width: `${eventCardPosition.width * 0.50}px`,
-                              transform: 'translateX(-100%)'
-                            }}
-                          ></div>
+                        {/* Estensioni orizzontali SOLO se shouldShowExtensions è true */}
+                        {shouldShowExtensions && (
+                          <>
+                            {/* Per card con immagine a sinistra (index dispari) - linea verso sinistra */}
+                            {index % 2 === 1 && (
+                              <div
+                                className="absolute bottom-0 left-0 h-0.5 bg-black z-10"
+                                style={{
+                                  width: `${eventCardPosition.width * 0.50}px`,
+                                  transform: 'translateX(-100%)'
+                                }}
+                              ></div>
+                            )}
+
+                            {/* Per card con immagine a destra (index pari) - linea verso destra */}
+                            {index % 2 === 0 && (
+                              <div
+                                className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
+                                style={{
+                                  width: `${eventCardPosition.width * 0.50}px`,
+                                  transform: 'translateX(100%)'
+                                }}
+                              ></div>
+                            )}
+                          </>
                         )}
 
-                        {/* Per card con immagine a destra (index pari) - linea verso destra */}
-                        {index % 2 === 0 && (
-                          <div
-                            className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
-                            style={{
-                              width: `${eventCardPosition.width * 0.50}px`,
-                              transform: 'translateX(100%)'
-                            }}
-                          ></div>
+                        {/* Vertical line from separation point - SOLO se non mobile */}
+                        {!isMobile && (
+                          <>
+                            <div
+                              className="absolute bg-black z-10"
+                              style={{
+                                width: '2px',
+                                height: '400px', // Adjust this value as needed
+                                left: index % 2 === 0
+                                  ? `${eventCardPosition.width * 0.30}px`
+                                  : `${eventCardPosition.width * 0.70}px`,
+                                top: '150%',
+                                marginTop: '0px'
+                              }}
+                            ></div>
+                            <svg
+                              className="absolute z-50"
+                              style={{
+                                left: index % 2 === 0
+                                  ? `${eventCardPosition.width * 0.30}px`
+                                  : `${eventCardPosition.width * 0.70}px`,
+                                top: 'calc(100% + 16px)',
+                                pointerEvents: 'none',
+                              }}
+                              width="2"
+                              height="400"
+                            >
+                              <line
+                                x1="1"
+                                y1="0"
+                                x2="1"
+                                y2="400"
+                                stroke="black"
+                                strokeWidth="2"
+                                strokeDasharray="14, 20"
+                              />
+                            </svg>
+                          </>
                         )}
-                        {/* Vertical line from separation point */}
-                        <div
-                          className="absolute bg-black z-10"
-                          style={{
-                            width: '2px',
-                            height: '400px', // Adjust this value as needed
-                            //left: `${eventCardPosition.width * 0.30}px`,
-                            left: index % 2 === 0
-                              ? `${eventCardPosition.width * 0.30}px` // Image on left: 30% from left
-                              : `${eventCardPosition.width * 0.70}px`, // Image on right: 70% from left    
-                            top: '150%', // Start from bottom of the card
-                            marginTop: '0px'
-                          }}
-                        ></div>
-                        <svg
-                          className="absolute z-50"
-                          style={{
-                            left: index % 2 === 0
-                              ? `${eventCardPosition.width * 0.30}px`
-                              : `${eventCardPosition.width * 0.70}px`,
-                            top: 'calc(100% + 16px)',
-                            pointerEvents: 'none',
-                          }}
-                          width="2"
-                          height="400"
-                        >
-                          <line
-                            x1="1"
-                            y1="0"
-                            x2="1"
-                            y2="400"
-                            stroke="black"
-                            strokeWidth="2"
-                            strokeDasharray="14, 20"
-                          />
-                        </svg>
-
-
                       </>
                     )}
                 </div>

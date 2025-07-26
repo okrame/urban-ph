@@ -41,13 +41,20 @@ export const getImageRoundingMobile = (index) => {
   return index % 2 === 1 ? "rounded-tl-2xl" : "rounded-tr-2xl";
 };
 
-export const getImageRoundingDesktop = (index) => {
+export const getImageRoundingDesktop = (index, showFullDescription = false) => {
+  // Remove bottom rounding when description is expanded
+  if (showFullDescription) {
+    return ""; // No rounding when expanded
+  }
+  
+  // Original rounding when collapsed
   if (index % 2 === 0) {
     return "rounded-bl-[22px]";
   } else {
     return "rounded-br-[22px]";
   }
 };
+
 
 // ANIMATION VARIANTS
 export const createImageVariants = (isImageLeft) => ({

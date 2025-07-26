@@ -55,7 +55,7 @@ return (
             <img
               src={getImageSource(event, imageError)}
               alt={event.title}
-              className={`w-full h-full object-cover ${getImageRoundingDesktop(index)}`}
+              className={`w-full h-full object-cover ${getImageRoundingDesktop(index, showFullDescription)}`}
               onError={handleImageError}
             />
           </div>

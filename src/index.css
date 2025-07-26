@@ -28,23 +28,27 @@ body {
   }
 }
 
-/* Hardware acceleration for smooth animations */
-.animated-element {
-  will-change: transform, opacity;
-  transform: translateZ(0); /* Force hardware acceleration */
-  backface-visibility: hidden;
-}
-
-/* EventCard optimization for mobile */
-@media (max-width: 1023px) {
-  [class*="motion-"] {
-    transform: translateZ(0);
-    backface-visibility: hidden;
-  }
+/* Dynamic height fix for iOS (will be set via JS) */
+body, #root {
+  height: auto !important; /* Override if JS sets it */
 }
 
 /* Safe-area for Navbar */
 .navbar {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* GPU acceleration for animations (add to EventCard/Info wrappers) */
+.animated-element, .event-card, .info-section {
+  will-change: transform, opacity;
+  backface-visibility: hidden; /* Extra for iOS jank */
+  transform: translate3d(0, 0, 0); /* Force hardware acceleration */
+}
+
+/* Reduce height transition duration on mobile to minimize jank */
+@media (max-width: 768px) {
+  .transition-height {
+    transition-duration: 200ms !important; /* Shorter for smoother feel */
+  }
 }

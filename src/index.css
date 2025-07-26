@@ -11,35 +11,40 @@ body {
   @apply font-sans;
 }
 
-/* iOS specific: Momentum scrolling on body only */
+/* iOS specific: Momentum scrolling and viewport stabilization */
 @supports (-webkit-overflow-scrolling: touch) {
   html {
-    height: 100%;
-    overflow: hidden; /* Locks html to prevent bar-induced height changes */
+    height: -webkit-fill-available;
   }
   body {
+    min-height: -webkit-fill-available;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    height: 100%;
-    width: 100%;
   }
   #root {
-    min-height: 100vh;
+    min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
   }
-  /* Avoid setting html:fixed unless you *must* lock out all other scrolling.
-     If you do, expect possible side effects! */
 }
 
-/* Safe-area for Navbar (adjust selector as needed) */
+/* Hardware acceleration for smooth animations */
+.animated-element {
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Force hardware acceleration */
+  backface-visibility: hidden;
+}
+
+/* EventCard optimization for mobile */
+@media (max-width: 1023px) {
+  [class*="motion-"] {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
+/* Safe-area for Navbar */
 .navbar {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* Smooth animations - add this class where needed */
-.animated-element {
-  will-change: transform, opacity;
 }

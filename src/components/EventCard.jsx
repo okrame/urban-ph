@@ -24,6 +24,19 @@ import {
 } from '../utils/eventCardUtils';
 
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // State management via custom hook
   const state = useEventCardState(event, user);
 
@@ -62,6 +75,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     setAnnotationTrigger: state.setAnnotationTrigger,
     setImageError: state.setImageError
   });
+
+  const shouldAnimate = state.shouldAnimate && !isMobile;
 
   // Enhanced handlers with celebration triggers
   const handlers = {
@@ -246,17 +261,16 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     <motion.div
       ref={state.cardRef}
       className={getContainerClasses()}
-      // Always ensure the card is visible regardless of animation state
-      initial={{ opacity: shouldShowBookedState ? 0.6 : 1 }}
-      animate={{
+      // CONDITIONAL ANIMATION - Only animate on desktop
+      initial={shouldAnimate ? "hidden" : { opacity: shouldShowBookedState ? 0.6 : 1 }}
+      animate={shouldAnimate ? undefined : {
         opacity: shouldShowBookedState ? 0.6 : 1,
         filter: shouldShowBookedState ? "saturate(0.5) grayscale(0.2)" : "saturate(1) grayscale(0)"
       }}
       transition={{ duration: 0.7, ease: "easeInOut" }}
-      // Keep original variants for initial load animations if enabled
-      variants={state.shouldAnimate ? containerVariants : undefined}
-      whileInView={state.shouldAnimate ? "visible" : undefined}
-      viewport={state.shouldAnimate ? { once: true, amount: 0.3 } : undefined}
+      variants={shouldAnimate ? containerVariants : undefined}
+      whileInView={shouldAnimate ? "visible" : undefined}
+      viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
 
       {/* Desktop Layout */}

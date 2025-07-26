@@ -6,7 +6,40 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Font setup */
 body {
   @apply font-sans;
 }
 
+/* iOS specific: Momentum scrolling on body only */
+@supports (-webkit-overflow-scrolling: touch) {
+  html {
+    height: 100%;
+    overflow: hidden; /* Locks html to prevent bar-induced height changes */
+  }
+  body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    height: 100%;
+    width: 100%;
+  }
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  /* Avoid setting html:fixed unless you *must* lock out all other scrolling.
+     If you do, expect possible side effects! */
+}
+
+/* Safe-area for Navbar (adjust selector as needed) */
+.navbar {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Smooth animations - add this class where needed */
+.animated-element {
+  will-change: transform, opacity;
+}

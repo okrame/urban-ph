@@ -48,7 +48,12 @@ return (
         {/* Image section */}
         <motion.div
           className="w-[30%] flex flex-col"
-          variants={shouldAnimate ? imageVariants : {}}
+          initial={shouldAnimate ? "hidden" : false}
+          whileInView={shouldAnimate ? "visible" : undefined}
+          animate={shouldAnimate ? undefined : { opacity: 1, filter: "none" }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          variants={shouldAnimate ? imageVariants : undefined}
+          viewport={shouldAnimate ? { once: true, amount: 0.25 } : undefined}
         >
           {/* Main image */}
           <div className="h-96 overflow-hidden">
@@ -93,7 +98,12 @@ return (
         {/* Content section */}
         <motion.div
           className="w-[70%] p-8 flex flex-col"
-          variants={shouldAnimate ? contentVariants : {}}
+          initial={shouldAnimate ? "hidden" : false}
+          whileInView={shouldAnimate ? "visible" : undefined}
+          animate={shouldAnimate ? undefined : { opacity: 1, filter: "none" }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          variants={shouldAnimate ? contentVariants : undefined}
+          viewport={shouldAnimate ? { once: true, amount: 0.25 } : undefined}
         >
           <div ref={contentRef} className="flex-1">
             <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
@@ -155,7 +165,11 @@ return (
               </div>
             )}
 
-            {bookingStatus === 'cancelled' }
+            {bookingStatus === 'cancelled' && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
+                <p className="font-medium">Booking Cancelled</p>
+              </div>
+            )}
 
             {isFullyBooked && bookingStatus !== 'cancelled' && (
               <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>

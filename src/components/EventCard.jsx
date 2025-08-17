@@ -31,7 +31,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024); // lg breakpoint
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -76,7 +76,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     setImageError: state.setImageError
   });
 
-  const shouldAnimate = state.shouldAnimate && !isMobile;
+  const isModalOpen = state.showBookingForm || state.showPaymentModal;
+  const shouldAnimate = state.shouldAnimate && !isMobile && !isModalOpen;
 
   // Enhanced handlers with celebration triggers
   const handlers = {
@@ -134,6 +135,33 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   // Check if event should appear as "completed/booked"
   const isEventBooked = state.isBooked && state.bookingStatus !== 'cancelled';
   const shouldShowBookedState = isEventBooked && !state.showBookingForm && !state.showPaymentModal;
+
+  // Ensures only one card is open at a time
+  const handleToggleDescription = (nextOpen) => {
+    if (nextOpen) {
+      // Notify all cards which one is opening
+      window.dispatchEvent(
+        new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
+      );
+      state.setShowFullDescription(true);
+    } else {
+      state.setShowFullDescription(false);
+    }
+  };
+
+  useEffect(() => {
+    const onAnyCardOpen = (e) => {
+      const openedId = e?.detail?.id;
+      if (openedId && openedId !== event.id) {
+        // Another card just opened -> close this one if it's open
+        state.setShowFullDescription(false);
+      }
+    };
+
+    window.addEventListener('eventCard:openDescription', onAnyCardOpen);
+    return () => window.removeEventListener('eventCard:openDescription', onAnyCardOpen);
+  }, [event.id]);
+
 
   // Position tracking effect
   useEffect(() => {
@@ -261,12 +289,20 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     <motion.div
       ref={state.cardRef}
       className={getContainerClasses()}
-      // CONDITIONAL ANIMATION - Only animate on desktop
-      initial={shouldAnimate ? "hidden" : { opacity: shouldShowBookedState ? 0.6 : 1 }}
-      animate={shouldAnimate ? undefined : {
-        opacity: shouldShowBookedState ? 0.6 : 1,
-        filter: shouldShowBookedState ? "saturate(0.5) grayscale(0.2)" : "saturate(1) grayscale(0)"
-      }}
+      // // CONDITIONAL ANIMATION - Only animate on desktop
+      // Only use whileInView on desktop when no modal is open.
+      // Otherwise, keep the card rendered in a visible state.
+      initial={shouldAnimate ? "hidden" : false}
+      animate={
+        shouldAnimate
+          ? undefined
+          : {
+            opacity: shouldShowBookedState ? 0.6 : 1,
+            filter: shouldShowBookedState
+              ? "saturate(0.5) grayscale(0.2)"
+              : "saturate(1) grayscale(0)"
+          }
+      }
       transition={{ duration: 0.7, ease: "easeInOut" }}
       variants={shouldAnimate ? containerVariants : undefined}
       whileInView={shouldAnimate ? "visible" : undefined}
@@ -278,12 +314,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         event={event}
         index={index}
         isImageLeft={isImageLeft}
-        shouldAnimate={state.shouldAnimate}
+        shouldAnimate={shouldAnimate}
         imageVariants={imageVariants}
         contentVariants={contentVariants}
         contentRef={state.contentRef}
         showFullDescription={state.showFullDescription}
-        setShowFullDescription={state.setShowFullDescription}
+        setShowFullDescription={handleToggleDescription}
         contentHeight={state.contentHeight}
         handleImageError={handlers.handleImageError}
         imageError={state.imageError}
@@ -322,7 +358,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         cardRef={state.cardRef}
         contentRef={state.contentRef}
         showFullDescription={state.showFullDescription}
-        setShowFullDescription={state.setShowFullDescription}
+        setShowFullDescription={handleToggleDescription}
         handleImageError={handlers.handleImageError}
         imageError={state.imageError}
         roughAnimationsReady={state.roughAnimationsReady}

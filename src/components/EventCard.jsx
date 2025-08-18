@@ -150,17 +150,16 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   };
 
   const setOpenInURL = (idOrNull, title) => {
-    const url = new URL(window.location.href);
-    if (idOrNull) {
-      url.searchParams.set('open', String(idOrNull));
-      if (title) url.searchParams.set('name', slugify(title));
-    } else {
-      url.searchParams.delete('open');
-      url.searchParams.delete('name');
-    }
-    // Mantiene pathname, eventuale #hash, e non crea una nuova voce in history
-    window.history.replaceState(null, '', url);
-  };
+  const base = import.meta.env.BASE_URL;  // "/urban-ph/"
+  const url = new URL(window.location.origin + base + "events");
+  
+  if (idOrNull) {
+    url.searchParams.set("open", String(idOrNull));
+    if (title) url.searchParams.set("name", slugify(title));
+  }
+  
+  history.replaceState(null, "", url);
+};
 
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {

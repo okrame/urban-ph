@@ -1,15 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="camera-icon.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Urban pH</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <!-- The path will be handled by Vite during build -->
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="camera-icon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban pH</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module">
+    // Rehydrate path written by 404.html on GitHub Pages
+    const l = window.location;
+    if (l.search && l.search.startsWith('?/')) {
+      const decoded = l.search.slice(1).replace(/~and~/g, '&'); // drop '?', restore '&'
+      const parts = decoded.split('?');
+      const path = parts[0].slice(1);                        // drop leading '/'
+      const query = parts[1] ? ('?' + parts[1]) : '';
+      const hash = l.hash || '';
+      const base = (import.meta.env.BASE_URL || '/');        // '/' in dev, '/urban-ph/' in build
+      window.history.replaceState(null, null, base + path + query + hash);
+    }
+  </script>
+  <!-- The path will be handled by Vite during build -->
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

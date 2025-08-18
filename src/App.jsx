@@ -81,9 +81,14 @@ function App() {
     const handlePayPalRedirect = async () => {
       // Parse the URL parameters from hash 
       // Since we're using hash router, we need to check the hash part
-      const hashParts = window.location.hash.split('?');
-      if (hashParts.length > 1) {
-        const urlParams = new URLSearchParams(hashParts[1]);
+      //const hashParts = window.location.hash.split('?');
+      //if (hashParts.length > 1) {
+      //const urlParams = new URLSearchParams(hashParts[1]);
+
+      // Parse from search (BrowserRouter)
+      const urlParams = new URLSearchParams(window.location.search);
+      if ([...urlParams.keys()].length > 0) {
+
 
         // Check for payment status
         const paymentSuccess = urlParams.get('payment-success');
@@ -198,38 +203,33 @@ function App() {
         }
 
         // Remove query parameters from URL
-        const baseHash = window.location.hash.split('?')[0];
-        window.history.replaceState({}, document.title, window.location.pathname + baseHash);
+        //const baseHash = window.location.hash.split('?')[0];
+        //window.history.replaceState({}, document.title, window.location.pathname + baseHash);
+        //window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+        window.history.replaceState(null, '', window.location.pathname);
       }
     };
 
     // Handle scroll to events if needed
     const checkScrollToEvents = () => {
-      const hashParts = window.location.hash.split('?');
-      if (hashParts.length > 1) {
-        const urlParams = new URLSearchParams(hashParts[1]);
 
-        // Check for scroll to events
-        if (urlParams.get('scrollToEvents') === 'true') {
-          // Delay the scroll slightly to ensure the page is fully rendered
-          setTimeout(() => {
-            const eventsSection = document.getElementById('current-events-section');
-            if (eventsSection) {
-              eventsSection.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 400);
-        }
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('scrollToEvents') === 'true') {
+        setTimeout(() => {
+          const eventsSection = document.getElementById('current-events-section');
+          if (eventsSection) {
+            eventsSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 400);
+      }
+      if (urlParams.get('scrollToAbout') === 'true') {
+        setTimeout(() => {
+          const aboutSection = document.querySelector('[data-section="about-us"]');
+          if (aboutSection) {
+            aboutSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 400);
 
-        // Check for scroll to about us
-        if (urlParams.get('scrollToAbout') === 'true') {
-          // Delay the scroll slightly to ensure the page is fully rendered
-          setTimeout(() => {
-            const aboutSection = document.querySelector('[data-section="about-us"]');
-            if (aboutSection) {
-              aboutSection.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 400);
-        }
       }
     };
 

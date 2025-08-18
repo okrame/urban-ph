@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createHashRouter, RouterProvider } from 'react-router-dom'
+//import { createHashRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { PayPalScriptProvider } from '@paypal/react-paypal-js'
 import App from './App.jsx'
 import './index.css'
@@ -21,8 +22,8 @@ const paypalOptions = {
   intent: "capture"
 };
 
-// For GitHub Pages, we'll use HashRouter
-const router = createHashRouter([
+// BrowserRouter con basename = BASE_URL (in dev è '/', su GH Pages è '/urban-ph/')
+const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
@@ -36,7 +37,11 @@ const router = createHashRouter([
     path: '*',
     element: <NotFound />
   }
-]);
+], {
+  basename: import.meta.env.BASE_URL
+});
+
+ 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <PayPalScriptProvider options={paypalOptions}>

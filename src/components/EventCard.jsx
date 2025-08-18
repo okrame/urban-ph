@@ -143,45 +143,34 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       .replace(/[^a-z0-9]+/g, '-')                      // spazi/punteggiatura → "-"
       .replace(/(^-|-$)+/g, '');                        // trim "-"
 
-  const getHashParts = () => {
-    const raw = window.location.hash.startsWith('#')
-      ? window.location.hash.slice(1)
-      : window.location.hash;
-    const [path, search = ''] = raw.split('?');
-    return { path, params: new URLSearchParams(search) };
+
+  // === Versione senza hash: usa la query string ===
+  const getOpenFromURL = () => {
+    return new URLSearchParams(window.location.search).get('open');
   };
 
   const setOpenInURL = (idOrNull, title) => {
-    const { path, params } = getHashParts();
-    if (idOrNull) params.set('open', String(idOrNull));
-    if (title) params.set('name', slugify(title));
-    else {
-      params.delete('open');
-      params.delete('name');
+    const url = new URL(window.location.href);
+    if (idOrNull) {
+      url.searchParams.set('open', String(idOrNull));
+      if (title) url.searchParams.set('name', slugify(title));
+    } else {
+      url.searchParams.delete('open');
+      url.searchParams.delete('name');
     }
-    const qs = params.toString();
-    const newHash = `#${path}${qs ? `?${qs}` : ''}`;
-    // replaceState: niente entry extra nella history quando chiudi
-    window.history.replaceState(null, '', newHash);
-  };
-
-  const getOpenFromURL = () => {
-    const { params } = getHashParts();
-    return params.get('open');
+    // Mantiene pathname, eventuale #hash, e non crea una nuova voce in history
+    window.history.replaceState(null, '', url);
   };
 
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {
     if (nextOpen) {
       setOpenInURL(event.id, event.title);
-      // Notifica le altre card per chiudersi
       window.dispatchEvent(
         new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
       );
       state.setShowFullDescription(true);
-      // Scroll in vista dopo il render
       requestAnimationFrame(() => {
-        // usa il ref se presente, altrimenti fallback all'anchor id
         if (state.cardRef.current) {
           state.cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
@@ -217,8 +206,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     };
 
     syncFromURL();                        // apertura su primo mount
-    window.addEventListener('hashchange', syncFromURL);  // supporta back/forward
-    return () => window.removeEventListener('hashchange', syncFromURL);
+    window.addEventListener('popstate', syncFromURL);    // back/forward su BrowserRouter
+    return () => window.removeEventListener('popstate', syncFromURL);
   }, [event.id, state.showFullDescription]);
 
   useEffect(() => {

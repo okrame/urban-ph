@@ -136,18 +136,90 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const isEventBooked = state.isBooked && state.bookingStatus !== 'cancelled';
   const shouldShowBookedState = isEventBooked && !state.showBookingForm && !state.showPaymentModal;
 
+  const slugify = (s) =>
+    s?.toString()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // rimuove accenti/diacritici
+      .toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-')                      // spazi/punteggiatura → "-"
+      .replace(/(^-|-$)+/g, '');                        // trim "-"
+
+  const getHashParts = () => {
+    const raw = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const [path, search = ''] = raw.split('?');
+    return { path, params: new URLSearchParams(search) };
+  };
+
+  const setOpenInURL = (idOrNull, title) => {
+    const { path, params } = getHashParts();
+    if (idOrNull) params.set('open', String(idOrNull));
+    if (title) params.set('name', slugify(title));
+    else {
+      params.delete('open');
+      params.delete('name');
+    }
+    const qs = params.toString();
+    const newHash = `#${path}${qs ? `?${qs}` : ''}`;
+    // replaceState: niente entry extra nella history quando chiudi
+    window.history.replaceState(null, '', newHash);
+  };
+
+  const getOpenFromURL = () => {
+    const { params } = getHashParts();
+    return params.get('open');
+  };
+
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {
     if (nextOpen) {
-      // Notify all cards which one is opening
+      setOpenInURL(event.id, event.title);
+      // Notifica le altre card per chiudersi
       window.dispatchEvent(
         new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
       );
       state.setShowFullDescription(true);
+      // Scroll in vista dopo il render
+      requestAnimationFrame(() => {
+        // usa il ref se presente, altrimenti fallback all'anchor id
+        if (state.cardRef.current) {
+          state.cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          const el = document.getElementById(`event-${event.id}`);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
     } else {
+      // pulisci il param se stai chiudendo proprio questa
+      if (getOpenFromURL() === String(event.id)) setOpenInURL(null);
       state.setShowFullDescription(false);
     }
   };
+
+  useEffect(() => {
+    const syncFromURL = () => {
+      const openId = getOpenFromURL();
+      if (openId === String(event.id) && !state.showFullDescription) {
+        window.dispatchEvent(
+          new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
+        );
+        state.setShowFullDescription(true);
+        setTimeout(() => {
+          if (state.cardRef.current) {
+            state.cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            document.getElementById(`event-${event.id}`)?.scrollIntoView({
+              behavior: 'smooth', block: 'start'
+            });
+          }
+        }, 50);
+      }
+    };
+
+    syncFromURL();                        // apertura su primo mount
+    window.addEventListener('hashchange', syncFromURL);  // supporta back/forward
+    return () => window.removeEventListener('hashchange', syncFromURL);
+  }, [event.id, state.showFullDescription]);
 
   useEffect(() => {
     const onAnyCardOpen = (e) => {

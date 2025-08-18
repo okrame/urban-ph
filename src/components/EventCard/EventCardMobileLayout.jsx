@@ -68,6 +68,7 @@ const EventCardMobileLayout = ({
 
   return (
     <motion.div
+      id={`event-${event.id}`}
       style={{ marginLeft: "7.5px", marginRight: "7px" }}
       ref={cardRef}
       className={`lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden ${getBorderClassesMobile(index)}`}

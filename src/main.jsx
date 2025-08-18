@@ -4,7 +4,6 @@ import { createHashRouter, RouterProvider } from 'react-router-dom'
 import { PayPalScriptProvider } from '@paypal/react-paypal-js'
 import App from './App.jsx'
 import './index.css'
-import EventsPage from './pages/EventsPage.jsx'
 import AdminPanel from './pages/AdminPanel.jsx'
 import NotFound from './pages/NotFound.jsx'
 
@@ -28,10 +27,6 @@ const router = createHashRouter([
     path: '/',
     element: <App />,
     errorElement: <NotFound />
-  },
-  {
-    path: '/events',
-    element: <EventsPage />,
   },
   {
     path: '/admin',

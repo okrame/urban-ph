@@ -33,12 +33,6 @@ body, #root {
   height: auto !important; /* Override if JS sets it */
 }
 
-/* Safe-area for Navbar */
-.navbar {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
 /* GPU acceleration for animations (add to EventCard/Info wrappers) */
 .animated-element, .event-card, .info-section {
   will-change: transform, opacity;

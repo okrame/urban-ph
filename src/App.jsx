@@ -206,7 +206,19 @@ function App() {
         //const baseHash = window.location.hash.split('?')[0];
         //window.history.replaceState({}, document.title, window.location.pathname + baseHash);
         //window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
-        window.history.replaceState(null, '', window.location.pathname);
+        //window.history.replaceState(null, '', window.location.pathname);
+
+        // Only strip PayPal-related params, keep others like ?open= & ?name=
+const allParams = new URLSearchParams(window.location.search);
+const ppKeys = ['payment-success','payment-cancelled','order_id','tx','st'];
+const hasPayPalParams = ppKeys.some(k => allParams.has(k));
+if (hasPayPalParams) {
+  ppKeys.forEach(k => allParams.delete(k));
+  const search = allParams.toString();
+  const nextUrl = window.location.pathname + (search ? `?${search}` : '') + window.location.hash;
+  window.history.replaceState(null, '', nextUrl);
+}
+
       }
     };
 

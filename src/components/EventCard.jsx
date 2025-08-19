@@ -164,7 +164,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
      params.delete('name');
    }
    // IMPORTANT: keep single-page UX, just alias to /events
-   navigate(`/events${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
+   //navigate(`/events${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
+   navigate(`${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
  };
 
   // Ensures only one card is open at a time

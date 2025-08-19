@@ -30,6 +30,11 @@ const router = createBrowserRouter([
     errorElement: <NotFound />
   },
   {
+    // ALIAS route: render the same App at /events as well.
+    path: '/events',
+    element: <App />,
+  },
+  {
     path: '/admin',
     element: <AdminPanel />,
   },
@@ -41,7 +46,7 @@ const router = createBrowserRouter([
   basename: import.meta.env.BASE_URL
 });
 
- 
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <PayPalScriptProvider options={paypalOptions}>

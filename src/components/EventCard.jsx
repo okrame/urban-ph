@@ -7,6 +7,7 @@ import RoughNotationText from './RoughNotationText';
 import LoadingSpinner from './LoadingSpinner';
 import EventCardDesktopLayout from './EventCard/EventCardDesktopLayout';
 import EventCardMobileLayout from './EventCard/EventCardMobileLayout';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 
 // Custom hooks
@@ -26,6 +27,9 @@ import {
 function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
   const [isMobile, setIsMobile] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -146,20 +150,22 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
   // === Versione senza hash: usa la query string ===
   const getOpenFromURL = () => {
-    return new URLSearchParams(window.location.search).get('open');
+    return new URLSearchParams(location.search).get('open');
   };
 
-  const setOpenInURL = (idOrNull, title) => {
-  const base = import.meta.env.BASE_URL;  // "/urban-ph/"
-  const url = new URL(window.location.origin + base + "events");
-  
-  if (idOrNull) {
-    url.searchParams.set("open", String(idOrNull));
-    if (title) url.searchParams.set("name", slugify(title));
-  }
-  
-  history.replaceState(null, "", url);
-};
+ // Write to URL using the router (keeps everything in sync)
+ const setOpenInURL = (idOrNull, title) => {
+   const params = new URLSearchParams(location.search);
+   if (idOrNull) {
+     params.set('open', String(idOrNull));
+     if (title) params.set('name', slugify(title));
+   } else {
+     params.delete('open');
+     params.delete('name');
+   }
+   // IMPORTANT: keep single-page UX, just alias to /events
+   navigate(`/events${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
+ };
 
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {

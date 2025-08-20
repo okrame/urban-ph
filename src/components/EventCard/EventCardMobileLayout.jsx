@@ -1,5 +1,6 @@
 // components/EventCard/EventCardMobileLayout.jsx
 import { motion } from 'framer-motion';
+import { useEffect } from 'react'
 import LocationMap from '../LocationMap';
 import RoughNotationText from '../RoughNotationText';
 import { 
@@ -77,30 +78,62 @@ const EventCardMobileLayout = ({
 
   const enableInView = !deepLinked;  // only use whileInView when NOT deep-linked
 
+  // 🔧: su deep-link, forziamo il paint e layer stabile (iOS/Safari/Chrome Android)
+  const wrapperMotionProps = deepLinked
+    ? {
+        initial: false,           // niente stato "hidden"
+        animate: false,           // niente animazione wrapper
+        whileInView: undefined,
+        viewport: undefined
+      }
+    : {
+        variants: mobileVariants,
+        initial: "hidden",
+        whileInView: "visible",
+        viewport: { once: true, amount: 0.3 }
+      };
+
+  // 🔧: micro “reflow kick” post-mount solo su deep-link per sbloccare il paint su device reali
+  useEffect(() => {
+    if (!deepLinked || !cardRef?.current) return;
+    const el = cardRef.current;
+    // forza un reflow + promotion del layer
+    el.style.transform = 'translateZ(0)';
+    // toggle di una custom property per innescare repaint senza layout costoso
+    el.style.setProperty('--repaint', '1');
+    requestAnimationFrame(() => el.style.removeProperty('--repaint'));
+  }, [deepLinked, cardRef]);    
+
   return (
     <motion.div
       id={`event-${event.id}`}
-      style={{
-        // 2) see next block — prevents deferred paint on mobile for the opened card
-        contentVisibility: deepLinked ? 'visible' : undefined
-      }}
       ref={cardRef}
       className={[
-        "relative lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden",
-        // 🟢 keep only when frame is visible
+        "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
+        // 🔧: rimuovo overflow-hidden su deep-link per evitare clip del compositor
+        deepLinked ? "overflow-visible" : "overflow-hidden",
         isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
         isFrameVisible ? getActiveFrameThickness(index) : "",
+        "event-card" // già usa will-change in index.css
       ].join(" ")}
-      variants={mobileVariants}
-      initial={deepLinked ? "visible" : "hidden"}
-      animate={deepLinked ? "visible" : undefined}
-      whileInView={enableInView ? "visible" : undefined}
-      viewport={enableInView ? { once: true, amount: 0.3 } : undefined}
+      style={{
+        // 🔧: niente content-visibility — alcuni WebKit saltano il paint con contenuti lunghi
+        // contentVisibility: deepLinked ? 'visible' : undefined,
+        contain: deepLinked ? 'layout paint' : undefined,   // stabilizza il layer su Safari
+        WebkitTransform: 'translateZ(0)',                   // GPU promote
+        backfaceVisibility: 'hidden',
+        willChange: 'transform, opacity'
+      }}
+      {...wrapperMotionProps}
     >
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div 
         className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getContentClasses()}`}
         {...getContentAnimationProps()}
+
+        // 🔧: evita che un filtro/opacity su tutto il blocco stressi il compositor su mobile
+        style={deepLinked ? { willChange: 'auto', filter: 'none', opacity: 1 } : undefined}
+        layout // aiuta Framer a calcolare height correttamente su mobile
       >
         {/* Image Half */}
         <div className={`w-1/2 h-full overflow-hidden ${getImageRoundingMobile(index)}`}>
@@ -139,6 +172,7 @@ const EventCardMobileLayout = ({
       <motion.div 
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)} ${getContentClasses()}`}
         {...getContentAnimationProps()}
+        layout // 🔧: layout animation → evita glitch di altezza su iOS
       >
         <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
           {shouldTruncate && !showFullDescription ? (

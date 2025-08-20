@@ -11,10 +11,13 @@ import {
   DESCRIPTION_LIMIT,
   getActiveFrameThickness
 } from '../../utils/eventCardUtils';
+import { useLocation } from 'react-router-dom';
+
 
 const EventCardMobileLayout = ({
   event,
   index,
+  isActive,
   shouldAnimate,
   mobileVariants,
   cardRef,
@@ -68,10 +71,19 @@ const EventCardMobileLayout = ({
     };
   };
 
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  const deepLinked = isActive && params.get('open') === event.id;
+
+  const enableInView = !deepLinked;  // only use whileInView when NOT deep-linked
+
   return (
     <motion.div
       id={`event-${event.id}`}
-      style={{ marginLeft: "7.5px", marginRight: "7px", ...(isFrameVisible ? {} : { boxShadow: 'none' }) }}
+      style={{
+        // 2) see next block — prevents deferred paint on mobile for the opened card
+        contentVisibility: deepLinked ? 'visible' : undefined
+      }}
       ref={cardRef}
       className={[
         "relative lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden",
@@ -79,11 +91,11 @@ const EventCardMobileLayout = ({
         isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
         isFrameVisible ? getActiveFrameThickness(index) : "",
       ].join(" ")}
-      variants={shouldAnimate ? mobileVariants : {}}
-      initial={shouldAnimate ? "hidden" : false}
-      animate={shouldAnimate ? undefined : false}
-      whileInView={shouldAnimate ? "visible" : undefined}
-      viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
+      variants={mobileVariants}
+      initial={deepLinked ? "visible" : "hidden"}
+      animate={deepLinked ? "visible" : undefined}
+      whileInView={enableInView ? "visible" : undefined}
+      viewport={enableInView ? { once: true, amount: 0.3 } : undefined}
     >
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div 

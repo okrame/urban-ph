@@ -1,6 +1,5 @@
 // components/EventCard/EventCardMobileLayout.jsx
 import { motion } from 'framer-motion';
-import { useEffect } from 'react'
 import LocationMap from '../LocationMap';
 import RoughNotationText from '../RoughNotationText';
 import { 
@@ -12,13 +11,10 @@ import {
   DESCRIPTION_LIMIT,
   getActiveFrameThickness
 } from '../../utils/eventCardUtils';
-import { useLocation } from 'react-router-dom';
-
 
 const EventCardMobileLayout = ({
   event,
   index,
-  isActive,
   shouldAnimate,
   mobileVariants,
   cardRef,
@@ -41,99 +37,71 @@ const EventCardMobileLayout = ({
   handleBookEvent,
   isBooked,
   loading,
-  shouldShowBookedState // Add this prop
+  shouldShowBookedState
 }) => {
   const shouldTruncate = shouldTruncateDescription(event.description);
   const isImageLeft = index % 2 === 0;
   const isFrameVisible = !showFullDescription;
 
-  // Content styling based on booking status (applied to inner content, not borders)
+  // 🚫 On very tall mobile cards, delaying visibility with whileInView can leave a white box
+  // ✅ Force immediate paint when expanded (or when we don’t want lazy “in-view” gating)
+  const forceAlwaysVisible = !!showFullDescription;
+
   const getContentClasses = () => {
-    let baseClasses = "transition-all duration-700 ease-in-out";
-    
-    if (shouldShowBookedState) {
-      baseClasses += " opacity-60 saturate-50 grayscale-[0.2]";
-    }
-    
-    return baseClasses;
+    let base = "transition-all duration-700 ease-in-out";
+    if (shouldShowBookedState) base += " opacity-60 saturate-50 grayscale-[0.2]";
+    return base;
   };
 
-  // Content animation props for booking state
   const getContentAnimationProps = () => {
     if (!shouldShowBookedState) return {};
-    
     return {
       initial: { opacity: 0.6 },
-      animate: { 
-        opacity: 0.6,
-        filter: "saturate(0.5) grayscale(0.2)"
-      },
+      animate: { opacity: 0.6, filter: "saturate(0.5) grayscale(0.2)" },
       transition: { duration: 0.7, ease: "easeInOut" }
     };
   };
-
-  const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  const deepLinked = isActive && params.get('open') === event.id;
-
-  const enableInView = !deepLinked;  // only use whileInView when NOT deep-linked
-
-  // 🔧: su deep-link, forziamo il paint e layer stabile (iOS/Safari/Chrome Android)
-  const wrapperMotionProps = deepLinked
-    ? {
-        initial: false,           // niente stato "hidden"
-        animate: false,           // niente animazione wrapper
-        whileInView: undefined,
-        viewport: undefined
-      }
-    : {
-        variants: mobileVariants,
-        initial: "hidden",
-        whileInView: "visible",
-        viewport: { once: true, amount: 0.3 }
-      };
-
-  // 🔧: micro “reflow kick” post-mount solo su deep-link per sbloccare il paint su device reali
-  useEffect(() => {
-    if (!deepLinked || !cardRef?.current) return;
-    const el = cardRef.current;
-    // forza un reflow + promotion del layer
-    el.style.transform = 'translateZ(0)';
-    // toggle di una custom property per innescare repaint senza layout costoso
-    el.style.setProperty('--repaint', '1');
-    requestAnimationFrame(() => el.style.removeProperty('--repaint'));
-  }, [deepLinked, cardRef]);    
 
   return (
     <motion.div
       id={`event-${event.id}`}
       ref={cardRef}
+      style={{
+        marginLeft: "7.5px",
+        marginRight: "7px",
+        ...(isFrameVisible ? {} : { boxShadow: 'none' }),
+        // 🛠️ Mobile paint hints to avoid “white until scroll” on iOS/WebKit
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        willChange: 'opacity, transform',
+        contain: 'layout paint style',
+        minHeight: 1
+      }}
       className={[
         "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
-        // 🔧: rimuovo overflow-hidden su deep-link per evitare clip del compositor
-        deepLinked ? "overflow-visible" : "overflow-hidden",
+        // when expanded, do NOT clip tall content
+        showFullDescription ? "overflow-visible" : "overflow-hidden",
+        // keep the frame only when collapsed
         isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
         isFrameVisible ? getActiveFrameThickness(index) : "",
-        "event-card" // già usa will-change in index.css
       ].join(" ")}
-      style={{
-        // 🔧: niente content-visibility — alcuni WebKit saltano il paint con contenuti lunghi
-        // contentVisibility: deepLinked ? 'visible' : undefined,
-        contain: deepLinked ? 'layout paint' : undefined,   // stabilizza il layer su Safari
-        WebkitTransform: 'translateZ(0)',                   // GPU promote
-        backfaceVisibility: 'hidden',
-        willChange: 'transform, opacity'
-      }}
-      {...wrapperMotionProps}
+      
+      // ⛔ Don’t gate visibility behind IntersectionObserver for the expanded (tall) card
+      variants={shouldAnimate && !forceAlwaysVisible ? mobileVariants : undefined}
+      initial={shouldAnimate && !forceAlwaysVisible ? "hidden" : false}
+      animate={
+        shouldAnimate && !forceAlwaysVisible
+          ? undefined
+          : { opacity: 1, filter: shouldShowBookedState ? "saturate(0.5) grayscale(0.2)" : "saturate(1) grayscale(0)" }
+      }
+      whileInView={shouldAnimate && !forceAlwaysVisible ? "visible" : undefined}
+      viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
     >
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div 
         className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getContentClasses()}`}
         {...getContentAnimationProps()}
-
-        // 🔧: evita che un filtro/opacity su tutto il blocco stressi il compositor su mobile
-        style={deepLinked ? { willChange: 'auto', filter: 'none', opacity: 1 } : undefined}
-        layout // aiuta Framer a calcolare height correttamente su mobile
       >
         {/* Image Half */}
         <div className={`w-1/2 h-full overflow-hidden ${getImageRoundingMobile(index)}`}>
@@ -144,6 +112,7 @@ const EventCardMobileLayout = ({
             onError={handleImageError}
           />
         </div>
+
         {/* Info Half */}
         <div className="w-1/2 h-full p-3 sm:p-4 flex flex-col justify-center bg-white">
           <h3 className="text-lg sm:text-xl font-light text-black mb-2 line-clamp-2">{event.title}</h3>
@@ -172,7 +141,6 @@ const EventCardMobileLayout = ({
       <motion.div 
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)} ${getContentClasses()}`}
         {...getContentAnimationProps()}
-        layout // 🔧: layout animation → evita glitch di altezza su iOS
       >
         <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
           {shouldTruncate && !showFullDescription ? (

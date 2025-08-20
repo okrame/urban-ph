@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
@@ -30,6 +30,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const didInitRef = useRef(false);
+
 
   useEffect(() => {
     const checkMobile = () => {
@@ -170,51 +172,54 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {
-    if (nextOpen) {
-      setOpenInURL(event.id, event.title);
+  if (nextOpen) {
+    setOpenInURL(event.id, event.title);
+    window.dispatchEvent(
+      new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
+    );
+    state.setShowFullDescription(true);
+    // NOTE: no scroll here anymore
+  } else {
+    if (getOpenFromURL() === String(event.id)) setOpenInURL(null);
+    state.setShowFullDescription(false);
+  }
+};
+
+
+useEffect(() => {
+  const syncFromURL = (shouldScroll) => {
+    const openId = getOpenFromURL();
+    const isMe = openId === String(event.id);
+
+    if (isMe && !state.showFullDescription) {
       window.dispatchEvent(
         new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
       );
       state.setShowFullDescription(true);
-      requestAnimationFrame(() => {
-        if (state.cardRef.current) {
-          state.cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          const el = document.getElementById(`event-${event.id}`);
-          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    } else {
-      // pulisci il param se stai chiudendo proprio questa
-      if (getOpenFromURL() === String(event.id)) setOpenInURL(null);
-      state.setShowFullDescription(false);
+
+      if (shouldScroll) {
+        setTimeout(() => {
+          (state.cardRef.current ??
+            document.getElementById(`event-${event.id}`))
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      }
     }
   };
 
-  useEffect(() => {
-    const syncFromURL = () => {
-      const openId = getOpenFromURL();
-      if (openId === String(event.id) && !state.showFullDescription) {
-        window.dispatchEvent(
-          new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
-        );
-        state.setShowFullDescription(true);
-        setTimeout(() => {
-          if (state.cardRef.current) {
-            state.cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            document.getElementById(`event-${event.id}`)?.scrollIntoView({
-              behavior: 'smooth', block: 'start'
-            });
-          }
-        }, 50);
-      }
-    };
+  // Initial mount: sync & scroll once
+  if (!didInitRef.current) {
+    didInitRef.current = true;
+    syncFromURL(true);
+  }
 
-    syncFromURL();                        // apertura su primo mount
-    window.addEventListener('popstate', syncFromURL);    // back/forward su BrowserRouter
-    return () => window.removeEventListener('popstate', syncFromURL);
-  }, [event.id, state.showFullDescription]);
+  // Back/forward: sync & scroll
+  const onPop = () => syncFromURL(true);
+  window.addEventListener('popstate', onPop);
+
+  return () => window.removeEventListener('popstate', onPop);
+  // IMPORTANT: do not depend on showFullDescription to avoid re-running
+}, [event.id]); 
 
   useEffect(() => {
     const onAnyCardOpen = (e) => {

@@ -9,7 +9,8 @@ import {
   getImageSource,
   getMapHeight,
   shouldTruncateDescription,
-  DESCRIPTION_LIMIT
+  DESCRIPTION_LIMIT,
+  getActiveFrameThickness
 } from '../../utils/eventCardUtils';
 
 const EventCardDesktopLayout = ({
@@ -46,7 +47,9 @@ const EventCardDesktopLayout = ({
   return (
     <div
       id={`event-${event.id}`}
-      className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getBorderClasses(index)}`}
+      className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} 
+    ${getBorderClasses(index)} 
+    ${showFullDescription ? getActiveFrameThickness(index) : ''}`}
     >
       {/* Image section */}
       <motion.div

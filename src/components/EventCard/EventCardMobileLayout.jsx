@@ -8,7 +8,8 @@ import {
   getImageRoundingMobile, 
   getImageSource,
   shouldTruncateDescription,
-  DESCRIPTION_LIMIT
+  DESCRIPTION_LIMIT,
+  getActiveFrameThickness
 } from '../../utils/eventCardUtils';
 
 const EventCardMobileLayout = ({
@@ -71,7 +72,9 @@ const EventCardMobileLayout = ({
       id={`event-${event.id}`}
       style={{ marginLeft: "7.5px", marginRight: "7px" }}
       ref={cardRef}
-      className={`lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden ${getBorderClassesMobile(index)}`}
+      className={`lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden 
+    ${getBorderClassesMobile(index)} 
+    ${showFullDescription ? getActiveFrameThickness(index) : ''}`}
       variants={shouldAnimate ? mobileVariants : {}}
       initial={shouldAnimate ? "hidden" : false}
       animate={shouldAnimate ? undefined : false}

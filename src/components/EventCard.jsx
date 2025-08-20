@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
 import CelebratoryToast from './CelebratoryToast';
@@ -9,6 +9,7 @@ import EventCardDesktopLayout from './EventCard/EventCardDesktopLayout';
 import EventCardMobileLayout from './EventCard/EventCardMobileLayout';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
+import { getActiveCardRounding } from '../utils/eventCardUtils';
 
 // Custom hooks
 import { useEventCardState } from '../hooks/useEventCardState';
@@ -360,7 +361,15 @@ useEffect(() => {
   const eventCardComponent = (
     <motion.div
       ref={state.cardRef}
-      className={getContainerClasses()}
+      className={`${getContainerClasses()} ${
+    state.showFullDescription
+      ? [
+          'relative z-50 bg-white shadow-2xl overflow-hidden transform-gpu',
+          getActiveCardRounding(index),   // keep the same rounded corner as the frame
+        ].join(' ')
+      : ''
+  }`}
+
       // // CONDITIONAL ANIMATION - Only animate on desktop
       // Only use whileInView on desktop when no modal is open.
       // Otherwise, keep the card rendered in a visible state.
@@ -462,7 +471,22 @@ useEffect(() => {
   );
 
   return (
+    
     <>
+
+          <AnimatePresence>
+  {state.showFullDescription && !isModalOpen && ( // don’t show scrim if a modal is open
+    <motion.div
+      key="eventcard-scrim"
+      className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => handleToggleDescription(false)}
+    />
+  )}
+</AnimatePresence>
+    
       {/* Main Event Card */}
       {eventCardComponent}
 
@@ -503,6 +527,7 @@ useEffect(() => {
         onComplete={handlers.handleCelebrationComplete}
         message={celebrationMessage}
       />
+
     </>
   );
 }

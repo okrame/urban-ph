@@ -1,6 +1,5 @@
 // utils/eventCardUtils.js
 
-// CONSTANTS
 export const DESCRIPTION_LIMIT = 400;
 
 // BORDER CLASSES FUNCTIONS
@@ -35,6 +34,15 @@ export const getContentBorderClassesMobile = (index) => {
 
   return "overflow-hidden";
 };
+
+export const getActiveCardRounding = (index) =>
+  index % 2 === 0 ? 'rounded-bl-3xl' : 'rounded-br-3xl';
+
+export const getActiveFrameThickness = (index) =>
+  index % 2 === 0
+    ? 'border-b-2 border-l-2 md:border-b-2 md:border-l-2'
+    : 'border-b-2 border-r-2 md:border-b-2 md:border-r-2';
+
 
 export const getImageRoundingMobile = (index) => {
   if (index === 0) return "rounded-tr-2xl";

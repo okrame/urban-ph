@@ -41,6 +41,7 @@ const EventCardMobileLayout = ({
 }) => {
   const shouldTruncate = shouldTruncateDescription(event.description);
   const isImageLeft = index % 2 === 0;
+  const isFrameVisible = !showFullDescription;
 
   // Content styling based on booking status (applied to inner content, not borders)
   const getContentClasses = () => {
@@ -70,11 +71,14 @@ const EventCardMobileLayout = ({
   return (
     <motion.div
       id={`event-${event.id}`}
-      style={{ marginLeft: "7.5px", marginRight: "7px" }}
+      style={{ marginLeft: "7.5px", marginRight: "7px", ...(isFrameVisible ? {} : { boxShadow: 'none' }) }}
       ref={cardRef}
-      className={`lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden 
-    ${getBorderClassesMobile(index)} 
-    ${showFullDescription ? getActiveFrameThickness(index) : ''}`}
+      className={[
+        "relative lg:hidden sm:mx-6 md:mx-8 bg-white overflow-hidden",
+        // 🟢 keep only when frame is visible
+        isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
+        isFrameVisible ? getActiveFrameThickness(index) : "",
+      ].join(" ")}
       variants={shouldAnimate ? mobileVariants : {}}
       initial={shouldAnimate ? "hidden" : false}
       animate={shouldAnimate ? undefined : false}

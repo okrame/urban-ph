@@ -1,11 +1,12 @@
 // components/EventCard/EventCardMobileLayout.jsx
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
+import { useRef, useState, useLayoutEffect } from 'react';
 import LocationMap from '../LocationMap';
 import RoughNotationText from '../RoughNotationText';
-import { 
-  getBorderClassesMobile, 
+import {
+  getBorderClassesMobile,
   getContentBorderClassesMobile,
-  getImageRoundingMobile, 
+  getImageRoundingMobile,
   getImageSource,
   shouldTruncateDescription,
   DESCRIPTION_LIMIT,
@@ -43,9 +44,27 @@ const EventCardMobileLayout = ({
   const isImageLeft = index % 2 === 0;
   const isFrameVisible = !showFullDescription;
 
-  // 🚫 On very tall mobile cards, delaying visibility with whileInView can leave a white box
-  // ✅ Force immediate paint when expanded (or when we don’t want lazy “in-view” gating)
   const forceAlwaysVisible = !!showFullDescription;
+
+  // local in-view just for RoughNotation
+  const dateRef = useRef(null);
+  const dateInView = useInView(dateRef, { once: true, rootMargin: '40% 0px -10% 0px' });
+  const btnRef = useRef(null);
+  const btnInView = useInView(btnRef, { once: true, rootMargin: '40% 0px -10% 0px' });
+
+  const [rnArmed, setRnArmed] = useState(false);
+  useLayoutEffect(() => {
+    if (!roughAnimationsReady || !allowRoughAnimations) return;
+    let f1 = 0, f2 = 0;
+    f1 = requestAnimationFrame(() => {
+      f2 = requestAnimationFrame(() => setRnArmed(true));
+    });
+    return () => { cancelAnimationFrame(f1); cancelAnimationFrame(f2); };
+  }, [roughAnimationsReady, allowRoughAnimations, showFullDescription]);
+
+  // Final trigger: after armed, when external trigger OR in-view OR already open
+  const roughTrigger = (annotationTrigger || dateInView || forceAlwaysVisible);
+
 
   const getContentClasses = () => {
     let base = "transition-all duration-700 ease-in-out";
@@ -70,24 +89,19 @@ const EventCardMobileLayout = ({
         marginLeft: "7.5px",
         marginRight: "7px",
         ...(isFrameVisible ? {} : { boxShadow: 'none' }),
-        // 🛠️ Mobile paint hints to avoid “white until scroll” on iOS/WebKit
         transform: 'translateZ(0)',
         backfaceVisibility: 'hidden',
         WebkitOverflowScrolling: 'touch',
         willChange: 'opacity, transform',
-        contain: 'layout paint style',
+        //contain: 'layout',
         minHeight: 1
       }}
       className={[
         "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
-        // when expanded, do NOT clip tall content
         showFullDescription ? "overflow-visible" : "overflow-hidden",
-        // keep the frame only when collapsed
         isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
         isFrameVisible ? getActiveFrameThickness(index) : "",
       ].join(" ")}
-      
-      // ⛔ Don’t gate visibility behind IntersectionObserver for the expanded (tall) card
       variants={shouldAnimate && !forceAlwaysVisible ? mobileVariants : undefined}
       initial={shouldAnimate && !forceAlwaysVisible ? "hidden" : false}
       animate={
@@ -99,7 +113,7 @@ const EventCardMobileLayout = ({
       viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
     >
       {/* Mobile Header Section - Image + Basic Info */}
-      <motion.div 
+      <motion.div
         className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getContentClasses()}`}
         {...getContentAnimationProps()}
       >
@@ -117,14 +131,15 @@ const EventCardMobileLayout = ({
         <div className="w-1/2 h-full p-3 sm:p-4 flex flex-col justify-center bg-white">
           <h3 className="text-lg sm:text-xl font-light text-black mb-2 line-clamp-2">{event.title}</h3>
           <div className="flex flex-col text-xs sm:text-sm text-black opacity-70 gap-1">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" ref={dateRef}>
               <RoughNotationText
+                key={`rn-${Number(roughTrigger)}-${showFullDescription ? 'open' : 'closed'}`}
                 type="underline"
                 color="#4A7E74"
                 strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 200 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
+                animationDelay={150}
+                disabled={!allowRoughAnimations}
+                trigger={roughTrigger}
               >
                 {event.date}
               </RoughNotationText>
@@ -138,7 +153,7 @@ const EventCardMobileLayout = ({
       </motion.div>
 
       {/* Mobile Content - Description and Actions */}
-      <motion.div 
+      <motion.div
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)} ${getContentClasses()}`}
         {...getContentAnimationProps()}
       >
@@ -234,15 +249,14 @@ const EventCardMobileLayout = ({
               loading ||
               (!isBookable && bookingStatus !== 'cancelled')
             }
-            className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${
-              (isBooked && bookingStatus !== 'cancelled')
+            className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
                 ? 'bg-transparent text-black'
                 : loading
                   ? 'bg-transparent text-black cursor-wait'
                   : (!isBookable && bookingStatus !== 'cancelled')
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                     : 'bg-transparent text-black hover:text-purple-700 transition-colors'
-            }`}
+              }`}
             style={{
               background:
                 (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
@@ -254,22 +268,20 @@ const EventCardMobileLayout = ({
                   : undefined
             }}
           >
-            {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
-              getButtonContent()
-            ) : isInteractiveButton ? (
+            <span ref={btnRef} className="inline-block align-middle">
               <RoughNotationText
+                key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
                 type="box"
                 color="#4A7E74"
                 strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 100 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
+                animationDelay={100}
+                disabled={!allowRoughAnimations}
+                trigger={annotationTrigger || btnInView || forceAlwaysVisible}
               >
                 {getButtonText()}
               </RoughNotationText>
-            ) : (
-              getButtonText()
-            )}
+            </span>
+
           </button>
         </div>
       </motion.div>

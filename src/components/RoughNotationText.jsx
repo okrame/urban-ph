@@ -35,7 +35,7 @@ const RoughNotationText = ({
     if (!isMobile) {
       return {
         strokeWidth,
-        padding: type === 'highlight' ? 4 : 2,
+        padding: type === 'highlight' ? 4 : 4,
         animationDuration: 800
       };
     }
@@ -43,87 +43,58 @@ const RoughNotationText = ({
     // Mobile optimizations - much tighter annotations
     return {
       strokeWidth: Math.max(1, strokeWidth - 0.5), // Thinner strokes on mobile
-      padding: type === 'highlight' ? 1 : 0, // Minimal padding on mobile for tight fit
+      padding: type === 'highlight' ? 1 : 2, // Minimal padding on mobile for tight fit
       animationDuration: 600 // Faster animations on mobile
     };
   };
 
-  useEffect(() => {
-    // Immediately hide annotation when trigger changes (prevents ghosting)
-    if (trigger !== prevTriggerRef.current && annotationRef.current) {
-      try {
-        annotationRef.current.hide();
-        annotationRef.current.remove();
-      } catch {
-        // Silently handle removal errors  
-      }
+
+
+useEffect(() => {
+  const el = elementRef.current;
+  // Clean up any previous annotation
+  if (annotationRef.current) {
+    try { annotationRef.current.remove(); } catch {}
+    annotationRef.current = null;
+  }
+
+  // Bail if no element, disabled, or not triggered
+  if (!el || disabled || !trigger) return;
+
+  const settings = getMobileSettings();
+  let raf1 = 0, raf2 = 0, showTimer = 0;
+
+  // force layout
+  void el.getBoundingClientRect();
+
+  raf1 = requestAnimationFrame(() => {
+    raf2 = requestAnimationFrame(() => {
+      const ann = annotate(el, {
+        type,
+        color,
+        strokeWidth: settings.strokeWidth,
+        animate,
+        animationDuration: settings.animationDuration,
+        padding: settings.padding
+      });
+      annotationRef.current = ann;
+      showTimer = window.setTimeout(() => {
+        ann.show();
+      }, animationDelay || 0);
+    });
+  });
+
+  return () => {
+    cancelAnimationFrame(raf1);
+    cancelAnimationFrame(raf2);
+    clearTimeout(showTimer);
+    if (annotationRef.current) {
+      try { annotationRef.current.remove(); } catch {}
       annotationRef.current = null;
-      setIsTransitioning(true);
     }
-    prevTriggerRef.current = trigger;
-  }, [trigger]);
+  };
+}, [trigger, disabled, type, color, animate, animationDelay, strokeWidth, children, isMobile]);
 
-  useEffect(() => {
-    if (elementRef.current && !disabled && !isTransitioning) {
-      // Clean removal of existing annotation
-      if (annotationRef.current) {
-        try {
-          annotationRef.current.remove();
-        } catch (e) {
-          // Silently handle removal errors
-        }
-        annotationRef.current = null;
-      }
-
-      // Small delay to ensure DOM is stable
-      const createTimer = setTimeout(() => {
-        if (elementRef.current && !disabled && !isTransitioning) {
-          const settings = getMobileSettings();
-          
-          annotationRef.current = annotate(elementRef.current, {
-            type,
-            color,
-            strokeWidth: settings.strokeWidth,
-            animate,
-            animationDuration: settings.animationDuration,
-            padding: settings.padding
-          });
-
-          // Start animation with delay
-          const showTimer = setTimeout(() => {
-            if (annotationRef.current) {
-              annotationRef.current.show();
-            }
-          }, animationDelay);
-
-          return () => clearTimeout(showTimer);
-        }
-      }, isMobile ? 150 : 100); // Slightly longer delay on mobile for stability
-
-      return () => {
-        clearTimeout(createTimer);
-        if (annotationRef.current) {
-          try {
-            annotationRef.current.remove();
-          } catch (e) {
-            // Silently handle removal errors
-          }
-          annotationRef.current = null;
-        }
-      };
-    }
-  }, [type, color, animate, animationDelay, strokeWidth, disabled, children, isTransitioning, isMobile]);
-
-  // Handle transition state for smooth recreation
-  useEffect(() => {
-    if (trigger > 0 && isTransitioning) {
-      const timer = setTimeout(() => {
-        setIsTransitioning(false);
-      }, isMobile ? 250 : 200); // Longer wait on mobile for layout to settle
-
-      return () => clearTimeout(timer);
-    }
-  }, [trigger, isTransitioning, isMobile]);
 
   return (
     <span 

@@ -307,19 +307,24 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const getButtonContent = () => {
     if (state.isBooked && state.bookingStatus !== 'cancelled') {
       return (
-        <RoughNotationText
-          type="box"
-          color="#AFACFB"
-          strokeWidth={2}
-          animationDelay={100}
-          disabled={!state.allowRoughAnimations || !state.roughAnimationsReady || state.bookingJustCompleted}
-          trigger={state.annotationTrigger}
-          className="relative z-[70]"
+      <div className="flex items-center gap-2">
+        <span>Booked!</span>
+        </div>
+      )
+      // return (
+      //   <RoughNotationText
+      //     type="box"
+      //     color="#AFACFB"
+      //     strokeWidth={2}
+      //     animationDelay={100}
+      //     disabled={!state.allowRoughAnimations || !state.roughAnimationsReady || state.bookingJustCompleted}
+      //     trigger={state.annotationTrigger}
+      //     className="relative z-[70]"
 
-        >
-          Booking Confirmed!
-        </RoughNotationText>
-      );
+      //   >
+      //     Booking Confirmed!
+      //   </RoughNotationText>
+      // );
     }
 
     if (state.loading) {
@@ -384,13 +389,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
       whileInView={shouldAnimate ? "visible" : undefined}
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
-      {/* Dim solo visuale, non agisce come filtro sul parent */}
-      {shouldShowBookedState && (
-        <div
-          className="pointer-events-none absolute inset-0 z-10 bg-white/60"
-          aria-hidden
-        />
-      )}
 
 
       {/* Desktop Layout */}

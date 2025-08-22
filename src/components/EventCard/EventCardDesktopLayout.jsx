@@ -158,11 +158,13 @@ const EventCardDesktopLayout = ({
           </div>
 
           {/* Event meta info */}
+        {!isBooked && (
           <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
             <span className="px-2 py-1">
               {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
             </span>
           </div>
+        )}
 
           {/* Status messages */}
           {authError && (

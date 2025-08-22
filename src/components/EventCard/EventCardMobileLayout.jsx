@@ -66,6 +66,16 @@ const EventCardMobileLayout = ({
   // Final trigger: after armed, when external trigger OR in-view OR already open
   const roughTrigger = (annotationTrigger || dateInView || forceAlwaysVisible);
 
+
+const getContentClasses = () => {
+  // Don't apply opacity/filter classes that would affect child elements
+  return "transition-all duration-700 ease-in-out";
+};
+  const getContentAnimationProps = () => {
+  // Don't apply any animation props that would create a new stacking context
+  return {};
+};
+
   return (
     <motion.div
   id={`event-${event.id}`}
@@ -186,11 +196,13 @@ const EventCardMobileLayout = ({
         )}
 
         {/* Event meta info */}
-        <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-          <span className="px-2 py-1">
-            {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-          </span>
-        </div>
+        {!isBooked && (
+          <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
+            <span className="px-2 py-1">
+              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+            </span>
+          </div>
+        )}
 
         {/* Status messages */}
         {authError && (

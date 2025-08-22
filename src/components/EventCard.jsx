@@ -156,71 +156,71 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     return new URLSearchParams(location.search).get('open');
   };
 
- // Write to URL using the router (keeps everything in sync)
- const setOpenInURL = (idOrNull, title) => {
-   const params = new URLSearchParams(location.search);
-   if (idOrNull) {
-     params.set('open', String(idOrNull));
-     if (title) params.set('name', slugify(title));
-   } else {
-     params.delete('open');
-     params.delete('name');
-   }
-   // IMPORTANT: keep single-page UX, just alias to /events
-   //navigate(`/events${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
-   navigate(`${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
- };
+  // Write to URL using the router (keeps everything in sync)
+  const setOpenInURL = (idOrNull, title) => {
+    const params = new URLSearchParams(location.search);
+    if (idOrNull) {
+      params.set('open', String(idOrNull));
+      if (title) params.set('name', slugify(title));
+    } else {
+      params.delete('open');
+      params.delete('name');
+    }
+    // IMPORTANT: keep single-page UX, just alias to /events
+    //navigate(`/events${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
+    navigate(`${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
+  };
 
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {
-  if (nextOpen) {
-    setOpenInURL(event.id, event.title);
-    window.dispatchEvent(
-      new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
-    );
-    state.setShowFullDescription(true);
-    // NOTE: no scroll here anymore
-  } else {
-    if (getOpenFromURL() === String(event.id)) setOpenInURL(null);
-    state.setShowFullDescription(false);
-  }
-};
-
-
-useEffect(() => {
-  const syncFromURL = (shouldScroll) => {
-    const openId = getOpenFromURL();
-    const isMe = openId === String(event.id);
-
-    if (isMe && !state.showFullDescription) {
+    if (nextOpen) {
+      setOpenInURL(event.id, event.title);
       window.dispatchEvent(
         new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
       );
       state.setShowFullDescription(true);
-
-      if (shouldScroll) {
-        setTimeout(() => {
-          (state.cardRef.current ??
-            document.getElementById(`event-${event.id}`))
-            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 50);
-      }
+      // NOTE: no scroll here anymore
+    } else {
+      if (getOpenFromURL() === String(event.id)) setOpenInURL(null);
+      state.setShowFullDescription(false);
     }
   };
 
-  // Initial mount: sync & scroll once
-  if (!didInitRef.current) {
-    didInitRef.current = true;
-    syncFromURL(true);
-  }
 
-  // Back/forward: sync & scroll
-  const onPop = () => syncFromURL(true);
-  window.addEventListener('popstate', onPop);
+  useEffect(() => {
+    const syncFromURL = (shouldScroll) => {
+      const openId = getOpenFromURL();
+      const isMe = openId === String(event.id);
 
-  return () => window.removeEventListener('popstate', onPop);
-  // IMPORTANT: do not depend on showFullDescription to avoid re-running
-}, [event.id]); 
+      if (isMe && !state.showFullDescription) {
+        window.dispatchEvent(
+          new CustomEvent('eventCard:openDescription', { detail: { id: event.id } })
+        );
+        state.setShowFullDescription(true);
+
+        if (shouldScroll) {
+          setTimeout(() => {
+            (state.cardRef.current ??
+              document.getElementById(`event-${event.id}`))
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
+      }
+    };
+
+    // Initial mount: sync & scroll once
+    if (!didInitRef.current) {
+      didInitRef.current = true;
+      syncFromURL(true);
+    }
+
+    // Back/forward: sync & scroll
+    const onPop = () => syncFromURL(true);
+    window.addEventListener('popstate', onPop);
+
+    return () => window.removeEventListener('popstate', onPop);
+    // IMPORTANT: do not depend on showFullDescription to avoid re-running
+  }, [event.id]);
 
   useEffect(() => {
     const onAnyCardOpen = (e) => {
@@ -314,6 +314,8 @@ useEffect(() => {
           animationDelay={100}
           disabled={!state.allowRoughAnimations || !state.roughAnimationsReady || state.bookingJustCompleted}
           trigger={state.annotationTrigger}
+          className="relative z-[70]"
+
         >
           Booking Confirmed!
         </RoughNotationText>
@@ -348,12 +350,6 @@ useEffect(() => {
   // Container styling based on booking status
   const getContainerClasses = () => {
     let baseClasses = "bg-white overflow-hidden transition-all duration-700 ease-in-out";
-
-    if (shouldShowBookedState) {
-      // Apply reduced opacity and saturation for booked events
-      baseClasses += " opacity-60 saturate-50 grayscale-[0.2]";
-    }
-
     return baseClasses;
   };
 
@@ -361,34 +357,41 @@ useEffect(() => {
   const eventCardComponent = (
     <motion.div
       ref={state.cardRef}
-      className={`${getContainerClasses()} ${
-    state.showFullDescription
-      ? [
-          'relative z-50 bg-white shadow-2xl overflow-hidden transform-gpu',
-          getActiveCardRounding(index),   // keep the same rounded corner as the frame
-        ].join(' ')
-      : ''
-  }`}
+      className={`${getContainerClasses()} ${state.showFullDescription
+          ? [
+            'relative z-50 bg-white shadow-2xl overflow-hidden transform-gpu',
+            getActiveCardRounding(index),
+          ].join(' ')
+          : ''
+        }`}
 
       // // CONDITIONAL ANIMATION - Only animate on desktop
-      // Only use whileInView on desktop when no modal is open.
-      // Otherwise, keep the card rendered in a visible state.
       initial={shouldAnimate ? "hidden" : false}
       animate={
         shouldAnimate
           ? undefined
-          : {
-            opacity: shouldShowBookedState ? 0.6 : 1,
-            filter: shouldShowBookedState
-              ? "saturate(0.5) grayscale(0.2)"
-              : "saturate(1) grayscale(0)"
-          }
+          : isMobile
+            ? { opacity: 1 } // On mobile, don't apply any filters - let the overlay handle it
+            : {
+              opacity: shouldShowBookedState ? 0.6 : 1,
+              filter: shouldShowBookedState
+                ? "saturate(0.5) grayscale(0.2)"
+                : "saturate(1) grayscale(0)"
+            }
       }
       transition={{ duration: 0.7, ease: "easeInOut" }}
       variants={shouldAnimate ? containerVariants : undefined}
       whileInView={shouldAnimate ? "visible" : undefined}
       viewport={shouldAnimate ? { once: true, amount: 0.3 } : undefined}
     >
+      {/* Dim solo visuale, non agisce come filtro sul parent */}
+      {shouldShowBookedState && (
+        <div
+          className="pointer-events-none absolute inset-0 z-10 bg-white/60"
+          aria-hidden
+        />
+      )}
+
 
       {/* Desktop Layout */}
       <EventCardDesktopLayout
@@ -471,22 +474,22 @@ useEffect(() => {
   );
 
   return (
-    
+
     <>
 
-          <AnimatePresence>
-  {state.showFullDescription && !isModalOpen && ( // don’t show scrim if a modal is open
-    <motion.div
-      key="eventcard-scrim"
-      className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => handleToggleDescription(false)}
-    />
-  )}
-</AnimatePresence>
-    
+      <AnimatePresence>
+        {state.showFullDescription && !isModalOpen && ( // don’t show scrim if a modal is open
+          <motion.div
+            key="eventcard-scrim"
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => handleToggleDescription(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Main Event Card */}
       {eventCardComponent}
 

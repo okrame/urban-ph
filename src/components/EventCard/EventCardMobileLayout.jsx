@@ -52,6 +52,7 @@ const EventCardMobileLayout = ({
   const btnRef = useRef(null);
   const btnInView = useInView(btnRef, { once: true, rootMargin: '40% 0px -10% 0px' });
 
+
   const [rnArmed, setRnArmed] = useState(false);
   useLayoutEffect(() => {
     if (!roughAnimationsReady || !allowRoughAnimations) return;
@@ -66,56 +67,49 @@ const EventCardMobileLayout = ({
   const roughTrigger = (annotationTrigger || dateInView || forceAlwaysVisible);
 
 
-  const getContentClasses = () => {
-    let base = "transition-all duration-700 ease-in-out";
-    if (shouldShowBookedState) base += " opacity-60 saturate-50 grayscale-[0.2]";
-    return base;
-  };
-
+const getContentClasses = () => {
+  // Don't apply opacity/filter classes that would affect child elements
+  return "transition-all duration-700 ease-in-out";
+};
   const getContentAnimationProps = () => {
-    if (!shouldShowBookedState) return {};
-    return {
-      initial: { opacity: 0.6 },
-      animate: { opacity: 0.6, filter: "saturate(0.5) grayscale(0.2)" },
-      transition: { duration: 0.7, ease: "easeInOut" }
-    };
-  };
+  // Don't apply any animation props that would create a new stacking context
+  return {};
+};
 
   return (
     <motion.div
-      id={`event-${event.id}`}
-      ref={cardRef}
-      style={{
-        marginLeft: "7.5px",
-        marginRight: "7px",
-        ...(isFrameVisible ? {} : { boxShadow: 'none' }),
-        transform: 'translateZ(0)',
-        backfaceVisibility: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-        willChange: 'opacity, transform',
-        //contain: 'layout',
-        minHeight: 1
-      }}
-      className={[
-        "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
-        showFullDescription ? "overflow-visible" : "overflow-hidden",
-        isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
-        isFrameVisible ? getActiveFrameThickness(index) : "",
-      ].join(" ")}
-      variants={shouldAnimate && !forceAlwaysVisible ? mobileVariants : undefined}
-      initial={shouldAnimate && !forceAlwaysVisible ? "hidden" : false}
-      animate={
-        shouldAnimate && !forceAlwaysVisible
-          ? undefined
-          : { opacity: 1, filter: shouldShowBookedState ? "saturate(0.5) grayscale(0.2)" : "saturate(1) grayscale(0)" }
-      }
-      whileInView={shouldAnimate && !forceAlwaysVisible ? "visible" : undefined}
-      viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
-    >
+  id={`event-${event.id}`}
+  ref={cardRef}
+  style={{
+    marginLeft: "7.5px",
+    marginRight: "7px",
+    ...(isFrameVisible ? {} : { boxShadow: 'none' }),
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden',
+    WebkitOverflowScrolling: 'touch',
+    willChange: 'opacity, transform',
+    minHeight: 1
+  }}
+  className={[
+    "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
+    showFullDescription ? "overflow-visible" : "overflow-hidden",
+    isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
+    isFrameVisible ? getActiveFrameThickness(index) : "",
+  ].join(" ")}
+  variants={shouldAnimate && !forceAlwaysVisible ? mobileVariants : undefined}
+  initial={shouldAnimate && !forceAlwaysVisible ? "hidden" : false}
+  animate={
+    shouldAnimate && !forceAlwaysVisible
+      ? undefined
+      : { opacity: 1 } // REMOVED the filter from here
+  }
+  whileInView={shouldAnimate && !forceAlwaysVisible ? "visible" : undefined}
+  viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
+>
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div
-        className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} ${getContentClasses()}`}
-        {...getContentAnimationProps()}
+          className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}
+
       >
         {/* Image Half */}
         <div className={`w-1/2 h-full overflow-hidden ${getImageRoundingMobile(index)}`}>
@@ -154,8 +148,7 @@ const EventCardMobileLayout = ({
 
       {/* Mobile Content - Description and Actions */}
       <motion.div
-        className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)} ${getContentClasses()}`}
-        {...getContentAnimationProps()}
+        className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
       >
         <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
           {shouldTruncate && !showFullDescription ? (
@@ -241,49 +234,61 @@ const EventCardMobileLayout = ({
         )}
 
         {/* Mobile Book button */}
-        <div className="w-full mt-2">
-          <button
-            onClick={handleBookEvent}
-            disabled={
-              (isBooked && bookingStatus !== 'cancelled') ||
-              loading ||
-              (!isBookable && bookingStatus !== 'cancelled')
-            }
-            className={`w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
-                ? 'bg-transparent text-black'
-                : loading
-                  ? 'bg-transparent text-black cursor-wait'
-                  : (!isBookable && bookingStatus !== 'cancelled')
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-                    : 'bg-transparent text-black hover:text-purple-700 transition-colors'
-              }`}
-            style={{
-              background:
-                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
-                  ? 'transparent'
-                  : undefined,
-              border:
-                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
-                  ? 'none'
-                  : undefined
-            }}
-          >
-            <span ref={btnRef} className="inline-block align-middle">
-              <RoughNotationText
-                key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
-                type="box"
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={100}
-                disabled={!allowRoughAnimations}
-                trigger={annotationTrigger || btnInView || forceAlwaysVisible}
-              >
-                {getButtonText()}
-              </RoughNotationText>
-            </span>
-
-          </button>
-        </div>
+<div className="w-full mt-2 relative z-20"> {/* Add relative z-20 to button container */}
+  <button
+    onClick={handleBookEvent}
+    disabled={
+      (isBooked && bookingStatus !== 'cancelled') ||
+      loading ||
+      (!isBookable && bookingStatus !== 'cancelled')
+    }
+    className={`relative w-full py-3 px-4 text-base font-light transition-all duration-300 ${
+      (isBooked && bookingStatus !== 'cancelled')
+        ? 'bg-transparent text-black'
+        : loading
+          ? 'bg-transparent text-black cursor-wait'
+          : (!isBookable && bookingStatus !== 'cancelled')
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
+            : 'bg-transparent text-black hover:text-purple-700 transition-colors'
+    }`}
+    style={{
+      background:
+        (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
+          ? 'transparent'
+          : undefined,
+      border:
+        (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
+          ? 'none'
+          : undefined,
+      position: 'relative',
+      zIndex: 20
+    }}
+  >
+    {/* Use the same logic as desktop: getButtonContent() for booked/loading states */}
+    {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
+      <span className="relative z-[70]">
+        {getButtonContent()}
+      </span>
+    ) : isInteractiveButton ? (
+      <span ref={btnRef} className="inline-block align-middle relative z-[70]">
+        <RoughNotationText
+          key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
+          type="box"
+          color="#4A7E74"
+          strokeWidth={2}
+          animationDelay={100}
+          disabled={!allowRoughAnimations}
+          trigger={annotationTrigger || btnInView || forceAlwaysVisible}
+          className="relative z-[70]"
+        >
+          {getButtonText()}
+        </RoughNotationText>
+      </span>
+    ) : (
+      getButtonText()
+    )}
+  </button>
+</div>
       </motion.div>
     </motion.div>
   );

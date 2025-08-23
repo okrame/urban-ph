@@ -493,19 +493,22 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
 
       {/* Booking Form Modal */}
       {state.showBookingForm && (
-        <BookingForm
-          onSubmit={handlers.handleFormSubmit}
-          onCancel={handlers.handleCancelForm}
-          loading={state.loading}
-          isFirstTime={state.isFirstTimeBooking}
-          existingData={state.existingUserData}
-          event={{
-            ...event,
-            paymentAmount: state.applicablePrice,
-            userMembershipStatus: state.userMembershipStatus
-          }}
-        />
-      )}
+  <BookingForm
+    onSubmit={handlers.handleFormSubmit}
+    onCancel={handlers.handleCancelForm}
+    loading={state.loading}
+    isFirstTime={state.isFirstTimeBooking}
+    existingData={state.existingUserData}
+    event={{
+      ...event,
+      paymentAmount: state.applicablePrice,
+      userMembershipStatus: state.userMembershipStatus
+    }}
+    user={user}
+    isBooked={state.isBooked}
+    bookingStatus={state.bookingStatus}
+  />
+)}
 
       {/* Payment Modal */}
       {state.showPaymentModal && (

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
-function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event }) {
+function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, isBooked = false, bookingStatus = null }) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Form state
   const [name, setName] = useState(existingData.name || '');
   const [surname, setSurname] = useState(existingData.surname || '');
@@ -18,10 +18,46 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   const [error, setError] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [country, setCountry] = useState('');
 
   // Determine if we need pagination (first time or confirmation)
   const needsPagination = isFirstTime;
   const totalPages = needsPagination ? 2 : 1;
+
+  const countries = [
+    'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda',
+    'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
+    'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina',
+    'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi',
+    'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros',
+    'Congo (Congo-Brazzaville)', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic',
+    'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic',
+    'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia',
+    'Fiji', 'Finland', 'France',
+    'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana',
+    'Haiti', 'Honduras', 'Hungary',
+    'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy',
+    'Jamaica', 'Japan', 'Jordan',
+    'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan',
+    'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg',
+    'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico',
+    'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar (Burma)',
+    'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway',
+    'Oman',
+    'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal',
+    'Qatar',
+    'Romania', 'Russia', 'Rwanda',
+    'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe',
+    'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands',
+    'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria',
+    'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
+    'Turkmenistan', 'Tuvalu',
+    'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan',
+    'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam',
+    'Yemen',
+    'Zambia', 'Zimbabwe'
+  ].sort();
+
 
   // Format current date for max date validation
   const today = new Date().toISOString().split('T')[0];
@@ -39,7 +75,24 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     setEmail(existingData.email || '');
     setPhone(existingData.phone || '');
     setBirthDate(existingData.birthDate || '');
-    setAddress(existingData.address || '');
+
+    // Extract country from existing address if present
+    const existingAddress = existingData.address || '';
+    const lastComma = existingAddress.lastIndexOf(',');
+    if (lastComma !== -1) {
+      const possibleCountry = existingAddress.substring(lastComma + 1).trim();
+      if (countries.includes(possibleCountry)) {
+        setAddress(existingAddress.substring(0, lastComma).trim());
+        setCountry(possibleCountry);
+      } else {
+        setAddress(existingAddress);
+        setCountry('');
+      }
+    } else {
+      setAddress(existingAddress);
+      setCountry('');
+    }
+
     setTaxId(existingData.taxId || '');
     setInstagram(existingData.instagram || '');
     setRequests('');
@@ -65,9 +118,37 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   };
 
   const validateTaxId = (id) => {
-    // Italian Codice Fiscale validation - basic format check
-    const regex = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/i;
-    return id ? regex.test(id.toUpperCase()) : false;
+    if (!id) return false;
+    const value = id.toUpperCase().trim();
+
+    // Italian Codice Fiscale (16 alphanumeric chars with encoded rules)
+    const italian = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/i;
+
+    // UK National Insurance Number (e.g. AB123456C)
+    const ukNino = /^[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]$/i;
+
+    // US SSN (e.g. 123-45-6789) or EIN (12-3456789)
+    const usSsn = /^\d{3}-\d{2}-\d{4}$/;
+    const usEin = /^\d{2}-\d{7}$/;
+
+    // Germany Steuer-ID (11 digits)
+    const german = /^\d{11}$/;
+
+    // France Numéro fiscal (13 digits, sometimes 14)
+    const french = /^\d{13,14}$/;
+
+    // General fallback: allow alphanumeric 6–20 chars
+    const generic = /^[A-Z0-9]{6,20}$/i;
+
+    return (
+      italian.test(value) ||
+      ukNino.test(value) ||
+      usSsn.test(value) ||
+      usEin.test(value) ||
+      german.test(value) ||
+      french.test(value) ||
+      generic.test(value) // fallback
+    );
   };
 
   const getFormTitle = () => {
@@ -126,6 +207,10 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
         setError('Home address is required');
         return false;
       }
+      if (!country) {
+        setError('Country is required');
+        return false;
+      }
       if (!taxId.trim() || !validateTaxId(taxId)) {
         setError('Valid Tax ID/Codice Fiscale is required (16 characters)');
         return false;
@@ -159,6 +244,10 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           setError('Home address is required');
           return false;
         }
+        if (!country) {  
+          setError('Country is required');
+          return false;
+        }
         if (!taxId.trim() || !validateTaxId(taxId)) {
           setError('Valid Tax ID/Codice Fiscale is required (16 characters)');
           return false;
@@ -187,6 +276,11 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (isBooked && bookingStatus !== 'cancelled') {
+      setError('You have already booked this event. Please check your email for confirmation.');
+      return;
+    }
+
     if (!validateCurrentPage()) {
       return;
     }
@@ -198,7 +292,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
       name,
       surname,
       birthDate,
-      address,
+      address: country ? `${address}, ${country}` : address,
       taxId,
       instagram,
       requests,
@@ -223,6 +317,18 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
             </button>
           </div>
 
+          {isBooked && bookingStatus !== 'cancelled' && (
+            <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded-md">
+              <p className="text-amber-800 font-medium">
+                ⚠️ You have already booked this event
+              </p>
+              <p className="text-sm text-amber-700 mt-1">
+                Please check your email for confirmation details. If you need to make changes,
+                please contact us directly.
+              </p>
+            </div>
+          )}
+
           {/* Page indicator for paginated forms */}
           {needsPagination && (
             <div className="flex justify-center mb-4">
@@ -230,9 +336,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 {[1, 2].map((page) => (
                   <div
                     key={page}
-                    className={`w-2 h-2 rounded-full ${
-                      currentPage === page ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
+                    className={`w-2 h-2 rounded-full ${currentPage === page ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
                   />
                 ))}
               </div>
@@ -322,7 +427,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                 <div>
                   <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address">
-                    Home Address *
+                    Street Address *
                   </label>
                   <input
                     type="text"
@@ -336,6 +441,24 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 </div>
 
                 <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country">
+                    Country *
+                  </label>
+                  <select
+                    id="country"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    required
+                  >
+                    <option value="">Select a country</option>
+                    {countries.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId">
                     Tax ID/Codice Fiscale *
                   </label>
@@ -344,16 +467,15 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     id="taxId"
                     value={taxId}
                     onChange={handleTaxIdChange}
-                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                      taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                     required
                     maxLength={16}
                     placeholder="16 characters"
                   />
                   {taxId && !validateTaxId(taxId) && (
                     <p className="text-xs text-red-500 mt-1">
-                      Please enter a valid Italian Codice Fiscale (16 characters)
+                      Please enter a valid Tax ID (Codice Fiscale, NINO, SSN, EIN, Steuer-ID, etc.)
                     </p>
                   )}
                 </div>
@@ -413,7 +535,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address-single">
-                        Home Address *
+                        Street Address *
                       </label>
                       <input
                         type="text"
@@ -427,6 +549,24 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     </div>
 
                     <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country-single">
+                        Country *
+                      </label>
+                      <select
+                        id="country-single"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        required
+                      >
+                        <option value="">Select a country</option>
+                        {countries.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId-single">
                         Tax ID/Codice Fiscale *
                       </label>
@@ -435,9 +575,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="taxId-single"
                         value={taxId}
                         onChange={handleTaxIdChange}
-                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                          taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         required
                         maxLength={16}
                         placeholder="16 characters"
@@ -460,9 +599,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                      email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                     placeholder="your@email.com"
                     required
                   />
@@ -482,9 +620,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                      phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                     placeholder="+39 123 456 7890"
                     required
                   />
@@ -559,32 +696,32 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
             {/* Navigation Buttons */}
             <div className="flex justify-between items-center pt-4">
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 {needsPagination && currentPage > 1 && (
                   <button
                     type="button"
                     onClick={handlePrevious}
-                    className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                    className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs sm:text-sm"
                   >
-                    ← Previous
+                    ← Back
                   </button>
                 )}
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm"
+                  className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs sm:text-sm"
                 >
                   Cancel
                 </button>
-                
+
                 {needsPagination && currentPage < totalPages ? (
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    className="px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs sm:text-sm"
                   >
                     Next →
                   </button>
@@ -592,17 +729,24 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`px-4 py-1.5 bg-blue-600 text-white rounded font-medium text-sm flex items-center gap-2 ${
-                      loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
-                    }`}
+                    className={`px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2 ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
+                      }`}
                   >
                     {loading ? (
                       <>
-                        <LoadingSpinner size={16} color="#ffffff" />
-                        <span>Hold on...</span>
+                        <LoadingSpinner size={12} color="#ffffff" className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Hold on...</span>
+                        <span className="sm:hidden">Wait...</span>
                       </>
                     ) : (
-                      event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'
+                      <>
+                        <span className="hidden sm:inline">
+                          {event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'}
+                        </span>
+                        <span className="sm:hidden font-bold">
+                          {event?.paymentAmount > 0 ? 'Pay' : 'Book'}
+                        </span>
+                      </>
                     )}
                   </button>
                 )}

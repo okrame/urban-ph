@@ -472,15 +472,6 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
                               width="2"
                               height="400"
                             >
-                              <line
-                                x1="1"
-                                y1="0"
-                                x2="1"
-                                y2="400"
-                                stroke="black"
-                                strokeWidth="2"
-                                strokeDasharray="14, 20"
-                              />
                             </svg>
                           </>
                         )}

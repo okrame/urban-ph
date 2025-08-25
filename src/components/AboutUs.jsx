@@ -4,6 +4,7 @@ import { motion, useMotionValue, useTransform, animate, useInView } from "framer
 export default function AboutUs({ verticalLinePosition = 30 }) {
   const sectionRef = useRef(null);
   const counterRef = useRef(null);
+  const statsRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
 
   const titleRef = useRef(null);
@@ -12,12 +13,25 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const [aLeftPx, setALeftPx] = useState(null);
   const [usRightPx, setUsRightPx] = useState(null);
 
-  // Animated counter setup
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, Math.round);
+  // Animated counters setup
+  const membersCount = useMotionValue(0);
+  const eventsCount = useMotionValue(0);
+  const locationsCount = useMotionValue(0);
+  const partnershipsCount = useMotionValue(0);
+  
+  const membersRounded = useTransform(membersCount, Math.round);
+  const eventsRounded = useTransform(eventsCount, Math.round);
+  const locationsRounded = useTransform(locationsCount, Math.round);
+  const partnershipsRounded = useTransform(partnershipsCount, Math.round);
 
-  // Scroll trigger for counter animation
+  // Scroll triggers for counter animations
   const isCounterInView = useInView(counterRef, { 
+    once: true, 
+    threshold: 0.3,
+    rootMargin: '0px 0px -20% 0px'
+  });
+
+  const isStatsInView = useInView(statsRef, { 
     once: true, 
     threshold: 0.3,
     rootMargin: '0px 0px -20% 0px'
@@ -51,17 +65,42 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     return () => window.removeEventListener('resize', measure);
   }, [verticalLinePosition, isMobile]);
 
-  // Start counter animation when counter comes into view
+  // Start members counter animation when counter comes into view
   useEffect(() => {
     if (isCounterInView) {
-      const animation = animate(count, 244, { 
+      const animation = animate(membersCount, 244, { 
         duration: 2.5,
         ease: "easeOut"
       });
 
       return animation.stop;
     }
-  }, [count, isCounterInView]);
+  }, [membersCount, isCounterInView]);
+
+  // Start stats counters animation when stats come into view
+  useEffect(() => {
+    if (isStatsInView) {
+      const animations = [
+        animate(eventsCount, 76, { 
+          duration: 2,
+          ease: "easeOut",
+          delay: 0.3
+        }),
+        animate(locationsCount, 25, { 
+          duration: 2,
+          ease: "easeOut",
+          delay: 0.5
+        }),
+        animate(partnershipsCount, 12, { 
+          duration: 2,
+          ease: "easeOut",
+          delay: 0.7
+        })
+      ];
+
+      return () => animations.forEach(animation => animation.stop());
+    }
+  }, [eventsCount, locationsCount, partnershipsCount, isStatsInView]);
 
   const isLineOnLeft = verticalLinePosition <= 50;
 
@@ -84,7 +123,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     }
   };
 
-const getCounterStyles = () => {
+  const getCounterStyles = () => {
     if (isMobile) {
       return {
         maxWidth: '85vw',
@@ -111,6 +150,36 @@ const getCounterStyles = () => {
           width: `${counterWidth}%`,
           left: `${100 - gap - counterWidth}%`,
           top: '300px'
+        };
+      }
+    }
+  };
+
+  const getStatsStyles = () => {
+    if (isMobile) {
+      return {
+        maxWidth: '85vw',
+        width: '85vw',
+        marginTop: '2rem'
+      };
+    } else {
+      // Position stats row below the paragraph text
+      const textWidth = 65;
+      const gap = 2;
+
+      if (isLineOnLeft) {
+        return {
+          maxWidth: '750px',
+          width: `${textWidth}%`,
+          left: `${verticalLinePosition + gap}%`,
+          top: '340px' // Positioned below the paragraph
+        };
+      } else {
+        return {
+          maxWidth: '750px',
+          width: `${textWidth}%`,
+          left: `${verticalLinePosition - gap - textWidth}%`,
+          top: '340px' // Positioned below the paragraph
         };
       }
     }
@@ -223,6 +292,84 @@ const getCounterStyles = () => {
           Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a cultural association dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
         </div>
 
+        {/* Additional Stats Row - Desktop: below paragraph, Mobile: below members counter */}
+        <div
+          ref={statsRef}
+          className={`${isMobile
+            ? "relative z-10 mx-auto px-6 bg-transparent"
+            : "absolute z-10 p-8 bg-transparent"
+            }`}
+          style={{
+            ...(isMobile
+              ? {
+                maxWidth: '85vw',
+                width: '85vw',
+                marginBottom: '2rem',
+                order: 2 // Will appear after members counter in mobile
+              }
+              : {
+                ...getStatsStyles()
+              }
+            )
+          }}
+        >
+          <div className="grid grid-cols-3 gap-4 sm:gap-8">
+            {/* Events */}
+            <motion.div 
+              className="flex flex-col items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ 
+                opacity: isStatsInView ? 1 : 0, 
+                y: isStatsInView ? 0 : 20 
+              }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <motion.h3 className="font-bold text-green-800 text-2xl sm:text-3xl">
+                {eventsRounded}
+              </motion.h3>
+              <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
+                events
+              </p>
+            </motion.div>
+
+            {/* Locations */}
+            <motion.div 
+              className="flex flex-col items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ 
+                opacity: isStatsInView ? 1 : 0, 
+                y: isStatsInView ? 0 : 20 
+              }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              <motion.h3 className="font-bold text-green-800 text-2xl sm:text-3xl">
+                {locationsRounded}
+              </motion.h3>
+              <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
+                locations
+              </p>
+            </motion.div>
+
+            {/* Partnerships */}
+            <motion.div 
+              className="flex flex-col items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ 
+                opacity: isStatsInView ? 1 : 0, 
+                y: isStatsInView ? 0 : 20 
+              }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+            >
+              <motion.h3 className="font-bold text-green-800 text-2xl sm:text-3xl">
+                {partnershipsRounded}
+              </motion.h3>
+              <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
+                partnerships
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
         {/* Animated Member Counter */}
         <div
           ref={counterRef}
@@ -235,7 +382,8 @@ const getCounterStyles = () => {
               ? {
                 maxWidth: '85vw',
                 width: '85vw',
-                marginBottom: '2rem'
+                marginBottom: '2rem',
+                order: 1 // Will appear before stats in mobile
               }
               : {
                 ...getCounterStyles()
@@ -253,7 +401,7 @@ const getCounterStyles = () => {
               }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              {rounded}
+              {membersRounded}
             </motion.h2>
             <motion.p 
               className="text-sm sm:text-base text-purple-600 font-medium uppercase tracking-wider text-[clamp(1.25rem,4.5vw,3rem)]"

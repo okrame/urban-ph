@@ -1,15 +1,27 @@
 import React, { useRef, useEffect, useState } from "react";
-import { motion, useScroll } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate, useInView } from "framer-motion";
 
 export default function AboutUs({ verticalLinePosition = 30 }) {
   const sectionRef = useRef(null);
+  const counterRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
 
   const titleRef = useRef(null);
   const aboutRef = useRef(null);
   const usRef = useRef(null);
-  const [aLeftPx, setALeftPx] = useState(null);     // left edge of the "a" in "about"
-  const [usRightPx, setUsRightPx] = useState(null); // right edge of the "s" in "Us"
+  const [aLeftPx, setALeftPx] = useState(null);
+  const [usRightPx, setUsRightPx] = useState(null);
+
+  // Animated counter setup
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, Math.round);
+
+  // Scroll trigger for counter animation
+  const isCounterInView = useInView(counterRef, { 
+    once: true, 
+    threshold: 0.3,
+    rootMargin: '0px 0px -20% 0px'
+  });
 
   // Mobile detection
   useEffect(() => {
@@ -26,11 +38,11 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     const measure = () => {
       if (aboutRef.current) {
         const aboutBox = aboutRef.current.getBoundingClientRect();
-        setALeftPx(aboutBox.left);     // viewport-left px of the "a"
+        setALeftPx(aboutBox.left);
       }
       if (usRef.current) {
         const usBox = usRef.current.getBoundingClientRect();
-        setUsRightPx(usBox.right);     // viewport-left px of the "s" right edge
+        setUsRightPx(usBox.right);
       }
     };
 
@@ -39,16 +51,19 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     return () => window.removeEventListener('resize', measure);
   }, [verticalLinePosition, isMobile]);
 
+  // Start counter animation when counter comes into view
+  useEffect(() => {
+    if (isCounterInView) {
+      const animation = animate(count, 244, { 
+        duration: 2.5,
+        ease: "easeOut"
+      });
 
+      return animation.stop;
+    }
+  }, [count, isCounterInView]);
 
-  // Determine if line is on left or right side of center
   const isLineOnLeft = verticalLinePosition <= 50;
-
-  // Still available if you want to animate something with scroll
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "center center"]
-  });
 
   const getExpandedTextStyles = () => {
     const textWidth = 65;
@@ -66,6 +81,38 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
         width: `${textWidth}%`,
         left: `${verticalLinePosition - gap - textWidth}%`
       };
+    }
+  };
+
+const getCounterStyles = () => {
+    if (isMobile) {
+      return {
+        maxWidth: '85vw',
+        width: '85vw',
+        marginTop: '2rem'
+      };
+    } else {
+      // Position counter on external side of vertical line (opposite of text)
+      const counterWidth = 35;
+      const gap = 2;
+
+      if (isLineOnLeft) {
+        // If line is on left, put counter on the far left
+        return {
+          maxWidth: '400px',
+          width: `${counterWidth}%`,
+          left: `${gap}%`,
+          top: '300px'
+        };
+      } else {
+        // If line is on right, put counter on the far right
+        return {
+          maxWidth: '400px',
+          width: `${counterWidth}%`,
+          left: `${100 - gap - counterWidth}%`,
+          top: '300px'
+        };
+      }
     }
   };
 
@@ -92,7 +139,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
             // Desktop: Split title across vertical line
             <>
               {/* Full-width horizontal dashed line behind the title */}
-              <div
+              {/* <div
                 className="pointer-events-none absolute left-1/2 -translate-x-1/2 w-screen"
                 style={{ top: '-15px', height: 0, zIndex: 0 }}
               >
@@ -122,7 +169,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
                   />
                 )}
 
-              </div>
+              </div> */}
 
               <span
                 ref={aboutRef}
@@ -176,8 +223,54 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
           Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a cultural association dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
         </div>
 
+        {/* Animated Member Counter */}
+        <div
+          ref={counterRef}
+          className={`${isMobile
+            ? "relative z-10 mx-auto px-6 text-center bg-transparent"
+            : "absolute z-10 p-8 text-center bg-transparent"
+            }`}
+          style={{
+            ...(isMobile
+              ? {
+                maxWidth: '85vw',
+                width: '85vw',
+                marginBottom: '2rem'
+              }
+              : {
+                ...getCounterStyles()
+              }
+            )
+          }}
+        >
+          <motion.div className="flex flex-col items-center">
+            <motion.h2 
+              className="font-bold text-purple-800 text-[clamp(1.25rem,4.5vw,3rem)]"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ 
+                opacity: isCounterInView ? 1 : 0, 
+                y: isCounterInView ? 0 : 20 
+              }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              {rounded}
+            </motion.h2>
+            <motion.p 
+              className="text-sm sm:text-base text-purple-600 font-medium uppercase tracking-wider text-[clamp(1.25rem,4.5vw,3rem)]"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ 
+                opacity: isCounterInView ? 1 : 0, 
+                y: isCounterInView ? 0 : 10 
+              }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+            >
+              active members
+            </motion.p>
+          </motion.div>
+        </div>
+
         {/* Spacer for desktop absolutely positioned text */}
-        {!isMobile && <div style={{ height: "400px" }} />}
+        {!isMobile && <div style={{ height: "500px" }} />}
 
       </div>
 

@@ -5,7 +5,9 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const sectionRef = useRef(null);
   const counterRef = useRef(null);
   const statsRef = useRef(null);
+  const paragraphRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [paragraphHeight, setParagraphHeight] = useState(0);
 
   const titleRef = useRef(null);
   const aboutRef = useRef(null);
@@ -46,6 +48,29 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Measure paragraph height
+  useEffect(() => {
+    const measureParagraph = () => {
+      if (paragraphRef.current) {
+        setParagraphHeight(paragraphRef.current.offsetHeight);
+      }
+    };
+
+    measureParagraph();
+    window.addEventListener('resize', measureParagraph);
+    
+    // Use ResizeObserver for more accurate measurements
+    const resizeObserver = new ResizeObserver(measureParagraph);
+    if (paragraphRef.current) {
+      resizeObserver.observe(paragraphRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measureParagraph);
+      resizeObserver.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -163,26 +188,35 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
         marginTop: '2rem'
       };
     } else {
-      // Position stats row below the paragraph text
+      // Position stats row below the paragraph text with dynamic spacing
       const textWidth = 65;
       const gap = 2;
+      // Add 30px below the paragraph for spacing
+      const topPosition = 10 + paragraphHeight + 30;
 
       if (isLineOnLeft) {
         return {
           maxWidth: '750px',
           width: `${textWidth}%`,
           left: `${verticalLinePosition + gap}%`,
-          top: '340px' // Positioned below the paragraph
+          top: `${topPosition}px`
         };
       } else {
         return {
           maxWidth: '750px',
           width: `${textWidth}%`,
           left: `${verticalLinePosition - gap - textWidth}%`,
-          top: '340px' // Positioned below the paragraph
+          top: `${topPosition}px`
         };
       }
     }
+  };
+
+  // Calculate dynamic spacer height based on paragraph and stats
+  const getSpacerHeight = () => {
+    if (isMobile) return 0;
+    // Base height + paragraph height + stats spacing + stats height
+    return Math.max(500, paragraphHeight + 150);
   };
 
   return (
@@ -267,6 +301,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
 
         {/* Paragraph Text */}
         <div
+          ref={paragraphRef}
           className={`${isMobile
             ? "relative z-10 mx-auto px-6 text-black leading-relaxed bg-transparent"
             : "absolute z-10 p-8 text-gray-700 leading-relaxed bg-transparent"
@@ -313,7 +348,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
             )
           }}
         >
-          <div className="grid grid-cols-3 gap-4 sm:gap-8">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {/* Events */}
             <motion.div 
               className="flex flex-col items-center"
@@ -418,20 +453,20 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
         </div>
 
         {/* Spacer for desktop absolutely positioned text */}
-        {!isMobile && <div style={{ height: "500px" }} />}
+        {!isMobile && <div style={{ height: `${getSpacerHeight()}px` }} />}
 
       </div>
 
       {/* Team profiles */}
       <div className="w-full max-w-6xl mx-auto mt-16 px-6 pb-16">
         <div className="grid grid-cols-5 gap-2 sm:gap-4">
-          {[1, 2, 3, 4, 5].map((index) => (
+          {['Beatrice', 'Luca', 'Raffaella', 'Niccolò', 'Marco'].map((name, index) => (
             <div key={index} className="flex flex-col items-center">
               <div className={`w-full aspect-square bg-gray-200 rounded-full mb-2 sm:mb-3 flex items-center justify-center ${isMobile ? "max-w-[80px] sm:max-w-[100px]" : ""
                 }`}>
-                <span className="text-gray-500 text-xs sm:text-sm">Profile {index}</span>
+                <span className="text-gray-500 text-xs sm:text-sm">Profile {index + 1}</span>
               </div>
-              <span className="text-gray-700 text-xs sm:text-sm text-center">Nome {index}</span>
+              <span className="text-gray-700 text-xs sm:text-sm text-center">{name}</span>
             </div>
           ))}
         </div>

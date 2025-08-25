@@ -244,7 +244,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           setError('Home address is required');
           return false;
         }
-        if (!country) {  
+        if (!country) {
           setError('Country is required');
           return false;
         }
@@ -326,176 +326,81 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 Please check your email for confirmation details. If you need to make changes,
                 please contact us directly.
               </p>
-            </div>
-          )}
-
-          {/* Page indicator for paginated forms */}
-          {needsPagination && (
-            <div className="flex justify-center mb-4">
-              <div className="flex space-x-2">
-                {[1, 2].map((page) => (
-                  <div
-                    key={page}
-                    className={`w-2 h-2 rounded-full ${currentPage === page ? 'bg-blue-600' : 'bg-gray-300'
-                      }`}
-                  />
-                ))}
+              {/* Add a close button and return early */}
+              <div className="mt-3 text-center">
+                <button
+                  onClick={onCancel}
+                  className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm"
+                >
+                  Close
+                </button>
               </div>
             </div>
           )}
 
-          <p className="text-sm text-gray-600 mb-4">
-            {getIntroMessage()}
-          </p>
+          {/* if already booked, don't show the rest */}
+          {isBooked && bookingStatus !== 'cancelled' ? null : (
+            <>
 
-          {/* Payment notice */}
-          {event?.paymentAmount > 0 && currentPage === totalPages && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="font-medium text-blue-700">
-                Payment required: €{event.paymentAmount} {event.paymentCurrency || 'EUR'}
-              </p>
-              <p className="text-sm text-blue-600 mt-1">
-                You'll be redirected to a secure payment page after completing this form.
-              </p>
-            </div>
-          )}
-
-          {/* Add a notice for year confirmations */}
-          {isFirstTime && existingData.name && currentPage === 1 && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <p className="text-sm text-yellow-800">
-                <strong>Please review and update your information if needed.</strong>
-                This helps us keep our records current and ensures we can contact you about events.
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Page 1: Personal Details (only for first time users with pagination) */}
-            {(currentPage === 1 && needsPagination) && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="name">
-                      Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname">
-                      Surname *
-                    </label>
-                    <input
-                      type="text"
-                      id="surname"
-                      value={surname}
-                      onChange={(e) => setSurname(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate">
-                    Birth Date * <span className="text-xs text-gray-500">(must be 18+)</span>
-                  </label>
-                  <input
-                    type="date"
-                    id="birthDate"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    required
-                    max={minDate}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address">
-                    Street Address *
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    required
-                    placeholder="Street, number, city, zip code"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country">
-                    Country *
-                  </label>
-                  <select
-                    id="country"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    required
-                  >
-                    <option value="">Select a country</option>
-                    {countries.map(c => (
-                      <option key={c} value={c}>{c}</option>
+              {/* Page indicator for paginated forms */}
+              {needsPagination && (
+                <div className="flex justify-center mb-4">
+                  <div className="flex space-x-2">
+                    {[1, 2].map((page) => (
+                      <div
+                        key={page}
+                        className={`w-2 h-2 rounded-full ${currentPage === page ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                      />
                     ))}
-                  </select>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId">
-                    Tax ID/Codice Fiscale *
-                  </label>
-                  <input
-                    type="text"
-                    id="taxId"
-                    value={taxId}
-                    onChange={handleTaxIdChange}
-                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                    required
-                    maxLength={16}
-                    placeholder="16 characters"
-                  />
-                  {taxId && !validateTaxId(taxId) && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Please enter a valid Tax ID (Codice Fiscale, NINO, SSN, EIN, Steuer-ID, etc.)
-                    </p>
-                  )}
+              <p className="text-sm text-gray-600 mb-4">
+                {getIntroMessage()}
+              </p>
+
+              {/* Payment notice */}
+              {event?.paymentAmount > 0 && currentPage === totalPages && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="font-medium text-blue-700">
+                    Payment required: €{event.paymentAmount} {event.paymentCurrency || 'EUR'}
+                  </p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    You'll be redirected to a secure payment page after completing this form.
+                  </p>
                 </div>
-              </>
-            )}
+              )}
 
-            {/* Page 2 or Single Page: Contact Details and Event Info */}
-            {(currentPage === 2 || !needsPagination) && (
-              <>
-                {/* Show personal details on single page for first time users */}
-                {!needsPagination && isFirstTime && (
+              {/* Add a notice for year confirmations */}
+              {isFirstTime && existingData.name && currentPage === 1 && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Please review and update your information if needed.</strong>
+                    This helps us keep our records current and ensures we can contact you about events.
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Page 1: Personal Details (only for first time users with pagination) */}
+                {(currentPage === 1 && needsPagination) && (
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="name-single">
+                        <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="name">
                           Name *
                         </label>
                         <input
                           type="text"
-                          id="name-single"
+                          id="name"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -504,12 +409,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                       </div>
 
                       <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname-single">
+                        <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname">
                           Surname *
                         </label>
                         <input
                           type="text"
-                          id="surname-single"
+                          id="surname"
                           value={surname}
                           onChange={(e) => setSurname(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -519,12 +424,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate-single">
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate">
                         Birth Date * <span className="text-xs text-gray-500">(must be 18+)</span>
                       </label>
                       <input
                         type="date"
-                        id="birthDate-single"
+                        id="birthDate"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -534,12 +439,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address-single">
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address">
                         Street Address *
                       </label>
                       <input
                         type="text"
-                        id="address-single"
+                        id="address"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -549,11 +454,11 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country-single">
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country">
                         Country *
                       </label>
                       <select
-                        id="country-single"
+                        id="country"
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -567,12 +472,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId-single">
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId">
                         Tax ID/Codice Fiscale *
                       </label>
                       <input
                         type="text"
-                        id="taxId-single"
+                        id="taxId"
                         value={taxId}
                         onChange={handleTaxIdChange}
                         className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -583,179 +488,290 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                       />
                       {taxId && !validateTaxId(taxId) && (
                         <p className="text-xs text-red-500 mt-1">
-                          Please enter a valid Italian Codice Fiscale (16 characters)
+                          Please enter a valid Tax ID (Codice Fiscale, NINO, SSN, EIN, Steuer-ID, etc.)
                         </p>
                       )}
                     </div>
                   </>
                 )}
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="email">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                    placeholder="your@email.com"
-                    required
-                  />
-                  {email && !validateEmail(email) && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Please enter a valid email address
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="phone">
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                    placeholder="+39 123 456 7890"
-                    required
-                  />
-                  {phone && !validatePhone(phone) && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Please enter a valid phone number with at least 8 digits
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="instagram">
-                    Instagram Name (optional)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">@</span>
-                    <input
-                      type="text"
-                      id="instagram"
-                      value={instagram}
-                      onChange={(e) => setInstagram(e.target.value)}
-                      className="w-full pl-7 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="yourinstagram"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="requests">
-                    Any Specific Request (optional)
-                  </label>
-                  <textarea
-                    id="requests"
-                    value={requests}
-                    onChange={(e) => setRequests(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    rows="3"
-                    placeholder="Any special requirements or requests..."
-                  />
-                </div>
-
-                {/* Terms and Privacy Policy checkboxes */}
-                <div className="space-y-2">
-                  <div className="flex items-start">
-                    <input
-                      type="checkbox"
-                      id="acceptTerms"
-                      checked={acceptTerms}
-                      onChange={() => setAcceptTerms(!acceptTerms)}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
-                      I accept the <span className="text-blue-600 hover:underline cursor-pointer">Terms and Conditions</span> *
-                    </label>
-                  </div>
-
-                  <div className="flex items-start">
-                    <input
-                      type="checkbox"
-                      id="acceptPrivacy"
-                      checked={acceptPrivacy}
-                      onChange={() => setAcceptPrivacy(!acceptPrivacy)}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="acceptPrivacy" className="ml-2 block text-sm text-gray-700">
-                      I consent to the processing of my personal data as per the <span className="text-blue-600 hover:underline cursor-pointer">Privacy Policy</span> *
-                    </label>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between items-center pt-4">
-              <div className="flex space-x-1 sm:space-x-2">
-                {needsPagination && currentPage > 1 && (
-                  <button
-                    type="button"
-                    onClick={handlePrevious}
-                    className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs sm:text-sm"
-                  >
-                    ← Back
-                  </button>
-                )}
-              </div>
-
-              <div className="flex space-x-1 sm:space-x-2">
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs sm:text-sm"
-                >
-                  Cancel
-                </button>
-
-                {needsPagination && currentPage < totalPages ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs sm:text-sm"
-                  >
-                    Next →
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2 ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
-                      }`}
-                  >
-                    {loading ? (
+                {/* Page 2 or Single Page: Contact Details and Event Info */}
+                {(currentPage === 2 || !needsPagination) && (
+                  <>
+                    {/* Show personal details on single page for first time users */}
+                    {!needsPagination && isFirstTime && (
                       <>
-                        <LoadingSpinner size={12} color="#ffffff" className="sm:w-4 sm:h-4" />
-                        <span className="hidden sm:inline">Hold on...</span>
-                        <span className="sm:hidden">Wait...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="hidden sm:inline">
-                          {event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'}
-                        </span>
-                        <span className="sm:hidden font-bold">
-                          {event?.paymentAmount > 0 ? 'Pay' : 'Book'}
-                        </span>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="name-single">
+                              Name *
+                            </label>
+                            <input
+                              type="text"
+                              id="name-single"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname-single">
+                              Surname *
+                            </label>
+                            <input
+                              type="text"
+                              id="surname-single"
+                              value={surname}
+                              onChange={(e) => setSurname(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate-single">
+                            Birth Date * <span className="text-xs text-gray-500">(must be 18+)</span>
+                          </label>
+                          <input
+                            type="date"
+                            id="birthDate-single"
+                            value={birthDate}
+                            onChange={(e) => setBirthDate(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            required
+                            max={minDate}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address-single">
+                            Street Address *
+                          </label>
+                          <input
+                            type="text"
+                            id="address-single"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            required
+                            placeholder="Street, number, city, zip code"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country-single">
+                            Country *
+                          </label>
+                          <select
+                            id="country-single"
+                            value={country}
+                            onChange={(e) => setCountry(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            required
+                          >
+                            <option value="">Select a country</option>
+                            {countries.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId-single">
+                            Tax ID/Codice Fiscale *
+                          </label>
+                          <input
+                            type="text"
+                            id="taxId-single"
+                            value={taxId}
+                            onChange={handleTaxIdChange}
+                            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                            required
+                            maxLength={16}
+                            placeholder="16 characters"
+                          />
+                          {taxId && !validateTaxId(taxId) && (
+                            <p className="text-xs text-red-500 mt-1">
+                              Please enter a valid Italian Codice Fiscale (16 characters)
+                            </p>
+                          )}
+                        </div>
                       </>
                     )}
-                  </button>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="email">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        placeholder="your@email.com"
+                        required
+                      />
+                      {email && !validateEmail(email) && (
+                        <p className="text-xs text-red-500 mt-1">
+                          Please enter a valid email address
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="phone">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        placeholder="+39 123 456 7890"
+                        required
+                      />
+                      {phone && !validatePhone(phone) && (
+                        <p className="text-xs text-red-500 mt-1">
+                          Please enter a valid phone number with at least 8 digits
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="instagram">
+                        Instagram Name (optional)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">@</span>
+                        <input
+                          type="text"
+                          id="instagram"
+                          value={instagram}
+                          onChange={(e) => setInstagram(e.target.value)}
+                          className="w-full pl-7 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="yourinstagram"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="requests">
+                        Any Specific Request (optional)
+                      </label>
+                      <textarea
+                        id="requests"
+                        value={requests}
+                        onChange={(e) => setRequests(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        rows="3"
+                        placeholder="Any special requirements or requests..."
+                      />
+                    </div>
+
+                    {/* Terms and Privacy Policy checkboxes */}
+                    <div className="space-y-2">
+                      <div className="flex items-start">
+                        <input
+                          type="checkbox"
+                          id="acceptTerms"
+                          checked={acceptTerms}
+                          onChange={() => setAcceptTerms(!acceptTerms)}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
+                          I accept the <span className="text-blue-600 hover:underline cursor-pointer">Terms and Conditions</span> *
+                        </label>
+                      </div>
+
+                      <div className="flex items-start">
+                        <input
+                          type="checkbox"
+                          id="acceptPrivacy"
+                          checked={acceptPrivacy}
+                          onChange={() => setAcceptPrivacy(!acceptPrivacy)}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="acceptPrivacy" className="ml-2 block text-sm text-gray-700">
+                          I consent to the processing of my personal data as per the <span className="text-blue-600 hover:underline cursor-pointer">Privacy Policy</span> *
+                        </label>
+                      </div>
+                    </div>
+                  </>
                 )}
-              </div>
-            </div>
-          </form>
+
+                {/* Navigation Buttons */}
+                <div className="flex justify-between items-center pt-4">
+                  <div className="flex space-x-1 sm:space-x-2">
+                    {needsPagination && currentPage > 1 && (
+                      <button
+                        type="button"
+                        onClick={handlePrevious}
+                        className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs sm:text-sm"
+                      >
+                        ← Back
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-1 sm:space-x-2">
+                    <button
+                      type="button"
+                      onClick={onCancel}
+                      className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs sm:text-sm"
+                    >
+                      Cancel
+                    </button>
+
+                    {needsPagination && currentPage < totalPages ? (
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs sm:text-sm"
+                      >
+                        Next →
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className={`px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2 ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
+                          }`}
+                      >
+                        {loading ? (
+                          <>
+                            <LoadingSpinner size={12} color="#ffffff" className="sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Hold on...</span>
+                            <span className="sm:hidden">Wait...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="hidden sm:inline">
+                              {event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'}
+                            </span>
+                            <span className="sm:hidden font-bold">
+                              {event?.paymentAmount > 0 ? 'Pay' : 'Book'}
+                            </span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>
+
   );
 }
 

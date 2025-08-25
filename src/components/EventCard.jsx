@@ -378,10 +378,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
           : isMobile
             ? { opacity: 1 } // On mobile, don't apply any filters - let the overlay handle it
             : {
-              opacity: shouldShowBookedState ? 0.6 : 1,
-              filter: shouldShowBookedState
-                ? "saturate(0.5) grayscale(0.2)"
-                : "saturate(1) grayscale(0)"
+              opacity: 1,
+              filter: "none",
             }
       }
       transition={{ duration: 0.7, ease: "easeInOut" }}

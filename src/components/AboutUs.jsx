@@ -1,6 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform, animate, useInView } from "framer-motion";
 
+// Import profile images
+import beatriceImg from "../assets/profiles/Beatrice.png";
+import lucaImg from "../assets/profiles/Luca.png";
+import raffaellaImg from "../assets/profiles/Raffaella.png";
+import niccoloImg from "../assets/profiles/Niccolò.png";
+import marcoImg from "../assets/profiles/Marco.png";
+
 export default function AboutUs({ verticalLinePosition = 30 }) {
   const sectionRef = useRef(null);
   const counterRef = useRef(null);
@@ -219,6 +226,15 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     return Math.max(500, paragraphHeight + 150);
   };
 
+  // Team data with images
+  const teamMembers = [
+    { name: 'Beatrice', image: beatriceImg },
+    { name: 'Luca', image: lucaImg },
+    { name: 'Raffaella', image: raffaellaImg },
+    { name: 'Niccolò', image: niccoloImg },
+    { name: 'Marco', image: marcoImg }
+  ];
+
   return (
     <section
       ref={sectionRef}
@@ -241,39 +257,6 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
           ) : (
             // Desktop: Split title across vertical line
             <>
-              {/* Full-width horizontal dashed line behind the title */}
-              {/* <div
-                className="pointer-events-none absolute left-1/2 -translate-x-1/2 w-screen"
-                style={{ top: '-15px', height: 0, zIndex: 0 }}
-              >
-                {isLineOnLeft ? (
-                  <div
-                    className="absolute"
-                    style={{
-                      left: 0,
-                      width: (aLeftPx ?? 0) - 15,
-                      height: 0,
-                      borderTop: "2px dashed transparent",
-                      borderImage:
-                        "repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 20px) 1",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="absolute"
-                    style={{
-                      left: (usRightPx ?? 0) + 15,
-                      right: 0,
-                      height: 0,
-                      borderTop: "2px dashed transparent",
-                      borderImage:
-                        "repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 20px) 1",
-                    }}
-                  />
-                )}
-
-              </div> */}
-
               <span
                 ref={aboutRef}
                 className="absolute font-bold text-black text-center text-[clamp(1.25rem,4.5vw,3rem)]"
@@ -460,14 +443,51 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
       {/* Team profiles */}
       <div className="w-full max-w-6xl mx-auto mt-16 px-6 pb-16">
         <div className="grid grid-cols-5 gap-2 sm:gap-4">
-          {['Beatrice', 'Luca', 'Raffaella', 'Niccolò', 'Marco'].map((name, index) => (
-            <div key={index} className="flex flex-col items-center">
-              <div className={`w-full aspect-square bg-gray-200 rounded-full mb-2 sm:mb-3 flex items-center justify-center ${isMobile ? "max-w-[80px] sm:max-w-[100px]" : ""
-                }`}>
-                <span className="text-gray-500 text-xs sm:text-sm">Profile {index + 1}</span>
-              </div>
-              <span className="text-gray-700 text-xs sm:text-sm text-center">{name}</span>
-            </div>
+          {teamMembers.map((member, index) => (
+            <motion.div 
+              key={index} 
+              className="flex flex-col items-center"
+              whileHover={!isMobile ? {
+                scale: 1.15,
+                zIndex: 10,
+                transition: {
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 10,
+                  mass: 0.5
+                }
+              } : {}}
+            >
+              <motion.div 
+                className={`relative w-full aspect-square rounded-full mb-2 sm:mb-3 overflow-hidden ${
+                  isMobile ? "max-w-[80px] sm:max-w-[100px]" : ""
+                }`}
+                style={{ transformOrigin: 'center center' }}
+                whileHover={!isMobile ? {
+                  boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+                } : {}}
+              >
+                <img 
+                  src={member.image} 
+                  alt={`${member.name} profile`}
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+              <motion.span 
+                className="text-gray-700 text-xs sm:text-sm text-center"
+                whileHover={!isMobile ? {
+                  scale: 1.1,
+                  fontWeight: 600,
+                  transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 10
+                  }
+                } : {}}
+              >
+                {member.name}
+              </motion.span>
+            </motion.div>
           ))}
         </div>
       </div>

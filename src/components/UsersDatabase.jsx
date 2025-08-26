@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getDocs, collection, updateDoc, doc, getDoc, query, where, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
-function UsersDatabase() {
+function UsersDatabase({ onUpdateUserCount, updatingUserCount }) {
   const [data, setData] = useState([]);
   const [editingCell, setEditingCell] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,8 +21,8 @@ function UsersDatabase() {
         const events = userData.eventsBooked || [];
 
         const eventsDetails = [];
-        let phoneNumber = ''; 
-        
+        let phoneNumber = '';
+
         // Get phone from bookings
         try {
           const bookingsQuery = query(
@@ -30,7 +30,7 @@ function UsersDatabase() {
             where('userId', '==', userDoc.id)
           );
           const bookingsSnapshot = await getDocs(bookingsQuery);
-          
+
           if (!bookingsSnapshot.empty) {
             const firstBooking = bookingsSnapshot.docs[0].data();
             phoneNumber = firstBooking.contactInfo?.phone || '';
@@ -54,9 +54,9 @@ function UsersDatabase() {
         }
 
         // Safely get full name
-        const fullName = userData.name && userData.surname 
+        const fullName = userData.name && userData.surname
           ? `${userData.name} ${userData.surname}`
-          : userData.displayName || ''; 
+          : userData.displayName || '';
 
         // Safely format birth date
         let birthDateString = '';
@@ -93,7 +93,7 @@ function UsersDatabase() {
 
         // Format membership years
         const membershipYears = userData.membershipYears || [];
-        const membershipYearsDisplay = membershipYears.length > 0 
+        const membershipYearsDisplay = membershipYears.length > 0
           ? membershipYears.sort((a, b) => b - a) // Sort descending (newest first)
           : ['none'];
 
@@ -109,7 +109,7 @@ function UsersDatabase() {
           name: userData.name || '',
           surname: userData.surname || '',
           birthDate: birthDateString,
-          phone: phoneNumber, 
+          phone: phoneNumber,
           address: userData.address || '',
           instagram: userData.instagram || '',
           role: userData.role || '',
@@ -155,10 +155,10 @@ function UsersDatabase() {
   };
 
   const handleEdit = (rowId, columnId, value) => {
-    if (columnId === 'id' || columnId === 'role' || 
-        columnId === 'eventsBooked' || columnId === 'createdAt' ||
-        columnId === 'phone' || columnId === 'membershipYears' || 
-        columnId === 'currentYearMember') {
+    if (columnId === 'id' || columnId === 'role' ||
+      columnId === 'eventsBooked' || columnId === 'createdAt' ||
+      columnId === 'phone' || columnId === 'membershipYears' ||
+      columnId === 'currentYearMember') {
       return; // Prevent editing these columns
     }
     setEditingCell({ rowId, columnId, value });
@@ -168,16 +168,16 @@ function UsersDatabase() {
     try {
       const userRef = doc(db, 'users', rowId);
       const userSnapshot = await getDoc(userRef);
-      
+
       if (!userSnapshot.exists()) {
         throw new Error('User not found');
       }
-      
+
       // Special handling for nested properties
       let updateData = {
         updatedAt: serverTimestamp() // Always add updatedAt
       };
-      
+
       switch (columnId) {
         case 'fullName': {
           // Split fullName into name and surname
@@ -193,10 +193,10 @@ function UsersDatabase() {
         default:
           updateData[columnId] = value;
       }
-  
+
       await updateDoc(userRef, updateData);
       console.log('Updated user field', { rowId, columnId, value });
-  
+
       // Update local state
       setData(prevData =>
         prevData.map(row => {
@@ -212,7 +212,7 @@ function UsersDatabase() {
           return row;
         })
       );
-  
+
       setEditingCell(null);
     } catch (error) {
       console.error('Error updating user field:', error);
@@ -235,12 +235,12 @@ function UsersDatabase() {
         where('userId', '==', userId)
       );
       const bookingsSnapshot = await getDocs(bookingsQuery);
-      
+
       const bookingDeletionPromises = [];
       bookingsSnapshot.forEach(bookingDoc => {
         bookingDeletionPromises.push(deleteDoc(bookingDoc.ref));
       });
-      
+
       await Promise.all(bookingDeletionPromises);
       console.log(`Deleted ${bookingDeletionPromises.length} bookings for user ${userId}`);
 
@@ -256,12 +256,12 @@ function UsersDatabase() {
           try {
             const eventRef = doc(db, 'events', eventId);
             const eventDoc = await getDoc(eventRef);
-            
+
             if (eventDoc.exists()) {
               const eventData = eventDoc.data();
               const updatedAttendees = (eventData.attendees || []).filter(id => id !== userId);
               const spotsLeft = Math.max(0, (eventData.spots || 0) - updatedAttendees.length);
-              
+
               eventUpdatePromises.push(
                 updateDoc(eventRef, {
                   attendees: updatedAttendees,
@@ -273,7 +273,7 @@ function UsersDatabase() {
             console.error(`Error updating event ${eventId}:`, err);
           }
         }
-        
+
         await Promise.all(eventUpdatePromises);
         console.log(`Updated ${eventUpdatePromises.length} events for user ${userId}`);
       }
@@ -284,7 +284,7 @@ function UsersDatabase() {
 
       // 5. Refresh the data
       setData(prevData => prevData.filter(user => user.id !== userId));
-      
+
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Failed to delete user: ' + error.message);
@@ -329,7 +329,7 @@ function UsersDatabase() {
   // Render cell content with proper truncation for long text
   const renderCellContent = (rowId, columnId, content) => {
     console.log(`Rendering ${columnId}:`, content, typeof content); // Debug log
-    
+
     if (content === null || content === undefined) {
       if (columnId === 'currentYearMember') {
         // Explicitly handle null/undefined for currentYearMember
@@ -345,7 +345,7 @@ function UsersDatabase() {
     // Handle array content (like eventsBooked or membershipYears) - keep existing behavior
     if (Array.isArray(content)) {
       const expanded = isCellExpanded(rowId, columnId);
-      
+
       // If nothing or just default message, don't need expand/collapse
       if (content.length <= 1 && (content[0] === 'No events booked' || content[0] === 'none')) {
         return (
@@ -354,13 +354,13 @@ function UsersDatabase() {
           </span>
         );
       }
-      
+
       if (!expanded && content.length > 1) {
         // Show first item and a count
         return (
           <div>
             <div>{content[0]}</div>
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 toggleCellExpand(rowId, columnId);
@@ -379,7 +379,7 @@ function UsersDatabase() {
               <div key={index} className="mb-1">{item}</div>
             ))}
             {content.length > 1 && (
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleCellExpand(rowId, columnId);
@@ -392,42 +392,40 @@ function UsersDatabase() {
           </div>
         );
       }
-    } 
-    
+    }
+
     // Handle boolean content specifically for currentYearMember column
     if (columnId === 'currentYearMember') {
       const boolValue = content === true;
       console.log(`CurrentYearMember - content: ${content}, boolValue: ${boolValue}`); // Debug log
       return (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          boolValue 
-            ? 'bg-green-100 text-green-800' 
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${boolValue
+            ? 'bg-green-100 text-green-800'
             : 'bg-gray-100 text-gray-600'
-        }`}>
+          }`}>
           {boolValue ? 'Yes' : 'No'}
         </span>
       );
     }
-    
+
     // Handle other boolean content
     if (typeof content === 'boolean') {
       return (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          content 
-            ? 'bg-green-100 text-green-800' 
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${content
+            ? 'bg-green-100 text-green-800'
             : 'bg-gray-100 text-gray-600'
-        }`}>
+          }`}>
           {content ? 'Yes' : 'No'}
         </span>
       );
     }
-    
+
     // Handle string content - use ellipsis for very long text
     if (typeof content === 'string') {
       // For address and other long fields, show with ellipsis but allow full text on hover
       return (
-        <div 
-          className="truncate" 
+        <div
+          className="truncate"
           title={content}
           style={{ maxWidth: '100%' }}
         >
@@ -435,7 +433,7 @@ function UsersDatabase() {
         </div>
       );
     }
-    
+
     return content;
   };
 
@@ -459,37 +457,34 @@ function UsersDatabase() {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Users Database</h2>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={handleSync}
             disabled={syncing}
-            className={`flex items-center px-4 py-2 rounded ${
-              syncing 
-                ? 'bg-gray-400 cursor-not-allowed' 
+            className={`flex items-center px-4 py-2 rounded ${syncing
+                ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-yellow-600 hover:bg-yellow-700'
-            } text-white`}
+              } text-white`}
           >
-            <svg 
-              className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth="2" 
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
             {syncing ? 'Syncing...' : 'Sync Data'}
           </button>
-          <button 
+          <button
             onClick={downloadCSV}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             Download CSV
           </button>
+          {onUpdateUserCount && (
+            <button
+              onClick={onUpdateUserCount}
+              disabled={updatingUserCount}
+              className={`px-4 py-2 rounded text-white ${updatingUserCount
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
+                }`}
+            >
+              {updatingUserCount ? 'Updating...' : 'Update User Count'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -536,7 +531,7 @@ function UsersDatabase() {
                         autoFocus
                       />
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleEdit(row.id, 'email', row.email)}
                         className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.email}
@@ -555,7 +550,7 @@ function UsersDatabase() {
                         autoFocus
                       />
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleEdit(row.id, 'taxId', row.taxId)}
                         className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.taxId}
@@ -574,7 +569,7 @@ function UsersDatabase() {
                         autoFocus
                       />
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleEdit(row.id, 'fullName', row.fullName)}
                         className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.fullName}
@@ -593,7 +588,7 @@ function UsersDatabase() {
                         autoFocus
                       />
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleEdit(row.id, 'birthDate', row.birthDate)}
                         className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.birthDate}
@@ -617,7 +612,7 @@ function UsersDatabase() {
                         autoFocus
                       />
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleEdit(row.id, 'address', row.address)}
                         className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.address}
@@ -636,7 +631,7 @@ function UsersDatabase() {
                         autoFocus
                       />
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleEdit(row.id, 'instagram', row.instagram)}
                         className="p-1 rounded cursor-pointer hover:bg-gray-100 truncate"
                         title={row.instagram}
@@ -680,11 +675,10 @@ function UsersDatabase() {
                     <button
                       onClick={(e) => handleDeleteUser(row.id, e)}
                       disabled={deleting === row.id}
-                      className={`px-3 py-1 rounded ${
-                        deleting === row.id 
-                          ? 'bg-red-400 cursor-not-allowed' 
+                      className={`px-3 py-1 rounded ${deleting === row.id
+                          ? 'bg-red-400 cursor-not-allowed'
                           : 'bg-red-600 hover:bg-red-700'
-                      } text-white text-sm flex items-center gap-1`}
+                        } text-white text-sm flex items-center gap-1`}
                       title="Delete user and all associated data"
                     >
                       {deleting === row.id ? (

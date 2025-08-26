@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform, animate, useInView } from "framer-motion";
+import { getCurrentUsersCount } from "../utils/statsCount";
 
 // Import profile images
 import beatriceImg from "../assets/profiles/Beatrice.png";
@@ -16,6 +17,9 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const [isMobile, setIsMobile] = useState(false);
   const [paragraphHeight, setParagraphHeight] = useState(0);
 
+  // Dynamic user count state
+  const [currentUsersCount, setCurrentUsersCount] = useState(244); // fallback value
+
   const titleRef = useRef(null);
   const aboutRef = useRef(null);
   const usRef = useRef(null);
@@ -27,24 +31,39 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const eventsCount = useMotionValue(0);
   const locationsCount = useMotionValue(0);
   const partnershipsCount = useMotionValue(0);
-  
+
   const membersRounded = useTransform(membersCount, Math.round);
   const eventsRounded = useTransform(eventsCount, Math.round);
   const locationsRounded = useTransform(locationsCount, Math.round);
   const partnershipsRounded = useTransform(partnershipsCount, Math.round);
 
   // Scroll triggers for counter animations
-  const isCounterInView = useInView(counterRef, { 
-    once: true, 
+  const isCounterInView = useInView(counterRef, {
+    once: true,
     threshold: 0.3,
     rootMargin: '0px 0px -20% 0px'
   });
 
-  const isStatsInView = useInView(statsRef, { 
-    once: true, 
+  const isStatsInView = useInView(statsRef, {
+    once: true,
     threshold: 0.3,
     rootMargin: '0px 0px -20% 0px'
   });
+
+  // Fetch dynamic user count on component mount
+  useEffect(() => {
+    const fetchUsersCount = async () => {
+      try {
+        const count = await getCurrentUsersCount();
+        setCurrentUsersCount(count);
+      } catch (error) {
+        console.error('Error loading users count:', error);
+        // Keep fallback value (244)
+      }
+    };
+
+    fetchUsersCount();
+  }, []);
 
   // Mobile detection
   useEffect(() => {
@@ -67,7 +86,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
 
     measureParagraph();
     window.addEventListener('resize', measureParagraph);
-    
+
     // Use ResizeObserver for more accurate measurements
     const resizeObserver = new ResizeObserver(measureParagraph);
     if (paragraphRef.current) {
@@ -97,33 +116,33 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     return () => window.removeEventListener('resize', measure);
   }, [verticalLinePosition, isMobile]);
 
-  // Start members counter animation when counter comes into view
+  // Start members counter animation when counter comes into view - NOW USES DYNAMIC COUNT
   useEffect(() => {
     if (isCounterInView) {
-      const animation = animate(membersCount, 244, { 
+      const animation = animate(membersCount, currentUsersCount, {
         duration: 2.5,
         ease: "easeOut"
       });
 
       return animation.stop;
     }
-  }, [membersCount, isCounterInView]);
+  }, [membersCount, isCounterInView, currentUsersCount]);
 
   // Start stats counters animation when stats come into view
   useEffect(() => {
     if (isStatsInView) {
       const animations = [
-        animate(eventsCount, 76, { 
+        animate(eventsCount, 76, {
           duration: 2,
           ease: "easeOut",
           delay: 0.3
         }),
-        animate(locationsCount, 25, { 
+        animate(locationsCount, 25, {
           duration: 2,
           ease: "easeOut",
           delay: 0.5
         }),
-        animate(partnershipsCount, 12, { 
+        animate(partnershipsCount, 12, {
           duration: 2,
           ease: "easeOut",
           delay: 0.7
@@ -333,12 +352,12 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
         >
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {/* Events */}
-            <motion.div 
+            <motion.div
               className="flex flex-col items-center"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: isStatsInView ? 1 : 0, 
-                y: isStatsInView ? 0 : 20 
+              animate={{
+                opacity: isStatsInView ? 1 : 0,
+                y: isStatsInView ? 0 : 20
               }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
@@ -351,12 +370,12 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
             </motion.div>
 
             {/* Locations */}
-            <motion.div 
+            <motion.div
               className="flex flex-col items-center"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: isStatsInView ? 1 : 0, 
-                y: isStatsInView ? 0 : 20 
+              animate={{
+                opacity: isStatsInView ? 1 : 0,
+                y: isStatsInView ? 0 : 20
               }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
@@ -369,12 +388,12 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
             </motion.div>
 
             {/* Partnerships */}
-            <motion.div 
+            <motion.div
               className="flex flex-col items-center"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: isStatsInView ? 1 : 0, 
-                y: isStatsInView ? 0 : 20 
+              animate={{
+                opacity: isStatsInView ? 1 : 0,
+                y: isStatsInView ? 0 : 20
               }}
               transition={{ duration: 0.6, delay: 0.7 }}
             >
@@ -410,23 +429,23 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
           }}
         >
           <motion.div className="flex flex-col items-center">
-            <motion.h2 
-              className="font-bold text-purple-800 text-[clamp(1.25rem,4.5vw,3rem)]"
+            <motion.h2
+              className="font-bold text-purple-800 text-[clamp(1.5rem,4.5vw,3rem)]"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: isCounterInView ? 1 : 0, 
-                y: isCounterInView ? 0 : 20 
+              animate={{
+                opacity: isCounterInView ? 1 : 0,
+                y: isCounterInView ? 0 : 20
               }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
               {membersRounded}
             </motion.h2>
-            <motion.p 
+            <motion.p
               className="text-sm sm:text-base text-purple-600 font-medium uppercase tracking-wider text-[clamp(1.25rem,4.5vw,3rem)]"
               initial={{ opacity: 0, y: 10 }}
-              animate={{ 
-                opacity: isCounterInView ? 1 : 0, 
-                y: isCounterInView ? 0 : 10 
+              animate={{
+                opacity: isCounterInView ? 1 : 0,
+                y: isCounterInView ? 0 : 10
               }}
               transition={{ duration: 0.6, delay: 0.8 }}
             >
@@ -444,8 +463,8 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
       <div className="w-full max-w-6xl mx-auto mt-16 px-6 pb-16">
         <div className="grid grid-cols-5 gap-2 sm:gap-4">
           {teamMembers.map((member, index) => (
-            <motion.div 
-              key={index} 
+            <motion.div
+              key={index}
               className="flex flex-col items-center"
               whileHover={!isMobile ? {
                 scale: 1.15,
@@ -458,22 +477,21 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
                 }
               } : {}}
             >
-              <motion.div 
-                className={`relative w-full aspect-square rounded-full mb-2 sm:mb-3 overflow-hidden ${
-                  isMobile ? "max-w-[80px] sm:max-w-[100px]" : ""
-                }`}
+              <motion.div
+                className={`relative w-full aspect-square rounded-full mb-2 sm:mb-3 overflow-hidden ${isMobile ? "max-w-[80px] sm:max-w-[100px]" : ""
+                  }`}
                 style={{ transformOrigin: 'center center' }}
                 whileHover={!isMobile ? {
                   boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
                 } : {}}
               >
-                <img 
-                  src={member.image} 
+                <img
+                  src={member.image}
                   alt={`${member.name} profile`}
                   className="w-full h-full object-cover"
                 />
               </motion.div>
-              <motion.span 
+              <motion.span
                 className="text-gray-700 text-xs sm:text-sm text-center"
                 whileHover={!isMobile ? {
                   scale: 1.1,

@@ -10,6 +10,7 @@ import {
   createNewEvent,
   deleteEvent
 } from '../../firebase/adminServices';
+import { updatePublicUserCount } from '../utils/statsCount';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getDoc, doc, collection, query, where, getDocs, updateDoc, serverTimestamp, arrayRemove } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -38,6 +39,9 @@ function AdminPanel() {
   const [attendance, setAttendance] = useState({});
   const [expandedRequests, setExpandedRequests] = useState({});
 
+  const [updatingUserCount, setUpdatingUserCount] = useState(false);
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -54,6 +58,19 @@ function AdminPanel() {
 
     return () => unsubscribe();
   }, []);
+
+
+  const handleUpdateUserCount = async () => {
+  setUpdatingUserCount(true);
+  try {
+    await updatePublicUserCount();
+    alert('User count updated successfully!');
+  } catch (error) {
+    alert('Failed to update user count');
+  } finally {
+    setUpdatingUserCount(false);
+  }
+};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -595,7 +612,10 @@ function AdminPanel() {
             initialValues={editingEvent || {}}
           />
         ) : activeTab === 'database' ? (
-          <UsersDatabase />
+          <UsersDatabase 
+  onUpdateUserCount={handleUpdateUserCount}
+  updatingUserCount={updatingUserCount}
+/>
         ) : (
           <>
             <div className="flex mb-6 border-b items-center">

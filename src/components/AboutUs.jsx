@@ -16,6 +16,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const paragraphRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   const [paragraphHeight, setParagraphHeight] = useState(0);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   // Dynamic user count state
   const [currentUsersCount, setCurrentUsersCount] = useState(244); // fallback value
@@ -98,6 +99,10 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
       resizeObserver.disconnect();
     };
   }, []);
+
+  const handleMemberClick = (member) => {
+    setSelectedMember(selectedMember?.name === member.name ? null : member);
+  };
 
   useEffect(() => {
     const measure = () => {
@@ -242,16 +247,41 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const getSpacerHeight = () => {
     if (isMobile) return 0;
     // Base height + paragraph height + stats spacing + stats height
-    return Math.max(500, paragraphHeight + 150);
+    return Math.max(500, paragraphHeight + 100);
   };
 
   // Team data with images
   const teamMembers = [
-    { name: 'Beatrice', image: beatriceImg },
-    { name: 'Luca', image: lucaImg },
-    { name: 'Raffaella', image: raffaellaImg },
-    { name: 'Niccolò', image: niccoloImg },
-    { name: 'Marco', image: marcoImg }
+    {
+      name: 'Beatrice',
+      role: 'President & Founder',
+      image: beatriceImg,
+      bio: `Growing up between three different cities - Bologna, Rome and London - an experience in Barcelona and a long journey between the capitals of SouthEast Asia made me develop a deep curiosity for urban realities, while photography has been a passion of mine since childhood. In London I merged these interests into a master degree in visual sociology and a doctorate in urban anthropology, and then combined the fruits of both in the cultural association Urban pH, where image-making is combined with the collective exploration of urban realities.`
+    },
+    {
+      name: 'Luca',
+      role: 'Vice President',
+      image: lucaImg,
+      bio: 'Born in 1991 in Rome, I have always had a passion for photography. I have studied different techniques and styles, participating in exhibitions and collecting books. Lately I have been mainly oriented towards analogue photography, enjoying the transition to printing and developing images in my home darkroom. This allows me to bring a personal and authentic touch to each photograph and workshop at Urban pH'
+    },
+    {
+      name: 'Raffaella',
+      role: 'Treasurer',
+      image: raffaellaImg,
+      bio: 'I like to have interactions, create networks and connect people. My favorite part of the photo hunts we organize is being surprised by how participants interpret the proposed topics and the insights they can give to build a debate...sometimes I even take pretty pictures!'
+    },
+    {
+      name: 'Niccolò',
+      role: 'Secretary',
+      image: niccoloImg,
+      bio: 'I am a Roman, an art historian and passionate about street art and the secrets held within urban realms. Thanks to Urban pH I can explore these worlds in a creative and collaborative way, engaging with those who share my passions.'
+    },
+    {
+      name: 'Marco',
+      role: 'Web Designer',
+      image: marcoImg,
+      bio: 'I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I’ve been observing for years. Sharing these experiences with others turns it into a genuine journey.'
+    }
   ];
 
   return (
@@ -264,7 +294,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
       {isMobile ? <div style={{ height: "12px" }} /> : <div style={{ height: "120px" }} />}
 
       {/* Container for both title and text */}
-      <div className="relative w-full max-w-6xl mx-auto px-4">
+      <div className={`relative w-full max-w-6xl mx-auto px-4 ${isMobile ? 'mb-4' : ''}`}>
 
         {/* Title - Desktop: split across vertical line, Mobile: centered */}
         <div ref={titleRef} className="relative z-10 flex items-center justify-center h-[10px] mb-6">
@@ -460,12 +490,18 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
       </div>
 
       {/* Team profiles */}
-      <div className="w-full max-w-6xl mx-auto mt-16 px-6 pb-16">
+      <div className={`w-full max-w-6xl mx-auto px-6 pb-16 ${isMobile ? 'mt-8' : 'mt-12'}`}>
         <div className="grid grid-cols-5 gap-2 sm:gap-4">
           {teamMembers.map((member, index) => (
             <motion.div
               key={index}
-              className="flex flex-col items-center"
+              className="flex flex-col items-center cursor-pointer"
+              onClick={() => handleMemberClick(member)}
+              animate={{
+                opacity: selectedMember && selectedMember.name !== member.name ? 0.3 : 1,
+                scale: selectedMember?.name === member.name ? 1.15 : 1
+              }}
+              transition={{ duration: 0.3 }}
               whileHover={!isMobile ? {
                 scale: 1.15,
                 zIndex: 10,
@@ -478,7 +514,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
               } : {}}
             >
               <motion.div
-                className={`relative w-full aspect-square rounded-full mb-2 sm:mb-3 overflow-hidden ${isMobile ? "max-w-[80px] sm:max-w-[100px]" : ""
+                className={`relative w-full aspect-square rounded-full overflow-hidden ${isMobile ? "max-w-[80px] sm:max-w-[100px] mb-2" : "mb-6"
                   }`}
                 style={{ transformOrigin: 'center center' }}
                 whileHover={!isMobile ? {
@@ -491,23 +527,61 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
                   className="w-full h-full object-cover"
                 />
               </motion.div>
-              <motion.span
-                className="text-gray-700 text-xs sm:text-sm text-center"
-                whileHover={!isMobile ? {
-                  scale: 1.1,
-                  fontWeight: 600,
-                  transition: {
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 10
-                  }
-                } : {}}
-              >
-                {member.name}
-              </motion.span>
+              <div className="flex flex-col items-center">
+                <motion.span
+                  className={`text-gray-700 text-xs sm:text-sm text-center ${isMobile ? 'underline decoration-gray-400 decoration-1 underline-offset-2' : ''
+                    }`}
+                  animate={{
+                    scale: selectedMember?.name === member.name ? 1.15 : 1,
+                    fontWeight: selectedMember?.name === member.name ? 600 : 600
+                  }}
+                  transition={{ duration: 0.3 }}
+                  whileHover={!isMobile ? {
+                    scale: 1.1,
+                    fontWeight: 600,
+                    transition: {
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 10
+                    }
+                  } : {}}
+                >
+                  {member.name}
+                </motion.span>
+                <motion.span
+                  className="text-gray-500 text-[10px] sm:text-xs text-center mt-1"
+                  animate={{
+                    opacity: selectedMember && selectedMember.name !== member.name ? 0.3 : 1
+                  }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {member.role}
+                </motion.span>
+              </div>
             </motion.div>
           ))}
         </div>
+
+        {/* Selected member bio */}
+        {selectedMember && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -10 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -10 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className={`${isMobile ? 'mt-8' : 'mt-16'} mx-auto max-w-3xl`}
+          >
+            <motion.blockquote
+              className="text-gray-600 text-sm sm:text-base leading-relaxed px-4 italic border-l-4 border-gray-300 pl-4"
+              style={{ textAlign: 'justify' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+            >
+              {selectedMember.bio}
+            </motion.blockquote>
+          </motion.div>
+        )}
       </div>
     </section>
   );

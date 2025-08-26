@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform, animate, useInView } from "framer-motion";
 import { getCurrentUsersCount } from "../utils/statsCount";
-
+import RoughNotationText from "./RoughNotationText";
+import RoughNotationCircle from "./RoughNotationCircle";
 // Import profile images
 import beatriceImg from "../assets/profiles/Beatrice.png";
 import lucaImg from "../assets/profiles/Luca.png";
@@ -26,6 +27,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const usRef = useRef(null);
   const [aLeftPx, setALeftPx] = useState(null);
   const [usRightPx, setUsRightPx] = useState(null);
+  const [isTextInView, setIsTextInView] = useState(false); 
 
   // Animated counters setup
   const membersCount = useMotionValue(0);
@@ -37,6 +39,12 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const eventsRounded = useTransform(eventsCount, Math.round);
   const locationsRounded = useTransform(locationsCount, Math.round);
   const partnershipsRounded = useTransform(partnershipsCount, Math.round);
+
+  const isParagraphInView = useInView(paragraphRef, {
+  once: true,
+  threshold: 0.3,
+  rootMargin: '0px 0px -20% 0px'
+});
 
   // Scroll triggers for counter animations
   const isCounterInView = useInView(counterRef, {
@@ -50,6 +58,12 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
     threshold: 0.3,
     rootMargin: '0px 0px -20% 0px'
   });
+
+  useEffect(() => {
+  if (isParagraphInView) {
+    setIsTextInView(true);
+  }
+}, [isParagraphInView]);
 
   // Fetch dynamic user count on component mount
   useEffect(() => {
@@ -356,7 +370,30 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
             )
           }}
         >
-          Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a cultural association dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
+          Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a cultural association dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a 
+          platform to <RoughNotationCircle 
+  color="#8B5CF6" 
+  animate={true} 
+  animationDelay={2800}
+  strokeWidth={1}
+  trigger={isTextInView}
+> express </RoughNotationCircle> their creativity and <RoughNotationCircle 
+  color="#8B5CF6" 
+  animate={true} 
+  animationDelay={2200}
+  strokeWidth={1}
+  trigger={isTextInView}
+> explore</RoughNotationCircle> the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, 
+          and reflect on the visual and <RoughNotationText 
+  type="underline" 
+  color="#8B5CF6" 
+  animate={true} 
+  animationDelay={2500}
+  strokeWidth={1}
+  trigger={isTextInView}
+>
+  mental experiences
+</RoughNotationText> that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
         </div>
 
         {/* Additional Stats Row - Desktop: below paragraph, Mobile: below members counter */}
@@ -490,8 +527,10 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
       </div>
 
       {/* Team profiles */}
-      <div className={`w-full max-w-6xl mx-auto px-6 pb-16 ${isMobile ? 'mt-8' : 'mt-12'}`}>
-        <div className="grid grid-cols-5 gap-2 sm:gap-4">
+      <div className={`w-full max-w-6xl mx-auto px-6 pb-16 ${isMobile ? 'mt-6' : 'mt-12'}`}
+      onClick={() => setSelectedMember(null)}>
+        <div className="grid grid-cols-5 gap-2 sm:gap-4"
+        onClick={(e) => e.stopPropagation()}>
           {teamMembers.map((member, index) => (
             <motion.div
               key={index}

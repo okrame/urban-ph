@@ -3,8 +3,8 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
-  sendSignInLinkToEmail, 
-  isSignInWithEmailLink, 
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
   signInWithEmailLink,
   browserLocalPersistence,
   browserSessionPersistence,
@@ -20,6 +20,20 @@ function AuthModal({ isOpen, onClose, event }) {
   const [useMagicLink, setUseMagicLink] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
+  const [authSuccess, setAuthSuccess] = useState(false);
+
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // Applica la persistenza appena il modale è aperto o cambia l'opzione.
+    // Non fare await, così il click resta una user-gesture valida per il popup.
+    setPersistence(
+      auth,
+      keepSignedIn ? browserLocalPersistence : browserSessionPersistence
+    ).catch((err) => {
+      console.warn('setPersistence failed (using default):', err);
+    });
+  }, [isOpen, keepSignedIn]);
 
   // Reset error and useMagicLink when modal opens or closes
   useEffect(() => {
@@ -32,26 +46,26 @@ function AuthModal({ isOpen, onClose, event }) {
     // Controlla se l'URL contiene un link di sign-in email
     if (isSignInWithEmailLink(auth, window.location.href)) {
       setIsSigningIn(true);
-      
+
       const processSignInLink = async () => {
         let storedEmail = window.localStorage.getItem('emailForSignIn');
-        
+
         // Se non c'è email salvata, chiedi SOLO SE non stiamo già processando
         if (!storedEmail) {
           // Aggiungiamo una flag per evitare prompt multipli
           const isProcessingSignIn = sessionStorage.getItem('isProcessingSignIn');
-          
+
           if (!isProcessingSignIn) {
             sessionStorage.setItem('isProcessingSignIn', 'true');
-            
+
             // Solo se necessario, prova a estrarre dall'URL
             const extractEmailFromUrl = () => {
               const urlParams = new URLSearchParams(window.location.search);
               return urlParams.get('email');
             };
-            
+
             const urlEmail = extractEmailFromUrl();
-            
+
             if (!urlEmail) {
               const promptEmail = window.prompt('Please provide your email for confirmation');
               if (promptEmail) {
@@ -112,6 +126,7 @@ function AuthModal({ isOpen, onClose, event }) {
     setError('');
     setLoading(false);
     setUseMagicLink(false);
+    setAuthSuccess(false);
     onClose();
   };
 
@@ -175,29 +190,40 @@ function AuthModal({ isOpen, onClose, event }) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (e) => {
+    e?.preventDefault?.();
     setError('');
     setLoading(true);
-    
+
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
     try {
-      // Imposta la persistenza prima del sign-in
-      await setPersistence(auth, keepSignedIn ? browserLocalPersistence : browserSessionPersistence);
-      
-      const provider = new GoogleAuthProvider();
-      
-      // Forza la selezione dell'account
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      
       const result = await signInWithPopup(auth, provider);
-      
-      // Crea o aggiorna il profilo utente nel database
+      setAuthSuccess(result.user.displayName || result.user.email);
       await createUserProfile(result.user);
-      handleClose();
+
+      setTimeout(() => {
+        handleClose();
+      }, 2500);
+
     } catch (error) {
-      console.error("Google sign-in error:", error);
-      setError('Google sign-in failed. Please try again.');
+      console.error('Google sign-in error:', error);
+      setAuthSuccess(false);
+
+      // (Opzionale) Se vuoi un "paracadute" automatico: 
+      // scommenta le 3 righe sotto per fallback a redirect SOLO quando il popup è bloccato:
+      // if (error.code === 'auth/popup-blocked') {
+      //   return signInWithRedirect(auth, provider);
+      // }
+
+      setError(
+        error.code === 'auth/popup-blocked'
+          ? 'Popup blocked. Please allow popups and try again.'
+          : error.code === 'auth/popup-closed-by-user'
+            ? 'Sign-in was cancelled. Please try again.'
+            : 'Google sign-in failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -206,57 +232,100 @@ function AuthModal({ isOpen, onClose, event }) {
   const handleFacebookSignIn = async () => {
     setError('');
     setLoading(true);
-    
+
     try {
-      // Imposta la persistenza prima del sign-in
       await setPersistence(auth, keepSignedIn ? browserLocalPersistence : browserSessionPersistence);
-      
+
       const provider = new FacebookAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      
-      // Crea o aggiorna il profilo utente nel database
+
       await createUserProfile(result.user);
-      handleClose();
+
+      setAuthSuccess(result.user.displayName || result.user.email);
+      setTimeout(() => {
+        handleClose();
+      }, 2500);
+
     } catch (error) {
       console.error("Facebook sign-in error:", error);
+      setAuthSuccess(false);
       setError('Facebook sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div style={modalStyle}>
       <div style={modalContentStyle}>
-        <h2 style={{fontSize: '24px', fontWeight: 'bold', marginBottom: '16px'}}>
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px' }}>
           {useMagicLink ? 'Sign In with Magic Link' : 'Sign In'} to Urban PH
         </h2>
-        
-        <button 
+
+        <button
           onClick={handleClose}
-          style={{position: 'absolute', right: '16px', top: '16px', cursor: 'pointer'}}
+          style={{ position: 'absolute', right: '16px', top: '16px', cursor: 'pointer' }}
         >
           Close
         </button>
 
-        <h3 style={{fontSize: '18px', marginBottom: '12px'}}>
+        <h3 style={{ fontSize: '18px', marginBottom: '12px' }}>
           {event?.title || ''}
         </h3>
-        
+
         {error && (
-          <div style={{padding: '10px', backgroundColor: '#FEE2E2', color: '#B91C1C', marginBottom: '16px', borderRadius: '4px'}}>
+          <div style={{ padding: '10px', backgroundColor: '#FEE2E2', color: '#B91C1C', marginBottom: '16px', borderRadius: '4px' }}>
             {error}
           </div>
         )}
 
-        {!useMagicLink && (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <svg
+              className="animate-spin h-8 w-8 mx-auto mb-4"
+              style={{ color: '#4285F4' }}
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <p style={{ color: '#6B7280' }}>Signing you in...</p>
+          </div>
+        ) : authSuccess ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <svg
+              style={{ width: '48px', height: '48px', color: '#166534', margin: '0 auto 16px' }}
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', color: '#166534' }}>
+              Hello, {authSuccess}!
+            </h3>
+            <p style={{ color: '#6B7280' }}>Successfully signed in</p>
+          </div>
+        ) : !useMagicLink ? (
           <>
             <button
+              type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
               style={{
-                width: '100%', 
-                padding: '10px', 
+                width: '100%',
+                padding: '10px',
                 marginBottom: '20px',
                 border: '1px solid #ccc',
                 borderRadius: '4px',
@@ -267,7 +336,7 @@ function AuthModal({ isOpen, onClose, event }) {
                 alignItems: 'center'
               }}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" style={{marginRight: '8px'}}>
+              <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '8px' }}>
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -280,8 +349,8 @@ function AuthModal({ isOpen, onClose, event }) {
               onClick={handleFacebookSignIn}
               disabled={loading}
               style={{
-                width: '100%', 
-                padding: '10px', 
+                width: '100%',
+                padding: '10px',
                 marginBottom: '20px',
                 border: '1px solid #ccc',
                 borderRadius: '4px',
@@ -292,14 +361,14 @@ function AuthModal({ isOpen, onClose, event }) {
                 alignItems: 'center'
               }}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" style={{marginRight: '8px', fill: '#1877F2'}}>
+              <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '8px', fill: '#1877F2' }}>
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
               Continue with Facebook
             </button>
 
-            <div style={{marginBottom: '20px', position: 'relative', textAlign: 'center'}}>
-              <span style={{backgroundColor: 'white', padding: '0 10px', position: 'relative', zIndex: 1}}>
+            <div style={{ marginBottom: '20px', position: 'relative', textAlign: 'center' }}>
+              <span style={{ backgroundColor: 'white', padding: '0 10px', position: 'relative', zIndex: 1 }}>
                 Or continue with email
               </span>
             </div>
@@ -320,8 +389,7 @@ function AuthModal({ isOpen, onClose, event }) {
             >
               Use Magic Link (Passwordless)
             </button>
-            
-            {/* Checkbox per Keep me signed in */}
+
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -333,22 +401,20 @@ function AuthModal({ isOpen, onClose, event }) {
                 id="keepSignedIn"
                 checked={keepSignedIn}
                 onChange={(e) => setKeepSignedIn(e.target.checked)}
-                style={{marginRight: '8px'}}
+                style={{ marginRight: '8px' }}
               />
-              <label 
-                htmlFor="keepSignedIn" 
-                style={{cursor: 'pointer', fontSize: '14px'}}
+              <label
+                htmlFor="keepSignedIn"
+                style={{ cursor: 'pointer', fontSize: '14px' }}
               >
                 Keep me signed in
               </label>
             </div>
           </>
-        )}
-
-        {useMagicLink && (
+        ) : (
           <form onSubmit={handleEmailLinkAuth}>
-            <div style={{marginBottom: '16px'}}>
-              <label style={{display: 'block', marginBottom: '8px'}} htmlFor="email">
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px' }} htmlFor="email">
                 Email Address
               </label>
               <input
@@ -366,7 +432,7 @@ function AuthModal({ isOpen, onClose, event }) {
                 placeholder="your@email.com"
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -384,7 +450,7 @@ function AuthModal({ isOpen, onClose, event }) {
             >
               {loading ? 'Sending link...' : 'Send Magic Link'}
             </button>
-            
+
             <button
               type="button"
               onClick={() => setUseMagicLink(false)}

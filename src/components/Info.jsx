@@ -109,7 +109,12 @@ function Info() {
     ]
   );
 
-  const italianTextOpacity = useTransform(progressPhase2, [0, 0.4], [0, 1]);
+  const italianTextOpacity = useTransform(
+    isMobile ? scrollYProgress : progressPhase2, 
+    isMobile ? [0.6, 0.7] : [0, 0.4], 
+    [0, 1]
+  );
+
 
   const content = {
     hunts: {
@@ -264,7 +269,11 @@ function Info() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -15 }}
-          transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
+          transition={{ 
+            duration: 0.4, 
+            ease: "easeInOut", 
+            delay: isMobile ? 0.3 : 0.1
+          }}
           dangerouslySetInnerHTML={{ __html: currentContent.text }}
         />
       </motion.div>

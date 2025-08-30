@@ -34,7 +34,7 @@ const RoughNotationCircle = ({
     if (!isMobile) {
       return {
         strokeWidth,
-        padding: 6,
+        padding: 3, 
         animationDuration: 600
       };
     }

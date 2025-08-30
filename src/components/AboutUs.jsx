@@ -27,7 +27,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const usRef = useRef(null);
   const [aLeftPx, setALeftPx] = useState(null);
   const [usRightPx, setUsRightPx] = useState(null);
-  const [isTextInView, setIsTextInView] = useState(false); 
+  const [isTextInView, setIsTextInView] = useState(false);
 
   // Animated counters setup
   const membersCount = useMotionValue(0);
@@ -41,10 +41,10 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   const partnershipsRounded = useTransform(partnershipsCount, Math.round);
 
   const isParagraphInView = useInView(paragraphRef, {
-  once: true,
-  threshold: 0.3,
-  rootMargin: '0px 0px -20% 0px'
-});
+    once: true,
+    threshold: 0.3,
+    rootMargin: '0px 0px -20% 0px'
+  });
 
   // Scroll triggers for counter animations
   const isCounterInView = useInView(counterRef, {
@@ -60,10 +60,10 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
   });
 
   useEffect(() => {
-  if (isParagraphInView) {
-    setIsTextInView(true);
-  }
-}, [isParagraphInView]);
+    if (isParagraphInView) {
+      setIsTextInView(true);
+    }
+  }, [isParagraphInView]);
 
   // Fetch dynamic user count on component mount
   useEffect(() => {
@@ -370,30 +370,15 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
             )
           }}
         >
-          Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a cultural association dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a 
-          platform to <RoughNotationCircle 
-  color="#8B5CF6" 
-  animate={true} 
-  animationDelay={2800}
-  strokeWidth={1}
-  trigger={isTextInView}
-> express </RoughNotationCircle> their creativity and <RoughNotationCircle 
-  color="#8B5CF6" 
-  animate={true} 
-  animationDelay={2200}
-  strokeWidth={1}
-  trigger={isTextInView}
-> explore</RoughNotationCircle> the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, 
-          and reflect on the visual and <RoughNotationText 
-  type="underline" 
-  color="#8B5CF6" 
-  animate={true} 
-  animationDelay={2500}
-  strokeWidth={1}
-  trigger={isTextInView}
->
-  mental experiences
-</RoughNotationText> that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
+          Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a <RoughNotationCircle
+            color="#8B5CF6"
+            animate={true}
+            animationDelay={1500}
+            strokeWidth={1.1}
+            trigger={isTextInView}
+          >cultural association</RoughNotationCircle> dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a
+          platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore,
+          and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
         </div>
 
         {/* Additional Stats Row - Desktop: below paragraph, Mobile: below members counter */}
@@ -418,23 +403,6 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
           }}
         >
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {/* Events */}
-            <motion.div
-              className="flex flex-col items-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{
-                opacity: isStatsInView ? 1 : 0,
-                y: isStatsInView ? 0 : 20
-              }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <motion.h3 className="font-bold text-green-800 text-2xl sm:text-3xl">
-                {eventsRounded}
-              </motion.h3>
-              <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
-                events
-              </p>
-            </motion.div>
 
             {/* Locations */}
             <motion.div
@@ -446,11 +414,29 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
               }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <motion.h3 className="font-bold text-green-800 text-2xl sm:text-3xl">
+              <motion.h3 className="font-bold text-green-800 text-3xl sm:text-4xl">
                 {locationsRounded}
               </motion.h3>
               <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
                 locations
+              </p>
+            </motion.div>
+
+            {/* Events */}
+            <motion.div
+              className="flex flex-col items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{
+                opacity: isStatsInView ? 1 : 0,
+                y: isStatsInView ? 0 : 20
+              }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <motion.h3 className="font-bold text-green-800 text-3xl sm:text-4xl">
+                {eventsRounded}
+              </motion.h3>
+              <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
+                events
               </p>
             </motion.div>
 
@@ -464,7 +450,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
               }}
               transition={{ duration: 0.6, delay: 0.7 }}
             >
-              <motion.h3 className="font-bold text-green-800 text-2xl sm:text-3xl">
+              <motion.h3 className="font-bold text-green-800 text-3xl sm:text-4xl">
                 {partnershipsRounded}
               </motion.h3>
               <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
@@ -497,7 +483,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
         >
           <motion.div className="flex flex-col items-center">
             <motion.h2
-              className="font-bold text-purple-800 text-[clamp(1.5rem,4.5vw,3rem)]"
+              className="font-bold text-purple-800 text-[clamp(2.5rem,5.5vw,4rem)]"
               initial={{ opacity: 0, y: 20 }}
               animate={{
                 opacity: isCounterInView ? 1 : 0,
@@ -528,9 +514,9 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
 
       {/* Team profiles */}
       <div className={`w-full max-w-6xl mx-auto px-6 pb-16 ${isMobile ? 'mt-6' : 'mt-12'}`}
-      onClick={() => setSelectedMember(null)}>
+        onClick={() => setSelectedMember(null)}>
         <div className="grid grid-cols-5 gap-2 sm:gap-4"
-        onClick={(e) => e.stopPropagation()}>
+          onClick={(e) => e.stopPropagation()}>
           {teamMembers.map((member, index) => (
             <motion.div
               key={index}
@@ -576,7 +562,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
                   }}
                   transition={{ duration: 0.3 }}
                   whileHover={!isMobile ? {
-                    scale: 1.1,
+                    scale: 1.6,
                     fontWeight: 600,
                     transition: {
                       type: "spring",

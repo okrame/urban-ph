@@ -111,7 +111,7 @@ function Info() {
 
   const italianTextOpacity = useTransform(
     isMobile ? scrollYProgress : progressPhase2, 
-    isMobile ? [0.6, 0.7] : [0, 0.4], 
+    isMobile ? [0.6, 0.64] : [0, 0.4], 
     [0, 1]
   );
 
@@ -124,6 +124,11 @@ function Info() {
     workshops: {
       title: "Workshops",
       text: "<span class='text-2xl font-bold inline'>The workshops</span> we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>, <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, and more. We are always open to new collaborations."
+    },
+    
+    exhibitions: {
+      title: "Exhibitions",
+      text: "We regularly organize exhibitions to <strong>showcase the artwork of our community</strong>, be it photos, collages or other. We also host a <strong>biennial open-call event</strong>, called Boring Exhibition, which revisits and re-imagines holiday photos."
     }
   };
 
@@ -219,7 +224,7 @@ function Info() {
       </motion.div>
 
       <motion.button
-        onClick={() => setActivityKind(activityKind === 'hunts' ? 'workshops' : 'hunts')}
+        onClick={() => setActivityKind(activityKind === 'hunts' ? 'workshops' : activityKind === 'workshops' ? 'exhibitions' : 'hunts')}
         className="absolute p-2 hover:bg-gray-200/50 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
         aria-label={`Switch to ${activityKind === 'hunts' ? 'workshops' : 'hunts'}`}
         aria-expanded={activityKind === 'workshops'}

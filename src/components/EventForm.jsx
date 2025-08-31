@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import ImageUploader from './ImageUploader';
 import EmojiPicker from 'emoji-picker-react';
+import MDEditor from '@uiw/react-md-editor';
 
 function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const [formData, setFormData] = useState({
@@ -51,6 +52,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const emojiPickerRef = useRef(null);
   const descriptionRef = useRef(null);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const mdEditorRef = useRef(null);
 
   // Form state
   const [loading, setLoading] = useState(false);
@@ -71,18 +73,18 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     }
 
     setLocationLoading(true);
-    
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=IT`
       );
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch locations');
       }
-      
+
       const data = await response.json();
-      
+
       // Format suggestions for better display
       const suggestions = data.map(item => ({
         display_name: item.display_name,
@@ -91,7 +93,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         lon: item.lon,
         raw: item
       }));
-      
+
       setLocationSuggestions(suggestions);
       setShowLocationSuggestions(suggestions.length > 0);
       setSelectedLocationIndex(-1);
@@ -108,34 +110,34 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const formatLocationDisplay = (location) => {
     const address = location.address || {};
     const parts = [];
-    
+
     // Add specific place name if available
     if (address.amenity || address.shop || address.tourism) {
       parts.push(address.amenity || address.shop || address.tourism);
     }
-    
+
     // Add street address
     if (address.house_number && address.road) {
       parts.push(`${address.road} ${address.house_number}`);
     } else if (address.road) {
       parts.push(address.road);
     }
-    
+
     // Add neighborhood/suburb
     if (address.suburb || address.neighbourhood) {
       parts.push(address.suburb || address.neighbourhood);
     }
-    
+
     // Add city
     if (address.city || address.town || address.village) {
       parts.push(address.city || address.town || address.village);
     }
-    
+
     // Add province/state
     if (address.province || address.state) {
       parts.push(address.province || address.state);
     }
-    
+
     return parts.slice(0, 3).join(', ') || location.display_name;
   };
 
@@ -143,12 +145,12 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const handleLocationChange = (e) => {
     const value = e.target.value;
     setFormData({ ...formData, location: value });
-    
+
     // Clear previous timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    
+
     // Set new timeout for search
     searchTimeoutRef.current = setTimeout(() => {
       searchLocations(value);
@@ -157,15 +159,15 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
   // Handle location suggestion selection
   const handleLocationSelect = (suggestion) => {
-    setFormData({ 
-      ...formData, 
+    setFormData({
+      ...formData,
       location: suggestion.formatted,
       venueName: extractVenueName(suggestion) // Auto-populate venue name from suggestion
     });
     setShowLocationSuggestions(false);
     setLocationSuggestions([]);
     setSelectedLocationIndex(-1);
-    
+
     // Focus back to input
     if (locationInputRef.current) {
       locationInputRef.current.focus();
@@ -175,7 +177,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Extract venue name from OpenStreetMap suggestion
   const extractVenueName = (suggestion) => {
     const address = suggestion.raw.address || {};
-    
+
     // Priority order for venue names
     if (address.amenity) return address.amenity;
     if (address.shop) return address.shop;
@@ -183,7 +185,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     if (address.leisure) return address.leisure;
     if (address.historic) return address.historic;
     if (address.building && address.building !== 'yes') return address.building;
-    
+
     // If no specific venue name, use the formatted address
     return suggestion.formatted;
   };
@@ -191,11 +193,11 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Handle keyboard navigation for location suggestions
   const handleLocationKeyDown = (e) => {
     if (!showLocationSuggestions) return;
-    
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedLocationIndex(prev => 
+        setSelectedLocationIndex(prev =>
           prev < locationSuggestions.length - 1 ? prev + 1 : prev
         );
         break;
@@ -220,7 +222,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        suggestionsRef.current && 
+        suggestionsRef.current &&
         !suggestionsRef.current.contains(event.target) &&
         !locationInputRef.current.contains(event.target)
       ) {
@@ -408,31 +410,41 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Handle emoji selection
   const handleEmojiClick = (emojiObject) => {
     const emoji = emojiObject.emoji;
-    const descriptionValue = formData.description;
 
-    // Insert emoji at cursor position
-    const newDescription = descriptionValue.substring(0, cursorPosition) + emoji + descriptionValue.substring(cursorPosition);
+    // Get the actual textarea element from MDEditor
+    const textarea = mdEditorRef.current?.querySelector('textarea');
 
-    setFormData({
-      ...formData,
-      description: newDescription
-    });
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = formData.description || '';
 
-    setCursorPosition(cursorPosition + emoji.length);
+      // Insert emoji at cursor position
+      const newDescription =
+        text.substring(0, start) +
+        emoji +
+        text.substring(end);
 
-    // Update cursor position in textarea
-    if (descriptionRef.current) {
-      const newCursorPos = cursorPosition + emoji.length;
+      setFormData({
+        ...formData,
+        description: newDescription
+      });
+
+      // Restore focus and set cursor position after emoji
       setTimeout(() => {
-        descriptionRef.current.focus();
-        descriptionRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+        const newCursorPos = start + emoji.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
       }, 0);
+    } else {
+      // Fallback: append at end if we can't find textarea
+      setFormData({
+        ...formData,
+        description: formData.description + emoji
+      });
     }
-  };
 
-  // Track cursor position in description field
-  const handleDescriptionCursorPosition = (e) => {
-    setCursorPosition(e.target.selectionStart);
+    setShowEmojiPicker(false);
   };
 
   // Toggle emoji picker visibility
@@ -581,22 +593,22 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
       if (formData.isPaid) {
         // Member price can be 0 or greater, but must be a valid number (not empty string)
-        const memberPrice = typeof formData.memberPrice === 'string' ? 
+        const memberPrice = typeof formData.memberPrice === 'string' ?
           parseFloat(formData.memberPrice) : formData.memberPrice;
 
-        if (formData.memberPrice === '' || formData.memberPrice === null || 
-            formData.memberPrice === undefined || isNaN(memberPrice) || memberPrice < 0) {
+        if (formData.memberPrice === '' || formData.memberPrice === null ||
+          formData.memberPrice === undefined || isNaN(memberPrice) || memberPrice < 0) {
           setError('Please enter a valid member price (can be 0 for free member access)');
           setLoading(false);
           return;
         }
 
         // Non-member price can be 0 or greater
-        const nonMemberPrice = typeof formData.nonMemberPrice === 'string' ? 
+        const nonMemberPrice = typeof formData.nonMemberPrice === 'string' ?
           parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice;
 
-        if (formData.nonMemberPrice === '' || formData.nonMemberPrice === null || 
-            formData.nonMemberPrice === undefined || isNaN(nonMemberPrice) || nonMemberPrice < 0) {
+        if (formData.nonMemberPrice === '' || formData.nonMemberPrice === null ||
+          formData.nonMemberPrice === undefined || isNaN(nonMemberPrice) || nonMemberPrice < 0) {
           setError('Please enter a valid non-member price (can be 0 for free access)');
           setLoading(false);
           return;
@@ -623,7 +635,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       if (initialValues.id) {
         // Update existing event using updateEvent function
         const { updateEvent } = await import('../../firebase/adminServices');
-        
+
         // Calculate spotsLeft correctly as total spots minus bookings
         const spotsLeft = updatedFormData.spots - bookingsCount;
 
@@ -982,21 +994,20 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                 </div>
               )}
             </div>
-            
+
             {/* Location suggestions dropdown */}
             {showLocationSuggestions && locationSuggestions.length > 0 && (
-              <div 
+              <div
                 ref={suggestionsRef}
                 className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
               >
                 {locationSuggestions.map((suggestion, index) => (
                   <div
                     key={index}
-                    className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                      index === selectedLocationIndex 
-                        ? 'bg-blue-50 border-blue-200' 
-                        : 'hover:bg-gray-50'
-                    }`}
+                    className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 ${index === selectedLocationIndex
+                      ? 'bg-blue-50 border-blue-200'
+                      : 'hover:bg-gray-50'
+                      }`}
                     onClick={() => handleLocationSelect(suggestion)}
                   >
                     <div className="font-medium text-sm text-gray-900">
@@ -1011,7 +1022,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                 ))}
               </div>
             )}
-            
+
             <p className="text-xs text-gray-500 mt-1">
               Mappable address for location services (required for map display)
             </p>
@@ -1221,8 +1232,8 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
           </p>
         </div>
 
-        {/* Description with emoji support */}
-        <div className="mb-4 relative">
+        {/* Description with markdown editor */}
+        <div className="mb-4">
           <div className="flex justify-between items-center mb-1">
             <label className="block text-sm font-medium text-gray-700">
               Description
@@ -1236,23 +1247,21 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </button>
           </div>
 
-          <textarea
-            ref={descriptionRef}
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            onClick={handleDescriptionCursorPosition}
-            onKeyUp={handleDescriptionCursorPosition}
-            className="w-full p-2 border rounded"
-            rows="4"
-            required
-          ></textarea>
+          <div data-color-mode="light" ref={mdEditorRef}>
+            <MDEditor
+              value={formData.description}
+              onChange={(value) => setFormData({ ...formData, description: value || '' })}
+              preview="edit"
+              height={200}
+              textareaProps={{
+                placeholder: "Write description using markdown...",
+              }}
+            />
+          </div>
 
+          {/* Keep your existing emoji picker as is */}
           {showEmojiPicker && (
-            <div
-              ref={emojiPickerRef}
-              className="absolute right-0 z-10 mt-1"
-            >
+            <div ref={emojiPickerRef} className="absolute right-0 z-10 mt-1">
               <EmojiPicker
                 onEmojiClick={handleEmojiClick}
                 disableAutoFocus={true}

@@ -12,6 +12,8 @@ import {
   DESCRIPTION_LIMIT,
   getActiveFrameThickness
 } from '../../utils/eventCardUtils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const EventCardDesktopLayout = ({
   event,
@@ -131,10 +133,34 @@ const EventCardDesktopLayout = ({
             <span>{event.venueName || event.location}</span>
           </div>
 
-          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed prose prose-sm max-w-none">
             {shouldTruncate && !showFullDescription ? (
               <>
-                {event.description.substring(0, DESCRIPTION_LIMIT)}...
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    // Other components...
+                    a: ({ children, href }) => {
+                      // Auto-fix URLs without protocol
+                      let finalHref = href;
+                      if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#') && !href.startsWith('/')) {
+                        finalHref = 'https://' + href;
+                      }
+                      return (
+                        <a
+                          href={finalHref}
+                          className="text-purple-600 hover:text-purple-800 underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {children}
+                        </a>
+                      );
+                    },
+                  }}
+                >
+                  {event.description.substring(0, DESCRIPTION_LIMIT) + '...'}
+                </ReactMarkdown>
                 <button
                   onClick={() => setShowFullDescription(true)}
                   className="ml-2 text-purple-800 hover:text-purple-600 underline text-sm"
@@ -144,7 +170,19 @@ const EventCardDesktopLayout = ({
               </>
             ) : (
               <>
-                {event.description}
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    // Override default styles to match your design
+                    h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-semibold mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
+                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    a: ({ children, href }) => <a href={href} className="text-purple-600 hover:text-purple-800 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                  }}
+                >
+                  {event.description}
+                </ReactMarkdown>
                 {shouldTruncate && (
                   <button
                     onClick={() => setShowFullDescription(false)}
@@ -158,13 +196,13 @@ const EventCardDesktopLayout = ({
           </div>
 
           {/* Event meta info */}
-        {!isBooked && (
-          <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
-            <span className="px-2 py-1">
-              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-            </span>
-          </div>
-        )}
+          {!isBooked && (
+            <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
+              <span className="px-2 py-1">
+                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
+              </span>
+            </div>
+          )}
 
           {/* Status messages */}
           {authError && (

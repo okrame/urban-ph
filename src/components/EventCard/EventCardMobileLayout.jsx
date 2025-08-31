@@ -12,6 +12,8 @@ import {
   DESCRIPTION_LIMIT,
   getActiveFrameThickness
 } from '../../utils/eventCardUtils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const EventCardMobileLayout = ({
   event,
@@ -67,48 +69,48 @@ const EventCardMobileLayout = ({
   const roughTrigger = (annotationTrigger || dateInView || forceAlwaysVisible);
 
 
-const getContentClasses = () => {
-  // Don't apply opacity/filter classes that would affect child elements
-  return "transition-all duration-700 ease-in-out";
-};
+  const getContentClasses = () => {
+    // Don't apply opacity/filter classes that would affect child elements
+    return "transition-all duration-700 ease-in-out";
+  };
   const getContentAnimationProps = () => {
-  // Don't apply any animation props that would create a new stacking context
-  return {};
-};
+    // Don't apply any animation props that would create a new stacking context
+    return {};
+  };
 
   return (
     <motion.div
-  id={`event-${event.id}`}
-  ref={cardRef}
-  style={{
-    marginLeft: "7.5px",
-    marginRight: "7px",
-    ...(isFrameVisible ? {} : { boxShadow: 'none' }),
-    transform: 'translateZ(0)',
-    backfaceVisibility: 'hidden',
-    WebkitOverflowScrolling: 'touch',
-    willChange: 'opacity, transform',
-    minHeight: 1
-  }}
-  className={[
-    "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
-    showFullDescription ? "overflow-visible" : "overflow-hidden",
-    isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
-    isFrameVisible ? getActiveFrameThickness(index) : "",
-  ].join(" ")}
-  variants={shouldAnimate && !forceAlwaysVisible ? mobileVariants : undefined}
-  initial={shouldAnimate && !forceAlwaysVisible ? "hidden" : false}
-  animate={
-    shouldAnimate && !forceAlwaysVisible
-      ? undefined
-      : { opacity: 1 } // REMOVED the filter from here
-  }
-  whileInView={shouldAnimate && !forceAlwaysVisible ? "visible" : undefined}
-  viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
->
+      id={`event-${event.id}`}
+      ref={cardRef}
+      style={{
+        marginLeft: "7.5px",
+        marginRight: "7px",
+        ...(isFrameVisible ? {} : { boxShadow: 'none' }),
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        willChange: 'opacity, transform',
+        minHeight: 1
+      }}
+      className={[
+        "relative lg:hidden sm:mx-6 md:mx-8 bg-white",
+        showFullDescription ? "overflow-visible" : "overflow-hidden",
+        isFrameVisible ? getBorderClassesMobile(index) : "ring-0 ring-transparent border-0 border-transparent",
+        isFrameVisible ? getActiveFrameThickness(index) : "",
+      ].join(" ")}
+      variants={shouldAnimate && !forceAlwaysVisible ? mobileVariants : undefined}
+      initial={shouldAnimate && !forceAlwaysVisible ? "hidden" : false}
+      animate={
+        shouldAnimate && !forceAlwaysVisible
+          ? undefined
+          : { opacity: 1 } // REMOVED the filter from here
+      }
+      whileInView={shouldAnimate && !forceAlwaysVisible ? "visible" : undefined}
+      viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
+    >
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div
-          className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}
+        className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}
 
       >
         {/* Image Half */}
@@ -150,20 +152,56 @@ const getContentClasses = () => {
       <motion.div
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
       >
-        <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+        <div className="text-sm text-black opacity-80 mb-4 leading-relaxed prose prose-sm max-w-none">
           {shouldTruncate && !showFullDescription ? (
             <>
-              {event.description.substring(0, DESCRIPTION_LIMIT)}...
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Other components...
+                  a: ({ children, href }) => {
+                    // Auto-fix URLs without protocol
+                    let finalHref = href;
+                    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#') && !href.startsWith('/')) {
+                      finalHref = 'https://' + href;
+                    }
+                    return (
+                      <a
+                        href={finalHref}
+                        className="text-purple-600 hover:text-purple-800 underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {children}
+                      </a>
+                    );
+                  },
+                }}
+              >
+                {event.description.substring(0, DESCRIPTION_LIMIT) + '...'}
+              </ReactMarkdown>
               <button
                 onClick={() => setShowFullDescription(true)}
-                className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                className="ml-2 text-purple-800 hover:text-purple-600 underline text-sm"
               >
                 Show more
               </button>
             </>
           ) : (
             <>
-              {event.description}
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Override default styles to match your design
+                  h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-lg font-semibold mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
+                  p: ({ children }) => <p className="mb-2">{children}</p>,
+                  a: ({ children, href }) => <a href={href} className="text-purple-600 hover:text-purple-800 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                }}
+              >
+                {event.description}
+              </ReactMarkdown>
               {shouldTruncate && (
                 <button
                   onClick={() => setShowFullDescription(false)}
@@ -236,61 +274,60 @@ const getContentClasses = () => {
         )}
 
         {/* Mobile Book button */}
-<div className="w-full mt-2 relative z-20"> {/* Add relative z-20 to button container */}
-  <button
-    onClick={handleBookEvent}
-    disabled={
-      (isBooked && bookingStatus !== 'cancelled') ||
-      loading ||
-      (!isBookable && bookingStatus !== 'cancelled')
-    }
-    className={`relative w-full py-3 px-4 text-base font-light transition-all duration-300 ${
-      (isBooked && bookingStatus !== 'cancelled')
-        ? 'bg-transparent text-black'
-        : loading
-          ? 'bg-transparent text-black cursor-wait'
-          : (!isBookable && bookingStatus !== 'cancelled')
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
-            : 'bg-transparent text-black hover:text-purple-700 transition-colors'
-    }`}
-    style={{
-      background:
-        (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
-          ? 'transparent'
-          : undefined,
-      border:
-        (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
-          ? 'none'
-          : undefined,
-      position: 'relative',
-      zIndex: 20
-    }}
-  >
-    {/* Use the same logic as desktop: getButtonContent() for booked/loading states */}
-    {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
-      <span className="relative z-[70]">
-        {getButtonContent()}
-      </span>
-    ) : isInteractiveButton ? (
-      <span ref={btnRef} className="inline-block align-middle relative z-[70]">
-        <RoughNotationText
-          key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
-          type="box"
-          color="#4A7E74"
-          strokeWidth={2}
-          animationDelay={100}
-          disabled={!allowRoughAnimations}
-          trigger={annotationTrigger || btnInView || forceAlwaysVisible}
-          className="relative z-[70]"
-        >
-          {getButtonText()}
-        </RoughNotationText>
-      </span>
-    ) : (
-      getButtonText()
-    )}
-  </button>
-</div>
+        <div className="w-full mt-2 relative z-20"> {/* Add relative z-20 to button container */}
+          <button
+            onClick={handleBookEvent}
+            disabled={
+              (isBooked && bookingStatus !== 'cancelled') ||
+              loading ||
+              (!isBookable && bookingStatus !== 'cancelled')
+            }
+            className={`relative w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
+              ? 'bg-transparent text-black'
+              : loading
+                ? 'bg-transparent text-black cursor-wait'
+                : (!isBookable && bookingStatus !== 'cancelled')
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
+                  : 'bg-transparent text-black hover:text-purple-700 transition-colors'
+              }`}
+            style={{
+              background:
+                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
+                  ? 'transparent'
+                  : undefined,
+              border:
+                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
+                  ? 'none'
+                  : undefined,
+              position: 'relative',
+              zIndex: 20
+            }}
+          >
+            {/* Use the same logic as desktop: getButtonContent() for booked/loading states */}
+            {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
+              <span className="relative z-[70]">
+                {getButtonContent()}
+              </span>
+            ) : isInteractiveButton ? (
+              <span ref={btnRef} className="inline-block align-middle relative z-[70]">
+                <RoughNotationText
+                  key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
+                  type="box"
+                  color="#4A7E74"
+                  strokeWidth={2}
+                  animationDelay={100}
+                  disabled={!allowRoughAnimations}
+                  trigger={annotationTrigger || btnInView || forceAlwaysVisible}
+                  className="relative z-[70]"
+                >
+                  {getButtonText()}
+                </RoughNotationText>
+              </span>
+            ) : (
+              getButtonText()
+            )}
+          </button>
+        </div>
       </motion.div>
     </motion.div>
   );

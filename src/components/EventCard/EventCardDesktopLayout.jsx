@@ -118,7 +118,7 @@ const EventCardDesktopLayout = ({
 
           <div className="flex items-center text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
             <RoughNotationText
-              type="underline"
+              type="underline"f
               color="#4A7E74"
               strokeWidth={2}
               animationDelay={roughAnimationsReady ? 200 : 0}
@@ -133,13 +133,13 @@ const EventCardDesktopLayout = ({
             <span>{event.venueName || event.location}</span>
           </div>
 
-          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed prose prose-sm max-w-none">
+          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
             {shouldTruncate && !showFullDescription ? (
               <>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    // Other components...
+                    p: ({ children }) => <span>{children}</span>,
                     a: ({ children, href }) => {
                       // Auto-fix URLs without protocol
                       let finalHref = href;

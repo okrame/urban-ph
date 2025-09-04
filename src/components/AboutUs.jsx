@@ -373,7 +373,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
           Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a <RoughNotationCircle
             color="#8B5CF6"
             animate={true}
-            animationDelay={1500}
+            animationDelay={1100}
             strokeWidth={1.1}
             trigger={isTextInView}
           >cultural association</RoughNotationCircle> dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a

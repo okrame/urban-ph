@@ -4,6 +4,7 @@ import Hero from './components/Hero';
 import Info from './components/Info';
 import AboutUs from './components/AboutUs';
 import EventCard from './components/EventCard';
+import ContactForm from "./components/ContactForm";
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
 import { getActiveEvents } from '../firebase/firestoreServices';
@@ -366,6 +367,8 @@ if (hasPayPalParams) {
 
         {/* about us with animated squares */}
         <AboutUs verticalLinePosition={getVerticalLinePosition()} />
+
+        <ContactForm />
 
         <footer className="bg-gray-800 text-white text-center py-6">
           <p>© {new Date().getFullYear()} Urban Photo Hunts. All rights reserved.</p>

@@ -152,13 +152,13 @@ const EventCardMobileLayout = ({
       <motion.div
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
       >
-        <div className="text-sm text-black opacity-80 mb-4 leading-relaxed prose prose-sm max-w-none">
+        <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
           {shouldTruncate && !showFullDescription ? (
             <>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  // Other components...
+                  p: ({ children }) => <span>{children}</span>,
                   a: ({ children, href }) => {
                     // Auto-fix URLs without protocol
                     let finalHref = href;

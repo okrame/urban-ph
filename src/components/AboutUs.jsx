@@ -539,7 +539,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
               } : {}}
             >
               <motion.div
-                className={`relative w-full aspect-square rounded-full overflow-hidden ${isMobile ? "max-w-[80px] sm:max-w-[100px] mb-2" : "mb-6"
+                className={`relative w-full aspect-square rounded-full overflow-hidden ${isMobile ? "max-w-[120px] sm:max-w-[100px] mb-2" : "mb-6"
                   }`}
                 style={{ transformOrigin: 'center center' }}
                 whileHover={!isMobile ? {

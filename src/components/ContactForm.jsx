@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import RoughNotationText from './RoughNotationText';
 import { db } from "../../firebase/config";
+import cameraroute from '../assets/cameraroute.png';
 
 export default function ContactForm() {
   const [name, setName] = useState("");
@@ -106,27 +107,33 @@ This message was sent from the Urban Photo Hunts contact form.
   return (
     <section id="contact" className="py-16 px-4 mt-0 md:mt-12">
       <div className="w-full max-w-6xl mx-auto">
-        
-        {/* Title */}
-        <div className="mb-8">
+
+        {/* Title + small image on the right (mobile only image) */}
+        <div className="flex items-center justify-between relative">
           <h2 className="text-2xl md:text-3xl font-bold text-black">
             Let's chat
           </h2>
+          <div className="relative block md:hidden">
+            <img
+              src={cameraroute}
+              alt="uph illustration"
+              className="w-[228px] h-auto object-contain relative bottom-2 -ml-2"
+            />
+          </div>
         </div>
 
+
         {/* Main content container */}
-        <div className={`${
-          isMobile 
-            ? "flex flex-col space-y-8" 
-            : "flex items-start justify-between"
-        }`}>
-          
+        <div className={`${isMobile
+          ? "flex flex-col space-y-8"
+          : "flex items-start justify-between"
+          }`}>
+
           {/* Form - Left side */}
-          <div className={`${
-            isMobile 
-              ? "w-full" 
-              : "w-full max-w-md"
-          } text-black`}>
+          <div className={`${isMobile
+            ? "w-full"
+            : "w-full max-w-md"
+            } text-black`}>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
@@ -176,11 +183,10 @@ This message was sent from the Urban Photo Hunts contact form.
                     color="#4A7E74"
                     strokeWidth={2}
                     animationDelay={800}
-                    trigger={!loading} 
+                    trigger={!loading}
                   >
-                    <span className={`inline-block px-6 py-2 font-medium transition-opacity ${
-                      loading ? "opacity-50" : "group-hover:opacity-80"
-                    }`}>
+                    <span className={`inline-block px-6 py-2 font-medium transition-opacity ${loading ? "opacity-50" : "group-hover:opacity-80"
+                      }`}>
                       {loading ? "Sending..." : "Send Message"}
                     </span>
                   </RoughNotationText>
@@ -188,9 +194,8 @@ This message was sent from the Urban Photo Hunts contact form.
               </div>
 
               {status.text && (
-                <p className={`text-sm ${
-                  status.type === "success" ? "text-green-600" : "text-red-600"
-                } animate-fadeIn`}>
+                <p className={`text-sm ${status.type === "success" ? "text-green-600" : "text-red-600"
+                  } animate-fadeIn`}>
                   {status.text}
                 </p>
               )}
@@ -198,20 +203,34 @@ This message was sent from the Urban Photo Hunts contact form.
           </div>
 
           {/* Contact Info - Right side */}
-          <div className={`${
-            isMobile 
-              ? "w-full" 
-              : "w-full max-w-md"
-          } text-black`}>
-            <div className="space-y-3">
-              <p className="text-sm md:text-base">
-                email at <a href="mailto:urbanphotohunts.roma@gmail.com" className="underline hover:no-underline">email@example.com</a>
+          <div className={`${isMobile ? "w-full" : "w-full max-w-md"} text-black`}>
+
+             <div className="space-y-3 justify-between">
+              <p className="text-green-900 md:text-xl md:mb-6 md:-ml-[75px]">
+                Do you wanna take part in any of our events <br />
+                or have an idea to share?
+              </p>
+              </div>
+
+            {/* Desktop image aligned with the form */}
+            <div className="hidden md:block relative mb-6">
+              <img
+                src={cameraroute}
+                alt="uph illustration"
+                className="w-auto h-auto object-contain relative bottom-10 md:-ml-[125px]"
+              />
+            </div>
+
+            {/* Contact Info */}
+            <div className="space-y-3 justify-between">
+              <p className="text-sm md:text-base mt-6">
+                ✉️ email: <a href="mailto:urbanphotohunts.roma@gmail.com" className="underline hover:no-underline">urbanphotohunts.roma@gmail.com</a>
               </p>
               <p className="text-sm md:text-base">
-                telephone at <a href="tel:+39 3491148545" className="underline hover:no-underline">+39 3491148545</a>
+                📱 telephone: <a href="tel:+39 3491148545" className="underline hover:no-underline">+39 3491148545</a>
               </p>
               <p className="text-sm md:text-base">
-                headquarters not yet ;)
+                📍 around the city ;)
               </p>
             </div>
           </div>

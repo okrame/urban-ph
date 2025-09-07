@@ -505,6 +505,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     user={user}
     isBooked={state.isBooked}
     bookingStatus={state.bookingStatus}
+    userEmail={user?.email}
   />
 )}
 

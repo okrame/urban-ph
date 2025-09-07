@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
-function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, isBooked = false, bookingStatus = null }) {
+function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, isBooked = false, bookingStatus = null, userEmail = null }) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -106,9 +106,21 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
     if (needsPagination && currentPage === 1) {
       if (isFirstTime && !hasPersonalDetails) {
-        return `Welcome to Urban pH! We need some information to register you for ${currentYear}.`;
+        return (
+          <>
+            <strong>Welcome to Urban pH!</strong>
+            <br />
+            We need some information to register you for {currentYear}.
+          </>
+        );
       } else if (isFirstTime && hasPersonalDetails) {
-        return `Welcome back! Please confirm your personal details are still correct for ${currentYear}.`;
+        return (
+          <>
+            <strong>Welcome back,{userEmail ? ` ${userEmail}` : ''}!</strong>
+            <br />
+            Please confirm your personal details are still correct for {currentYear}.
+          </>
+        );
       }
     } else if (needsPagination && currentPage === 2) {
       return "Please provide your contact details and any special requests for this event.";
@@ -158,7 +170,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     if (needsPagination) {
       if (currentPage === 1) {
         if (isFirstTime && hasPersonalDetails) {
-          return `Confirm Membership for ${currentYear}`;
+          return `Renew Membership for ${currentYear}`;
         } else if (isFirstTime) {
           return `Membership for ${currentYear}`;
         }
@@ -373,7 +385,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                 </div>
               )}
 
-              {/* Add a notice for year confirmations */}
+              {/* Add a notice for year confirmations
               {isFirstTime && existingData.name && currentPage === 1 && (
                 <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                   <p className="text-sm text-yellow-800">
@@ -381,7 +393,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     This helps us keep our records current and ensures we can contact you about events.
                   </p>
                 </div>
-              )}
+              )} */}
 
               {error && (
                 <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">

@@ -205,7 +205,7 @@ function AuthModal({ isOpen, onClose, event }) {
 
       setTimeout(() => {
         handleClose();
-      }, 2500);
+      }, 2000);
 
     } catch (error) {
       console.error('Google sign-in error:', error);
@@ -244,7 +244,7 @@ function AuthModal({ isOpen, onClose, event }) {
       setAuthSuccess(result.user.displayName || result.user.email);
       setTimeout(() => {
         handleClose();
-      }, 2500);
+      }, 2000);
 
     } catch (error) {
       console.error("Facebook sign-in error:", error);
@@ -263,9 +263,18 @@ function AuthModal({ isOpen, onClose, event }) {
 
         <button
           onClick={handleClose}
-          style={{ position: 'absolute', right: '16px', top: '16px', cursor: 'pointer' }}
+          style={{
+            position: 'absolute',
+            right: '16px',
+            top: '6px',
+            cursor: 'pointer',
+            background: 'transparent',
+            border: 'none',
+            fontSize: '18px',
+            fontWeight: 'bold'
+          }}
         >
-          Close
+          ×
         </button>
 
         <h3 style={{ fontSize: '18px', marginBottom: '12px' }}>
@@ -369,7 +378,7 @@ function AuthModal({ isOpen, onClose, event }) {
 
             <div style={{ marginBottom: '20px', position: 'relative', textAlign: 'center' }}>
               <span style={{ backgroundColor: 'white', padding: '0 10px', position: 'relative', zIndex: 1 }}>
-                Or continue with email
+                Or continue without password:
               </span>
             </div>
 
@@ -387,7 +396,7 @@ function AuthModal({ isOpen, onClose, event }) {
                 marginBottom: '20px'
               }}
             >
-              Use Magic Link (Passwordless)
+              Email Link
             </button>
 
             <div style={{

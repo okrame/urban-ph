@@ -249,11 +249,11 @@ const EventCardMobileLayout = ({
           </div>
         )}
 
-        {bookingStatus === 'cancelled' && (
+        {/* {bookingStatus === 'cancelled' && (
           <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
             <p className="font-medium">Booking Cancelled</p>
           </div>
-        )}
+        )} */}
 
         {isFullyBooked && bookingStatus !== 'cancelled' && (
           <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>

@@ -22,6 +22,19 @@ function AuthModal({ isOpen, onClose, event }) {
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [authSuccess, setAuthSuccess] = useState(false);
 
+  const [emailSent, setEmailSent] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (emailSent && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [emailSent, resendTimer]);
+
 
   useEffect(() => {
     if (!isOpen) return;
@@ -127,6 +140,8 @@ function AuthModal({ isOpen, onClose, event }) {
     setLoading(false);
     setUseMagicLink(false);
     setAuthSuccess(false);
+    setEmailSent(false);
+    setResendTimer(0);
     onClose();
   };
 
@@ -181,10 +196,32 @@ function AuthModal({ isOpen, onClose, event }) {
 
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       window.localStorage.setItem('emailForSignIn', email);
-      alert('A sign-in link has been sent to your email. Please check your inbox.');
+      //alert('A sign-in link has been sent to your email. Please check your inbox.');
+      setEmailSent(true);
+      setResendTimer(10);
     } catch (error) {
       console.error("Email link error:", error);
       setError('Failed to send sign-in link. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const actionCodeSettings = {
+        url: window.location.origin + window.location.pathname,
+        handleCodeInApp: true,
+      };
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      setResendTimer(5);
+    } catch (error) {
+      console.error("Resend email error:", error);
+      setError('Failed to resend email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -258,7 +295,7 @@ function AuthModal({ isOpen, onClose, event }) {
     <div style={modalStyle}>
       <div style={modalContentStyle}>
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px' }}>
-          {useMagicLink ? 'Sign In with Magic Link' : 'Sign In'} to Urban PH
+          {useMagicLink ? 'Sign In with Email' : 'Sign In'} to Urban PH
         </h2>
 
         <button
@@ -310,18 +347,18 @@ function AuthModal({ isOpen, onClose, event }) {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
-            <p style={{ color: '#6B7280' }}>Signing you in...</p>
+            <p style={{ color: '#3c6c64' }}>Signing you in...</p>
           </div>
         ) : authSuccess ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <svg
-              style={{ width: '48px', height: '48px', color: '#166534', margin: '0 auto 16px' }}
+              style={{ width: '48px', height: '48px', color: '#3c6c64', margin: '0 auto 16px' }}
               fill="currentColor"
               viewBox="0 0 20 20"
             >
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', color: '#166534' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', color: '#3c6c64' }}>
               Hello, {authSuccess}!
             </h3>
             <p style={{ color: '#6B7280' }}>Successfully signed in</p>
@@ -387,7 +424,7 @@ function AuthModal({ isOpen, onClose, event }) {
               style={{
                 width: '100%',
                 padding: '10px',
-                backgroundColor: '#4299e1',
+                backgroundColor: '#3c6c64',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -420,7 +457,85 @@ function AuthModal({ isOpen, onClose, event }) {
               </label>
             </div>
           </>
+        ) : emailSent ? (
+          // NUOVO STATO: Email inviata con successo
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ 
+              marginBottom: '20px', 
+              padding: '16px', 
+              backgroundColor: '#f0f9ff', 
+              borderRadius: '8px',
+              border: '1px solid #3c6c64'
+            }}>
+              <h3 style={{ 
+                fontSize: '18px', 
+                fontWeight: 'bold', 
+                marginBottom: '8px',
+                color: '#3c6c64'
+              }}>
+                ✉️ Check your email!
+              </h3>
+              <p style={{ marginBottom: '8px', color: '#374151' }}>
+                A sign-in link has been sent to:
+              </p>
+              <p style={{ 
+                fontWeight: 'bold', 
+                color: '#1f2937',
+                marginBottom: '12px'
+              }}>
+                {email}
+              </p>
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#6b7280',
+                marginBottom: '8px'
+              }}>
+                Don't forget to check your <strong>spam folder</strong> if you don't see it in your inbox.
+              </p>
+            </div>
+
+            <button
+              onClick={handleResendEmail}
+              disabled={loading || resendTimer > 0}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: (loading || resendTimer > 0) ? '#d1d5db' : '#f4f4d7',
+                color: (loading || resendTimer > 0) ? '#9ca3af' : 'black',
+                border: 'none',
+                borderRadius: '4px',
+                fontWeight: 'bold',
+                cursor: (loading || resendTimer > 0) ? 'not-allowed' : 'pointer',
+                marginBottom: '12px',
+                fontSize: '14px'
+              }}
+            >
+              {loading ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : "Send again"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmailSent(false);
+                setResendTimer(0);
+                setUseMagicLink(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: 'transparent',
+                color: '#3c6c64',
+                border: '1px solid #3c6c64',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Back to Options
+            </button>
+          </div>
         ) : (
+          // FORM ORIGINALE per inserire email
           <form onSubmit={handleEmailLinkAuth}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px' }} htmlFor="email">
@@ -448,7 +563,7 @@ function AuthModal({ isOpen, onClose, event }) {
               style={{
                 width: '100%',
                 padding: '10px',
-                backgroundColor: loading ? '#93C5FD' : '#2563EB',
+                backgroundColor: loading ? '#a8b9ac' : '#3c6c64',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -467,8 +582,8 @@ function AuthModal({ isOpen, onClose, event }) {
                 width: '100%',
                 padding: '10px',
                 backgroundColor: 'transparent',
-                color: '#2563EB',
-                border: '1px solid #2563EB',
+                color: '#3c6c64',
+                border: '1px solid #3c6c64',
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}

@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import the viewport fix */
+@import './viewport-fix.css';
+
 html {
   scroll-behavior: smooth;
 }
@@ -36,80 +39,105 @@ body {
   min-height: var(--viewport-height) !important;
 }
 
-/* iOS specific: Momentum scrolling and viewport stabilization */
+/* ENHANCED MOBILE VIEWPORT FIXES - REPLACES OLD iOS FIXES */
 @supports (-webkit-overflow-scrolling: touch) {
   html {
+    /* Use our new JS-controlled height instead of -webkit-fill-available */
+    height: var(--js-viewport-height, 100vh) !important;
+    /* Keep the fallback for compatibility */
     height: -webkit-fill-available;
   }
+  
   body {
+    min-height: var(--js-viewport-height, 100vh) !important;
     min-height: -webkit-fill-available;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    
+    /* NEW: Prevent bouncing and improve stability */
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
+  
   #root {
+    min-height: var(--js-viewport-height, 100vh) !important;
     min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
-  }
-}
-
-/* Dynamic height fix for iOS (will be set via JS) */
-body, #root {
-  height: auto !important; /* Override if JS sets it */
-}
-
-/* GPU acceleration for animations (add to EventCard/Info wrappers) */
-.animated-element, .event-card, .info-section {
-  will-change: transform, opacity;
-  backface-visibility: hidden; /* Extra for iOS jank */
-  transform: translate3d(0, 0, 0); /* Force hardware acceleration */
-}
-
-/* Reduce height transition duration on mobile to minimize jank */
-@media (max-width: 768px) {
-  .transition-height {
-    transition-duration: 200ms !important; /* Shorter for smoother feel */
-  }
-}
-
-/* Stabilizza il contenuto durante lo scroll su mobile */
-@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
-  /* Riduce il jank durante gli scroll rapidi */
-  * {
-    -webkit-backface-visibility: hidden;
+    
+    /* Enhanced GPU acceleration */
+    transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
   }
-  
-  /* Stabilizza la sezione Hero che probabilmente causa il glitch principale */
-  .relative.min-h-screen {
-    height: var(--viewport-height);
-    min-height: var(--viewport-height);
-    overflow: hidden; /* Previene scroll inaspettati */
+}
+
+/* Dynamic height fix - ENHANCED VERSION */
+body, #root {
+  /* Use JS-controlled height with fallback */
+  height: var(--js-viewport-height, auto) !important;
+}
+
+/* GPU acceleration for animations - ENHANCED */
+.animated-element, 
+.event-card, 
+.info-section,
+.hero-section,
+.mobile-viewport * {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+/* IMPROVED: Reduce animation complexity on mobile during viewport changes */
+@media (max-width: 768px) {
+  .transition-height {
+    transition-duration: 200ms !important;
   }
   
-  /* Forza una stabilità maggiore per gli elementi posizionati in modo assoluto */
-  .absolute {
-    will-change: auto; /* Riduce l'overhead GPU se non necessario */
+  /* NEW: Optimize performance during scrolling */
+  .scrolling .transition-height {
+    transition-duration: 100ms !important;
+  }
+  
+  /* NEW: Disable expensive animations during viewport changes */
+  .viewport-changing .transition-height,
+  .viewport-changing .animated-element,
+  .viewport-changing .event-card {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  /* NEW: Specific fixes for your Hero component */
+  .hero-section {
+    height: var(--js-viewport-height, 100vh) !important;
+    min-height: var(--js-viewport-height, 100vh) !important;
+  }
+  
+  /* NEW: Ensure bottom elements stay in place */
+  .hero-section .absolute.bottom-0,
+  .hero-section .absolute.bottom-2,
+  .hero-section .absolute.bottom-16 {
+    bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
-/* Migliora la gestione dello scroll su iOS */
-@media (max-width: 768px) {
-  html {
-    /* Stabilizza l'altezza durante le transizioni della barra del browser */
-    height: var(--viewport-height);
-    height: 100%;
+/* NEW: Browser-specific fixes for your detected issues */
+.ios-safari .hero-section {
+  height: -webkit-fill-available !important;
+  min-height: -webkit-fill-available !important;
+}
+
+.android-chrome .hero-section {
+  height: calc(100vh - env(keyboard-inset-height, 0px)) !important;
+}
+
+/* NEW: Safe area support for notch devices */
+@supports (padding: max(0px)) {
+  .hero-section {
+    padding-bottom: env(safe-area-inset-bottom);
   }
   
-  body {
-    /* Previene il bounce scroll che può peggiorare il glitch */
-    overscroll-behavior-y: none;
-    /* Usa l'altezza stabile */
-    min-height: var(--viewport-height);
-  }
-  
-  /* Ottimizzazione per ridurre i repaint */
-  #root {
-    contain: layout style paint;
+  .hero-section .absolute.bottom-0 {
+    bottom: env(safe-area-inset-bottom, 0px);
   }
 }

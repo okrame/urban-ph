@@ -8,12 +8,12 @@ import './index.css'
 import AdminPanel from './pages/AdminPanel.jsx'
 import NotFound from './pages/NotFound.jsx'
 
-// Function to handle iOS viewport resize
-function handleViewportResize() {
-  const vh = window.innerHeight;
-  document.body.style.height = `${vh}px`;
-  document.getElementById('root').style.height = `${vh}px`;
-}
+// // Function to handle iOS viewport resize
+// function handleViewportResize() {
+//   const vh = window.innerHeight;
+//   document.body.style.height = `${vh}px`;
+//   document.getElementById('root').style.height = `${vh}px`;
+// }
 
 // PayPal initial options
 const paypalOptions = {
@@ -55,10 +55,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 );
 
-let resizeTimeout;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(handleViewportResize, 100);
-});
-window.addEventListener('orientationchange', handleViewportResize);
-handleViewportResize();
+// let resizeTimeout;
+// window.addEventListener('resize', () => {
+//   clearTimeout(resizeTimeout);
+//   resizeTimeout = setTimeout(handleViewportResize, 100);
+// });
+// window.addEventListener('orientationchange', handleViewportResize);
+// handleViewportResize();

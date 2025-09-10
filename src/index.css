@@ -46,3 +46,13 @@ body, #root {
     transition-duration: 200ms !important; /* Shorter for smoother feel */
   }
 }
+
+/* Stabilizza le sezioni full-screen su mobile */
+@supports (height: 100svh) {
+  .min-h-screen { min-height: 100svh !important; }
+}
+
+/* Fallback iOS vecchi (se vuoi essere extra-safe) */
+@supports not (height: 100svh) {
+  .min-h-screen { min-height: -webkit-fill-available; }
+}

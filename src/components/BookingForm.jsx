@@ -4,6 +4,7 @@ import LoadingSpinner from './LoadingSpinner';
 function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, isBooked = false, bookingStatus = null, userEmail = null }) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Form state
   const [name, setName] = useState(existingData.name || '');
@@ -57,7 +58,6 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     'Yemen',
     'Zambia', 'Zimbabwe'
   ].sort();
-
 
   // Format current date for max date validation
   const today = new Date().toISOString().split('T')[0];
@@ -199,6 +199,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   };
 
   const validateCurrentPage = () => {
+
     setError('');
 
     if (currentPage === 1 && needsPagination) {
@@ -228,7 +229,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
         return false;
       }
     } else {
-      // Final page or single page: Contact details validation
+      // Page 2 with pagination OR single page: Contact details validation
       if (!email.trim() || !validateEmail(email)) {
         setError('Please enter a valid email address');
         return false;
@@ -238,7 +239,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
         return false;
       }
 
-      // Validate personal details if single page for first time users
+      // Validate personal details ONLY if single page for first time users
       if (!needsPagination && isFirstTime) {
         if (!name.trim()) {
           setError('Name is required');
@@ -265,18 +266,17 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           return false;
         }
       }
-
-      if (!acceptTerms || !acceptPrivacy) {
-        setError('You must accept the terms and conditions and privacy policy to proceed');
-        return false;
-      }
     }
     return true;
   };
 
   const handleNext = () => {
+    setIsNavigating(true);
     if (validateCurrentPage()) {
       setCurrentPage(currentPage + 1);
+      setTimeout(() => setIsNavigating(false), 100);
+    } else {
+      setIsNavigating(false);
     }
   };
 
@@ -287,6 +287,10 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (isNavigating) {
+      return;
+    }
 
     if (isBooked && bookingStatus !== 'cancelled') {
       setError('You have already booked this event. Please check your email for confirmation.');
@@ -294,6 +298,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     }
 
     if (!validateCurrentPage()) {
+      return;
+    }
+
+    // Check terms and privacy ONLY on final submit
+    if (!acceptTerms || !acceptPrivacy) {
+      setError('You must accept the terms and conditions and privacy policy to proceed');
       return;
     }
 
@@ -361,7 +371,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     {[1, 2].map((page) => (
                       <div
                         key={page}
-                        className={`w-2 h-2 rounded-full ${currentPage === page ? 'bg-blue-600' : 'bg-gray-300'
+                        className={`w-2 h-2 rounded-full ${currentPage === page ? 'bg-green-800' : 'bg-gray-300'
                           }`}
                       />
                     ))}
@@ -384,16 +394,6 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                   </p>
                 </div>
               )}
-
-              {/* Add a notice for year confirmations
-              {isFirstTime && existingData.name && currentPage === 1 && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Please review and update your information if needed.</strong>
-                    This helps us keep our records current and ensures we can contact you about events.
-                  </p>
-                </div>
-              )} */}
 
               {error && (
                 <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
@@ -696,20 +696,19 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           id="acceptTerms"
                           checked={acceptTerms}
                           onChange={() => setAcceptTerms(!acceptTerms)}
-                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                         />
                         <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
                           I accept the <span className="text-blue-600 hover:underline cursor-pointer">Terms and Conditions</span> *
                         </label>
                       </div>
-
                       <div className="flex items-start">
                         <input
                           type="checkbox"
                           id="acceptPrivacy"
                           checked={acceptPrivacy}
                           onChange={() => setAcceptPrivacy(!acceptPrivacy)}
-                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                         />
                         <label htmlFor="acceptPrivacy" className="ml-2 block text-sm text-gray-700">
                           I consent to the processing of my personal data as per the <span className="text-blue-600 hover:underline cursor-pointer">Privacy Policy</span> *
@@ -746,7 +745,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                       <button
                         type="button"
                         onClick={handleNext}
-                        className="px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs sm:text-sm"
+                        className="px-3 py-2 sm:px-4 sm:py-1.5 bg-[#3c6c64] text-white rounded hover:bg-[#5f8c85] text-xs sm:text-sm"
                       >
                         Next →
                       </button>
@@ -754,7 +753,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                       <button
                         type="submit"
                         disabled={loading}
-                        className={`px-3 py-2 sm:px-4 sm:py-1.5 bg-blue-600 text-white rounded font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2 ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-blue-700'
+                        className={`px-3 py-2 sm:px-4 sm:py-1.5 bg-[#3c6c64]  text-white rounded font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2 ${loading ? 'opacity-50 cursor-wait' : 'hover:bg-[#5f8c85]'
                           }`}
                       >
                         {loading ? (
@@ -783,7 +782,6 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
         </div>
       </div>
     </div>
-
   );
 }
 

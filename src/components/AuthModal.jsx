@@ -328,7 +328,7 @@ function AuthModal({ isOpen, onClose, event }) {
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <svg
               className="animate-spin h-8 w-8 mx-auto mb-4"
-              style={{ color: '#4285F4' }}
+              style={{ color: '#3c6c64' }}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"

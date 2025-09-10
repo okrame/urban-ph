@@ -6,6 +6,7 @@ import { auth } from '../../firebase/config';
 import { getUserProfile } from '../../firebase/userServices';
 import gianicolo from '../assets/gianicolo.jpg';
 import AnimateLogo from '../components/AnimateLogo';
+import { useViewport } from '../hooks/useViewport';
 
 // Animated burger menu lines
 const Path = props => (
@@ -27,6 +28,7 @@ function Hero({ user, onSignInClick }) {
   const endTextRef = useRef(null);
   const authButtonRef = useRef(null);
   const location = useLocation();
+  const viewport = useViewport();
 
   // Check if user is admin
   useEffect(() => {
@@ -97,18 +99,33 @@ function Hero({ user, onSignInClick }) {
     setIsMobileMenuOpen(false);
   };
 
+  const heroStyles = {
+    // Use safe height from viewport hook
+    minHeight: viewport.getSafeHeight('100vh'),
+    height: viewport.getSafeHeight('100vh'),
+  };
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
+    <section
+      className={`
+        relative flex items-center justify-center text-white overflow-hidden hero-section
+        ${viewport.getViewportClasses()}
+      `}
+      style={heroStyles}
+    >
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <img
           src={gianicolo}
           alt="Panorama dal Gianicolo a Roma"
           className="w-full h-full object-cover"
+          style={{
+            height: viewport.getSafeHeight('100vh')
+          }}
         />
       </div>
 
-      {/* Logo - with animation */}
+      {/* Logo - with enhanced animation stability */}
       <div
         className="absolute z-25"
         style={{
@@ -118,9 +135,9 @@ function Hero({ user, onSignInClick }) {
         }}
       >
         <AnimateLogo
-          className="w-28 h-auto xs:w-32 sm:w-32 md:w-40 lg:w-48" // Ridotto per dispositivi molto piccoli
-          animationDelay={700}
-          animationDuration={4000}
+          className="w-28 h-auto xs:w-32 sm:w-32 md:w-40 lg:w-48"
+          // Pass viewport info to logo if needed for animation adjustments
+          isViewportStable={viewport.isStable}
         />
       </div>
 

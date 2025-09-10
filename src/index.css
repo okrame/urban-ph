@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import the viewport fix */
+@import './viewport-fix.css';
+
 html {
   scroll-behavior: smooth;
 }
@@ -11,48 +14,105 @@ body {
   @apply font-sans;
 }
 
-/* iOS specific: Momentum scrolling and viewport stabilization */
+/* ENHANCED MOBILE VIEWPORT FIXES - REPLACES OLD iOS FIXES */
 @supports (-webkit-overflow-scrolling: touch) {
   html {
+    /* Use our new JS-controlled height instead of -webkit-fill-available */
+    height: var(--js-viewport-height, 100vh) !important;
+    /* Keep the fallback for compatibility */
     height: -webkit-fill-available;
   }
+  
   body {
+    min-height: var(--js-viewport-height, 100vh) !important;
     min-height: -webkit-fill-available;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    
+    /* NEW: Prevent bouncing and improve stability */
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
+  
   #root {
+    min-height: var(--js-viewport-height, 100vh) !important;
     min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
+    
+    /* Enhanced GPU acceleration */
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
   }
 }
 
-/* Dynamic height fix for iOS (will be set via JS) */
+/* Dynamic height fix - ENHANCED VERSION */
 body, #root {
-  height: auto !important; /* Override if JS sets it */
+  /* Use JS-controlled height with fallback */
+  height: var(--js-viewport-height, auto) !important;
 }
 
-/* GPU acceleration for animations (add to EventCard/Info wrappers) */
-.animated-element, .event-card, .info-section {
+/* GPU acceleration for animations - ENHANCED */
+.animated-element, 
+.event-card, 
+.info-section,
+.hero-section,
+.mobile-viewport * {
   will-change: transform, opacity;
-  backface-visibility: hidden; /* Extra for iOS jank */
-  transform: translate3d(0, 0, 0); /* Force hardware acceleration */
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
 }
 
-/* Reduce height transition duration on mobile to minimize jank */
+/* IMPROVED: Reduce animation complexity on mobile during viewport changes */
 @media (max-width: 768px) {
   .transition-height {
-    transition-duration: 200ms !important; /* Shorter for smoother feel */
+    transition-duration: 200ms !important;
+  }
+  
+  /* NEW: Optimize performance during scrolling */
+  .scrolling .transition-height {
+    transition-duration: 100ms !important;
+  }
+  
+  /* NEW: Disable expensive animations during viewport changes */
+  .viewport-changing .transition-height,
+  .viewport-changing .animated-element,
+  .viewport-changing .event-card {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  /* NEW: Specific fixes for your Hero component */
+  .hero-section {
+    height: var(--js-viewport-height, 100vh) !important;
+    min-height: var(--js-viewport-height, 100vh) !important;
+  }
+  
+  /* NEW: Ensure bottom elements stay in place */
+  .hero-section .absolute.bottom-0,
+  .hero-section .absolute.bottom-2,
+  .hero-section .absolute.bottom-16 {
+    bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
-/* Stabilizza le sezioni full-screen su mobile */
-@supports (height: 100svh) {
-  .min-h-screen { min-height: 100svh !important; }
+/* NEW: Browser-specific fixes for your detected issues */
+.ios-safari .hero-section {
+  height: -webkit-fill-available !important;
+  min-height: -webkit-fill-available !important;
 }
 
-/* Fallback iOS vecchi (se vuoi essere extra-safe) */
-@supports not (height: 100svh) {
-  .min-h-screen { min-height: -webkit-fill-available; }
+.android-chrome .hero-section {
+  height: calc(100vh - env(keyboard-inset-height, 0px)) !important;
+}
+
+/* NEW: Safe area support for notch devices */
+@supports (padding: max(0px)) {
+  .hero-section {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .hero-section .absolute.bottom-0 {
+    bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

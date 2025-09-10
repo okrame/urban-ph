@@ -66,6 +66,33 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
   const minDate = new Date(eighteenYearsAgo).toISOString().split('T')[0];
 
+  // Lock body scroll when modal opens and unlock when it closes
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const scrollY = window.scrollY;
+
+    // Lock body scroll
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+
+    return () => {
+      // Restore body scroll
+      document.body.style.overflow = originalStyle;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.left = '';
+      document.body.style.right = '';
+      
+      // Restore scroll position
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   // Pre-fill form data from existing data and reset page on mount
   useEffect(() => {
     setCurrentPage(1);
@@ -323,10 +350,30 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     });
   };
 
+  // Prevent backdrop scroll on touch devices
+  const handleBackdropTouchMove = (e) => {
+    e.preventDefault();
+  };
+
+  // Allow scroll only inside modal content
+  const handleModalContentTouchMove = (e) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ position: 'fixed' }}>
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="p-6">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" 
+      style={{ position: 'fixed' }}
+      onTouchMove={handleBackdropTouchMove}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full max-h-[90vh] shadow-2xl flex flex-col"
+        onTouchMove={handleModalContentTouchMove}
+      >
+        <div className="p-6 flex-1 overflow-y-auto" style={{ 
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}>
           {/* Header with title and close button */}
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-xl">{getFormTitle()}</h3>

@@ -120,11 +120,12 @@ export const useViewport = (options = {}) => {
 
 /**
  * Higher-order component for viewport-aware components
+ * Returns a component that wraps the original with viewport props
  */
 export const withViewport = (WrappedComponent) => {
   return function WithViewportComponent(props) {
     const viewport = useViewport();
-    return <WrappedComponent {...props} viewport={viewport} />;
+    return React.createElement(WrappedComponent, { ...props, viewport });
   };
 };
 

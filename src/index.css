@@ -11,6 +11,31 @@ body {
   @apply font-sans;
 }
 
+/* Fix per il viewport dinamico mobile - più aggressivo */
+:root {
+  --viewport-height: 100vh;
+}
+
+/* Su dispositivi touch, usa la dynamic viewport unit */
+@supports (height: 100dvh) {
+  :root {
+    --viewport-height: 100dvh; /* Dynamic viewport height */
+  }
+}
+
+/* Per iOS Safari e altri browser webkit */
+@supports (-webkit-appearance: none) and (stroke-color: transparent) {
+  :root {
+    --viewport-height: 100vh;
+    --viewport-height: -webkit-fill-available;
+  }
+}
+
+/* Applica l'altezza dinamica agli elementi che usano min-h-screen */
+.min-h-screen {
+  min-height: var(--viewport-height) !important;
+}
+
 /* iOS specific: Momentum scrolling and viewport stabilization */
 @supports (-webkit-overflow-scrolling: touch) {
   html {
@@ -47,12 +72,44 @@ body, #root {
   }
 }
 
-/* Stabilizza le sezioni full-screen su mobile */
-@supports (height: 100svh) {
-  .min-h-screen { min-height: 100svh !important; }
+/* Stabilizza il contenuto durante lo scroll su mobile */
+@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+  /* Riduce il jank durante gli scroll rapidi */
+  * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Stabilizza la sezione Hero che probabilmente causa il glitch principale */
+  .relative.min-h-screen {
+    height: var(--viewport-height);
+    min-height: var(--viewport-height);
+    overflow: hidden; /* Previene scroll inaspettati */
+  }
+  
+  /* Forza una stabilità maggiore per gli elementi posizionati in modo assoluto */
+  .absolute {
+    will-change: auto; /* Riduce l'overhead GPU se non necessario */
+  }
 }
 
-/* Fallback iOS vecchi (se vuoi essere extra-safe) */
-@supports not (height: 100svh) {
-  .min-h-screen { min-height: -webkit-fill-available; }
+/* Migliora la gestione dello scroll su iOS */
+@media (max-width: 768px) {
+  html {
+    /* Stabilizza l'altezza durante le transizioni della barra del browser */
+    height: var(--viewport-height);
+    height: 100%;
+  }
+  
+  body {
+    /* Previene il bounce scroll che può peggiorare il glitch */
+    overscroll-behavior-y: none;
+    /* Usa l'altezza stabile */
+    min-height: var(--viewport-height);
+  }
+  
+  /* Ottimizzazione per ridurre i repaint */
+  #root {
+    contain: layout style paint;
+  }
 }

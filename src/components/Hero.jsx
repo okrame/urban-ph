@@ -377,6 +377,16 @@ function Hero({ user, onSignInClick }) {
                   .aboutUs
                 </Link>
               </motion.div>
+              <motion.button
+  onClick={scrollToContactUs}
+  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+  variants={{
+    open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+    closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+  }}
+>
+  .contactUs
+</motion.button>
               {user && isAdmin && (
                 <motion.div
                   variants={{

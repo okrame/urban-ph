@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import RoughNotationText from './RoughNotationText';
 import { db } from "../../firebase/config";
@@ -11,6 +11,10 @@ export default function ContactForm() {
   const [status, setStatus] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isImageVisible, setIsImageVisible] = useState(false);
+
+  const mobileImageRef = useRef(null);
+  const desktopImageRef = useRef(null);
 
   // Mobile detection
   useEffect(() => {
@@ -22,6 +26,33 @@ export default function ContactForm() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Intersection Observer for image animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isImageVisible) {
+          setIsImageVisible(true);
+          observer.disconnect(); // Stop observing after first trigger
+        }
+      },
+      {
+        threshold: 0.1, // Trigger when 10% of the image is visible
+        rootMargin: "50px" // Start animation 50px before the element enters viewport
+      }
+    );
+
+    const currentMobileRef = mobileImageRef.current;
+    const currentDesktopRef = desktopImageRef.current;
+
+    if (currentMobileRef) observer.observe(currentMobileRef);
+    if (currentDesktopRef) observer.observe(currentDesktopRef);
+
+    return () => {
+      if (currentMobileRef) observer.unobserve(currentMobileRef);
+      if (currentDesktopRef) observer.unobserve(currentDesktopRef);
+    };
+  }, [isImageVisible]);
 
   // Auto-hide success message after 3 seconds
   useEffect(() => {
@@ -104,139 +135,163 @@ This message was sent from the Urban Photo Hunts contact form.
     }
   };
 
+  const imageAnimationClass = isImageVisible
+    ? "animate-fade-in-left"
+    : "opacity-0 translate-x-8";
+
   return (
-    <section id="contact" className="py-16 px-4 mt-0 md:mt-12">
-      <div className="w-full max-w-6xl mx-auto">
+    <>
+      <style jsx>{`
+        @keyframes fadeInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(2rem);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        .animate-fade-in-left {
+          animation: fadeInLeft 0.8s ease-out forwards;
+        }
+      `}</style>
 
-        {/* Title + small image on the right (mobile only image) */}
-        <div className="flex items-center justify-between relative">
-          <h2 className="text-2xl md:text-3xl font-bold text-black">
-            Let's chat
-          </h2>
-          <div className="relative block md:hidden">
-            <img
-              src={cameraroute}
-              alt="uph illustration"
-              className="w-[228px] h-auto object-contain relative bottom-2 -ml-2"
-            />
-          </div>
-        </div>
+      <section id="contact" className="py-16 px-4 mt-0 md:mt-12">
+        <div className="w-full max-w-6xl mx-auto">
 
-
-        {/* Main content container */}
-        <div className={`${isMobile
-          ? "flex flex-col space-y-8"
-          : "flex items-start justify-between"
-          }`}>
-
-          {/* Form - Left side */}
-          <div className={`${isMobile
-            ? "w-full"
-            : "w-full max-w-md"
-            } text-black`}>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <input
-                  id="name"
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors bg-transparent"
-                  placeholder="name"
-                />
-              </div>
-
-              <div>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors bg-transparent"
-                  placeholder="email"
-                />
-              </div>
-
-              <div>
-                <textarea
-                  id="message"
-                  required
-                  rows="4"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors resize-none bg-transparent"
-                  placeholder="message ... "
-                />
-              </div>
-
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="relative group"
-                >
-                  <RoughNotationText
-                    type="box"
-                    color="#4A7E74"
-                    strokeWidth={2}
-                    animationDelay={800}
-                    trigger={!loading}
-                  >
-                    <span className={`inline-block px-6 py-2 font-medium transition-opacity ${loading ? "opacity-50" : "group-hover:opacity-80"
-                      }`}>
-                      {loading ? "Sending..." : "Send Message"}
-                    </span>
-                  </RoughNotationText>
-                </button>
-              </div>
-
-              {status.text && (
-                <p className={`text-sm ${status.type === "success" ? "text-green-600" : "text-red-600"
-                  } animate-fadeIn`}>
-                  {status.text}
-                </p>
-              )}
-            </form>
-          </div>
-
-          {/* Contact Info - Right side */}
-          <div className={`${isMobile ? "w-full" : "w-full max-w-md"} text-black`}>
-
-             <div className="space-y-3 justify-between">
-              <p className="text-green-900 md:text-xl md:mb-6 md:-ml-[75px]">
-                Do you wanna take part in any of our events <br />
-                or have an idea to share?
-              </p>
-              </div>
-
-            {/* Desktop image aligned with the form */}
-            <div className="hidden md:block relative mb-6">
+          {/* Title + small image on the right (mobile only image) */}
+          <div className="flex items-center justify-between relative">
+            <h2 className="text-2xl md:text-3xl font-bold text-black">
+              Let's chat
+            </h2>
+            <div className="relative block md:hidden">
               <img
+                ref={mobileImageRef}
                 src={cameraroute}
                 alt="uph illustration"
-                className="w-auto h-auto object-contain relative bottom-10 md:-ml-[125px]"
+                className={`w-[228px] h-auto object-contain relative bottom-2 -ml-2 transition-all duration-300 ${imageAnimationClass}`}
               />
-            </div>
-
-            {/* Contact Info */}
-            <div className="space-y-3 justify-between">
-              <p className="text-sm md:text-base mt-6">
-                ✉️ email: <a href="mailto:urbanphotohunts.roma@gmail.com" className="underline hover:no-underline">urbanphotohunts.roma@gmail.com</a>
-              </p>
-              <p className="text-sm md:text-base">
-                📱 telephone: <a href="tel:+39 3491148545" className="underline hover:no-underline">+39 3491148545</a>
-              </p>
-              <p className="text-sm md:text-base">
-                📍 around the city ;)
-              </p>
             </div>
           </div>
 
+          {/* Main content container */}
+          <div className={`${isMobile
+            ? "flex flex-col space-y-8"
+            : "flex items-start justify-between"
+            }`}>
+
+            {/* Form - Left side */}
+            <div className={`${isMobile
+              ? "w-full"
+              : "w-full max-w-md"
+              } text-black`}>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <input
+                    id="name"
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors bg-transparent"
+                    placeholder="name"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors bg-transparent"
+                    placeholder="email"
+                  />
+                </div>
+
+                <div>
+                  <textarea
+                    id="message"
+                    required
+                    rows="4"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors resize-none bg-transparent"
+                    placeholder="message ... "
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="relative group"
+                  >
+                    <RoughNotationText
+                      type="box"
+                      color="#4A7E74"
+                      strokeWidth={2}
+                      animationDelay={800}
+                      trigger={!loading}
+                    >
+                      <span className={`inline-block px-6 py-2 font-medium transition-opacity ${loading ? "opacity-50" : "group-hover:opacity-80"
+                        }`}>
+                        {loading ? "Sending..." : "Send Message"}
+                      </span>
+                    </RoughNotationText>
+                  </button>
+                </div>
+
+                {status.text && (
+                  <p className={`text-sm ${status.type === "success" ? "text-green-600" : "text-red-600"
+                    } animate-fadeIn`}>
+                    {status.text}
+                  </p>
+                )}
+              </form>
+            </div>
+
+            {/* Contact Info - Right side */}
+            <div className={`${isMobile ? "w-full" : "w-full max-w-md"} text-black`}>
+
+              <div className="space-y-3 justify-between">
+                <p className="text-green-900 md:text-xl md:mb-6 md:-ml-[75px]">
+                  Do you wanna take part in any of our events <br />
+                  or have an idea to share?
+                </p>
+              </div>
+
+              {/* Desktop image aligned with the form */}
+              <div className="hidden md:block relative mb-6">
+                <img
+                  ref={desktopImageRef}
+                  src={cameraroute}
+                  alt="uph illustration"
+                  className={`w-auto h-auto object-contain relative bottom-10 md:-ml-[125px] transition-all duration-300 ${imageAnimationClass}`}
+                />
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-3 justify-between">
+                <p className="text-sm md:text-base mt-6">
+                  ✉️ email: <a href="mailto:urbanphotohunts.roma@gmail.com" className="underline hover:no-underline">urbanphotohunts.roma@gmail.com</a>
+                </p>
+                <p className="text-sm md:text-base">
+                  📱 telephone: <a href="tel:+39 3491148545" className="underline hover:no-underline">+39 3491148545</a>
+                </p>
+                <p className="text-sm md:text-base">
+                  📍 around the city ;)
+                </p>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

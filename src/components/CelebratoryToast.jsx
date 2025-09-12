@@ -23,17 +23,23 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
       // Auto-complete after 4 seconds
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 4000);
+      }, 4500);
 
       return () => clearTimeout(timer);
     }
   }, [isVisible, onComplete]);
 
+  const isMobile = window.innerWidth < 640;
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
-          className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center"
+         <motion.div
+          className="fixed inset-0 z-[100] pointer-events-none flex justify-center"
+          style={{
+            alignItems: isMobile ? 'flex-start' : 'center',
+            paddingTop: isMobile ? '38vh' : '8vh',
+            paddingBottom: isMobile ? '5vh' : '0'
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

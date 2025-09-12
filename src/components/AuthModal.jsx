@@ -125,6 +125,39 @@ function AuthModal({ isOpen, onClose, event }) {
     }
   }, []); // Rimuovi onClose dalla dependency array per evitare re-renders
 
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      if (isOpen) {
+        // Salva la posizione corrente prima dello scroll
+        const savedPosition = window.scrollY;
+
+        // Salva in sessionStorage per sicurezza
+        sessionStorage.setItem('modalScrollPosition', savedPosition.toString());
+
+        // Scroll in cima con animazione smooth
+        window.scrollTo({
+          top: 0,
+          behavior: 'instant'
+        });
+      } else {
+        // Quando il modal si chiude, ripristina la posizione
+        const savedPosition = sessionStorage.getItem('modalScrollPosition');
+        if (savedPosition) {
+          // Usa setTimeout per assicurarsi che il DOM sia aggiornato
+          setTimeout(() => {
+            window.scrollTo({
+              top: parseInt(savedPosition),
+              behavior: 'instant' 
+            });
+            // Pulisci il valore salvato
+            sessionStorage.removeItem('modalScrollPosition');
+          }, 0);
+        }
+      }
+    }
+  }, [isOpen]);
+
+
   // Funzione di pulizia URL separata per evitare duplicazione
   const cleanupUrl = () => {
     const url = new URL(window.location.href);
@@ -153,7 +186,7 @@ function AuthModal({ isOpen, onClose, event }) {
   if (!isOpen) {
     return null;
   }
-
+  const isMobile = window.innerWidth < 768;
   // Styling diretto per assicurarsi che il modale sia visibile
   const modalStyle = {
     position: 'fixed',
@@ -163,9 +196,12 @@ function AuthModal({ isOpen, onClose, event }) {
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: isMobile ? 'flex-start' : 'center', // Su mobile allinea in alto
     justifyContent: 'center',
-    zIndex: 9999
+    zIndex: 9999,
+    overflowY: 'auto',
+    paddingTop: isMobile ? '30vh' : '10vh', // Su mobile aggiungi padding top
+    paddingBottom: isMobile ? '10vh' : '0' // Padding bottom per sicurezza
   };
 
   const modalContentStyle = {
@@ -174,7 +210,10 @@ function AuthModal({ isOpen, onClose, event }) {
     borderRadius: '8px',
     width: '90%',
     maxWidth: '500px',
-    position: 'relative'
+    maxHeight: isMobile ? '80vh' : '90vh', // Riduci altezza max su mobile
+    overflowY: 'auto',
+    position: 'relative',
+    margin: isMobile ? '0 auto' : 'auto' // Centra orizzontalmente su mobile
   };
 
   const handleEmailLinkAuth = async (e) => {
@@ -242,7 +281,7 @@ function AuthModal({ isOpen, onClose, event }) {
 
       setTimeout(() => {
         handleClose();
-      }, 2000);
+      }, 1600);
 
     } catch (error) {
       console.error('Google sign-in error:', error);
@@ -281,7 +320,7 @@ function AuthModal({ isOpen, onClose, event }) {
       setAuthSuccess(result.user.displayName || result.user.email);
       setTimeout(() => {
         handleClose();
-      }, 2000);
+      }, 1600);
 
     } catch (error) {
       console.error("Facebook sign-in error:", error);
@@ -460,16 +499,16 @@ function AuthModal({ isOpen, onClose, event }) {
         ) : emailSent ? (
           // NUOVO STATO: Email inviata con successo
           <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              marginBottom: '20px', 
-              padding: '16px', 
-              backgroundColor: '#f0f9ff', 
+            <div style={{
+              marginBottom: '20px',
+              padding: '16px',
+              backgroundColor: '#f0f9ff',
               borderRadius: '8px',
               border: '1px solid #3c6c64'
             }}>
-              <h3 style={{ 
-                fontSize: '18px', 
-                fontWeight: 'bold', 
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
                 marginBottom: '8px',
                 color: '#3c6c64'
               }}>
@@ -478,15 +517,15 @@ function AuthModal({ isOpen, onClose, event }) {
               <p style={{ marginBottom: '8px', color: '#374151' }}>
                 A sign-in link has been sent to:
               </p>
-              <p style={{ 
-                fontWeight: 'bold', 
+              <p style={{
+                fontWeight: 'bold',
                 color: '#1f2937',
                 marginBottom: '12px'
               }}>
                 {email}
               </p>
-              <p style={{ 
-                fontSize: '14px', 
+              <p style={{
+                fontSize: '14px',
                 color: '#6b7280',
                 marginBottom: '8px'
               }}>

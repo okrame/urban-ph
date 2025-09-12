@@ -129,9 +129,12 @@ export const useEventCardHandlers = ({
       const requiresPayment = isPaidEvent && applicablePrice > 0;
 
       if (requiresPayment) {
-        setShowBookingForm(false);
+        // NON chiudere il BookingForm - lascialo aperto
+        // Apri il PaymentModal SOPRA di esso con z-index più alto
         setShowPaymentModal(true);
-        return { success: true, requiresPayment: true }; // Return success but payment required
+        // Il BookingForm verrà chiuso solo dal PaymentModal stesso
+
+        return { success: true, requiresPayment: true };
       } else {
         const result = await bookEventSimple(event.id, userData);
 
@@ -149,7 +152,7 @@ export const useEventCardHandlers = ({
             setAnnotationTrigger(prev => prev + 1);
           }, 300);
 
-          return { success: true, requiresPayment: false }; // Return success for celebration
+          return { success: true, requiresPayment: false };
         } else {
           setAuthError(result.message || "Booking failed. Please try again.");
           return { success: false, message: result.message || "Booking failed. Please try again." };
@@ -173,7 +176,6 @@ export const useEventCardHandlers = ({
     try {
       console.log("Payment approved:", paymentData);
 
-      // Check if we have booking form data
       if (!bookingFormData) {
         throw new Error("Booking form data is missing. Please try booking again.");
       }
@@ -200,6 +202,7 @@ export const useEventCardHandlers = ({
         setBookingSuccess(true);
         setBookingStatus('confirmed');
         setShowPaymentModal(false);
+        setShowBookingForm(false); // Chiudi anche il form sottostante
         setShouldAnimate(false);
         setAllowRoughAnimations(true);
         setBookingJustCompleted(true);
@@ -209,7 +212,7 @@ export const useEventCardHandlers = ({
           setAnnotationTrigger(prev => prev + 1);
         }, 500);
 
-        return { success: true }; // Return success for celebration
+        return { success: true };
       } else {
         throw new Error(result.message || "Unknown error during booking");
       }
@@ -224,6 +227,7 @@ export const useEventCardHandlers = ({
 
   const handlePaymentCancel = () => {
     setShowPaymentModal(false);
+    setShowBookingForm(false); // Chiudi anche il form sottostante
     setAuthError("Payment was cancelled.");
   };
 

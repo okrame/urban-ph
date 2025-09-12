@@ -243,12 +243,13 @@ const EventCardMobileLayout = ({
         )}
 
         {/* Status messages */}
-        {authError && (
-          <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-            {authError}
-          </div>
-        )}
-
+        <div className="h-0 -mb-8 relative">
+  {authError && (
+  <div className="fixed top-40 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
+    {authError}
+  </div>
+)}
+</div>
         {/* {bookingStatus === 'cancelled' && (
           <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
             <p className="font-medium">Booking Cancelled</p>

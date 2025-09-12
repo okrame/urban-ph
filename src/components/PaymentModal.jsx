@@ -27,7 +27,7 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
       script.async = true;
       script.onload = () => setPaypalLoaded(true);
       document.body.appendChild(script);
-      
+
       return () => {
         // Only remove if this component added it
         if (script.parentNode) {
@@ -44,9 +44,9 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
     if (paypalLoaded && window.paypal && paypalButtonsRef.current) {
       // Clear previous buttons
       paypalButtonsRef.current.innerHTML = '';
-      
+
       const orderId = `order_${Date.now()}_${event.id.substring(0, 8)}_${userData.userId.substring(0, 8)}`;
-      
+
       // Store pending booking data
       const bookingData = {
         userData,
@@ -56,9 +56,9 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
         timestamp: Date.now(),
         orderId
       };
-      
+
       localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-      
+
       // Render PayPal buttons
       window.paypal.Buttons({
         // Style the buttons
@@ -68,9 +68,9 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
           shape: 'rect',
           label: 'pay'
         },
-        
+
         // Create order
-        createOrder: function(data, actions) {
+        createOrder: function (data, actions) {
           return actions.order.create({
             purchase_units: [{
               description: `Booking for ${event.title}`,
@@ -83,14 +83,14 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
             }]
           });
         },
-        
+
         // Handle approval
-        onApprove: function(data, actions) {
+        onApprove: function (data, actions) {
           setIsPaying(true);
-          
-          return actions.order.capture().then(function(details) {
+
+          return actions.order.capture().then(function (details) {
             console.log('Payment approved:', details);
-            
+
             // Create payment details object for passing to callbacks
             const paymentDetails = {
               paymentId: details.id,
@@ -103,7 +103,7 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
               updateTime: details.update_time,
               orderId: orderId
             };
-            
+
             // Create payment record
             try {
               // Only try to save the payment record if needed, but don't wait for it
@@ -126,35 +126,38 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
               console.warn("Could not create preliminary payment record:", error);
               // Continue anyway since onPaymentSuccess will handle the main booking process
             }
-            
+
             // Call success callback with payment details
             if (onPaymentSuccess) {
               onPaymentSuccess({
                 paymentDetails
               });
             }
-            
+
             setIsPaying(false);
           });
         },
-        
+
         // Handle cancellation
-        onCancel: function() {
+        onCancel: function () {
           console.log('Payment cancelled by user');
-          
+
           if (onPaymentCancel) {
             onPaymentCancel();
           }
         },
-        
+
         // Handle errors
-        onError: function(err) {
+        onError: function (err) {
           console.error('PayPal payment error:', err);
           setError(`Payment error: ${err.message || 'Unknown error'}`);
         }
       }).render(paypalButtonsRef.current);
     }
   }, [paypalLoaded, event, userData, amount, onPaymentSuccess, onPaymentCancel]);
+
+  // Sostituisci gli style esistenti con questi responsive:
+  const isMobile = window.innerWidth < 768;
 
   const modalStyle = {
     position: 'fixed',
@@ -164,9 +167,17 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: isMobile ? 'flex-start' : 'center',
     justifyContent: 'center',
-    zIndex: 9999
+    zIndex: 10000,
+    overflowY: 'auto',
+    paddingTop: isMobile ? '15vh' : '0',
+    paddingBottom: isMobile ? '10vh' : '0',
+    padding: isMobile ? '10vh 16px' : '16px',
+
+    opacity: isOpen ? 1 : 0,
+    transition: 'opacity 200ms ease-in-out',
+    touchAction: 'manipulation',
   };
 
   const modalContentStyle = {
@@ -175,9 +186,11 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
     borderRadius: '8px',
     width: '90%',
     maxWidth: '500px',
-    position: 'relative'
+    maxHeight: isMobile ? '80vh' : '90vh',
+    position: 'relative',
+    margin: isMobile ? '0 auto' : 'auto',
+    overflowY: 'auto'
   };
-
   return (
     <div style={modalStyle}>
       <div style={modalContentStyle}>
@@ -187,10 +200,10 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
 
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
+          className="absolute right-1 top-1 text-gray-500 hover:text-gray-700"
           aria-label="Close"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -214,7 +227,11 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
             <p className="mt-2">Processing payment...</p>
           </div>
         ) : (
-          <div id="paypal-button-container" ref={paypalButtonsRef} className="mb-4"></div>
+          <div id="paypal-button-container" ref={paypalButtonsRef} className="mb-4" style={{
+    touchAction: 'manipulation',
+    pointerEvents: 'auto',
+    WebkitTouchCallout: 'default'
+  }}></div>
         )}
 
         <div className="text-center text-sm text-gray-500 mt-4">

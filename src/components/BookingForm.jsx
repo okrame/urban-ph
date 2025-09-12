@@ -87,11 +87,43 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
       document.body.style.top = originalTop;
       document.body.style.left = '';
       document.body.style.right = '';
-      
+
       // Restore scroll position
       window.scrollTo(0, scrollY);
     };
   }, []);
+
+  useEffect(() => {
+    // Mobile scroll management - same as AuthModal
+    if (window.innerWidth < 768) {
+      // Salva la posizione corrente prima dello scroll
+      const savedPosition = window.scrollY;
+
+      // Salva in sessionStorage per sicurezza
+      sessionStorage.setItem('bookingModalScrollPosition', savedPosition.toString());
+
+      // Scroll in cima con animazione smooth
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+
+      // Cleanup function per ripristinare la posizione
+      return () => {
+        const savedPosition = sessionStorage.getItem('bookingModalScrollPosition');
+        if (savedPosition) {
+          setTimeout(() => {
+            window.scrollTo({
+              top: parseInt(savedPosition),
+              behavior: 'instant'
+            });
+            sessionStorage.removeItem('bookingModalScrollPosition');
+          }, 0);
+        }
+      };
+    }
+  }, []); // Empty dependency array since this should only run on mount
+
 
   // Pre-fill form data from existing data and reset page on mount
   useEffect(() => {
@@ -314,7 +346,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (isNavigating) {
       return;
     }
@@ -352,25 +384,47 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
   // Prevent backdrop scroll on touch devices
   const handleBackdropTouchMove = (e) => {
-    e.preventDefault();
+    // Non usare preventDefault - invece blocca con CSS overflow
+    e.stopPropagation();
   };
 
   // Allow scroll only inside modal content
   const handleModalContentTouchMove = (e) => {
     e.stopPropagation();
   };
+  const isMobile = window.innerWidth < 768;
+  const isShowingWarningOnly = isBooked && bookingStatus !== 'cancelled';
+
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" 
-      style={{ position: 'fixed' }}
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center z-50"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: isMobile ? 'flex-start' : 'center',
+        overflowY: 'auto',
+        // Conditional padding based on content type
+        paddingTop: isMobile
+          ? (isShowingWarningOnly ? '35vh' : '10vh')  // Warning più in basso su mobile
+          : (isShowingWarningOnly ? '15vh' : '0'),    // Warning più in basso su desktop
+        paddingBottom: isMobile ? '10vh' : '0',
+        padding: isMobile ? `${isShowingWarningOnly ? '35vh' : '10vh'} 16px 10vh 16px` : '16px'
+      }}
       onTouchMove={handleBackdropTouchMove}
     >
-      <div 
-        className="bg-white rounded-lg max-w-md w-full max-h-[90vh] shadow-2xl flex flex-col"
+      <div
+        className="bg-white rounded-lg max-w-md w-full shadow-2xl flex flex-col"
+        style={{
+          maxHeight: isMobile ? '80vh' : '90vh',
+          margin: isMobile ? '0 auto' : 'auto'
+        }}
         onTouchMove={handleModalContentTouchMove}
       >
-        <div className="p-6 flex-1 overflow-y-auto" style={{ 
+        <div className="p-6 flex-1 overflow-y-auto" style={{
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
         }}>
@@ -387,11 +441,11 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           </div>
 
           {isBooked && bookingStatus !== 'cancelled' && (
-            <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded-md">
-              <p className="text-amber-800 font-medium">
-                ⚠️ You have already booked this event
+            <div className="mb-4 p-3 bg-[#FFFADE] border border-[#FFFADE] rounded-md">
+              <p className="text-green-900 font-medium">
+                ⚠️ Oops! It looks like you have already booked this one
               </p>
-              <p className="text-sm text-amber-700 mt-1">
+              <p className="text-sm text-[#3c6c64] mt-1">
                 Please check your email for confirmation details. If you need to make changes,
                 please contact us directly.
               </p>
@@ -399,9 +453,9 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
               <div className="mt-3 text-center">
                 <button
                   onClick={onCancel}
-                  className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm"
+                  className="px-4 py-2 bg-[#3c6c64] text-white rounded hover:bg-amber-700 text-sm"
                 >
-                  Close
+                  Ok
                 </button>
               </div>
             </div>

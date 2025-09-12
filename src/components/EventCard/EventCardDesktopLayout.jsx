@@ -118,7 +118,7 @@ const EventCardDesktopLayout = ({
 
           <div className="flex items-center text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
             <RoughNotationText
-              type="underline"f
+              type="underline" f
               color="#4A7E74"
               strokeWidth={2}
               animationDelay={roughAnimationsReady ? 200 : 0}
@@ -206,10 +206,10 @@ const EventCardDesktopLayout = ({
 
           {/* Status messages */}
           {authError && (
-            <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-              {authError}
-            </div>
-          )}
+  <div className="p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
+    {authError}
+  </div>
+)}
 
           {/* {bookingStatus === 'cancelled' && (
             <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">

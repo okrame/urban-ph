@@ -307,7 +307,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
   const getButtonContent = () => {
     if (state.isBooked && state.bookingStatus !== 'cancelled') {
       return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center mt-5 -mb-5 gap-2">
         <span>Booked!</span>
         </div>
       )

@@ -529,6 +529,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
         isVisible={showCelebration}
         onComplete={handlers.handleCelebrationComplete}
         message={celebrationMessage}
+        eventTitle={event.title}
       />
 
     </>

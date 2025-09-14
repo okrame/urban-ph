@@ -28,7 +28,6 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
     const originalStyle = window.getComputedStyle(document.body).overflow;
     const originalPosition = document.body.style.position;
     const originalTop = document.body.style.top;
-    const scrollY = window.scrollY;
 
     // FORZARE scroll to top in modo sincrono e aggressivo
     window.scrollTo(0, 0);
@@ -52,7 +51,7 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
       document.body.style.right = '';
 
       // Restore scroll position alla posizione originale
-      window.scrollTo(0, scrollY);
+      window.scrollTo(0, 0);
     };
   }
 }, [isVisible]);

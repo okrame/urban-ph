@@ -10,7 +10,7 @@ export const useEventCardHandlers = ({
   isBooked,
   bookingStatus,
   applicablePrice,
-  bookingFormData, // Add this parameter
+  bookingFormData,
   setLoading,
   setAuthError,
   setAuthRequested,
@@ -26,7 +26,8 @@ export const useEventCardHandlers = ({
   setAllowRoughAnimations,
   setBookingJustCompleted,
   setAnnotationTrigger,
-  setImageError
+  setImageError,
+  setShowFullDescription // Add this parameter
 }) => {
 
   const handleBookEvent = async () => {
@@ -129,11 +130,7 @@ export const useEventCardHandlers = ({
       const requiresPayment = isPaidEvent && applicablePrice > 0;
 
       if (requiresPayment) {
-        // NON chiudere il BookingForm - lascialo aperto
-        // Apri il PaymentModal SOPRA di esso con z-index più alto
         setShowPaymentModal(true);
-        // Il BookingForm verrà chiuso solo dal PaymentModal stesso
-
         return { success: true, requiresPayment: true };
       } else {
         const result = await bookEventSimple(event.id, userData);
@@ -146,6 +143,9 @@ export const useEventCardHandlers = ({
           setShouldAnimate(false);
           setAllowRoughAnimations(true);
           setBookingJustCompleted(true);
+          
+          // CLOSE THE EXPANDED EVENT VIEW
+          setShowFullDescription(false);
 
           setTimeout(() => {
             setBookingJustCompleted(false);
@@ -166,8 +166,6 @@ export const useEventCardHandlers = ({
       setLoading(false);
     }
   };
-
-  // E aggiorna anche handlePaymentSuccess per restituire il risultato:
 
   const handlePaymentSuccess = async (paymentData) => {
     setLoading(true);
@@ -202,24 +200,28 @@ export const useEventCardHandlers = ({
         setBookingSuccess(true);
         setBookingStatus('confirmed');
         setShowPaymentModal(false);
-        setShowBookingForm(false); // Chiudi anche il form sottostante
+        setShowBookingForm(false);
         setShouldAnimate(false);
         setAllowRoughAnimations(true);
         setBookingJustCompleted(true);
+        
+        // CLOSE THE EXPANDED EVENT VIEW
+        setShowFullDescription(false);
 
         setTimeout(() => {
           setBookingJustCompleted(false);
           setAnnotationTrigger(prev => prev + 1);
-        }, 500);
+        }, 300);
 
         return { success: true };
       } else {
-        throw new Error(result.message || "Unknown error during booking");
+        setAuthError(result.message || "Booking failed after payment. Please contact support.");
+        return { success: false, message: result.message || "Booking failed after payment. Please contact support." };
       }
     } catch (error) {
-      console.error("Error completing booking:", error);
-      setAuthError("An error occurred during booking. Please contact support with your payment ID.");
-      return { success: false, message: "An error occurred during booking" };
+      console.error("Error completing booking after payment:", error);
+      setAuthError("Error completing booking after payment. Please contact support.");
+      return { success: false, message: "Error completing booking after payment. Please contact support." };
     } finally {
       setLoading(false);
     }
@@ -227,12 +229,14 @@ export const useEventCardHandlers = ({
 
   const handlePaymentCancel = () => {
     setShowPaymentModal(false);
-    setShowBookingForm(false); // Chiudi anche il form sottostante
+    // Don't close the booking form, let user try again or cancel manually
     setAuthError("Payment was cancelled.");
   };
 
   const handleCancelForm = () => {
     setShowBookingForm(false);
+    setShowPaymentModal(false);
+    setBookingFormData(null);
     setAuthError(null);
     setShouldAnimate(false);
     setAllowRoughAnimations(true);

@@ -25,7 +25,7 @@ import {
   getButtonText
 } from '../utils/eventCardUtils';
 
-function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter}) {
+function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter }) {
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -86,7 +86,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     setAllowRoughAnimations: state.setAllowRoughAnimations,
     setBookingJustCompleted: state.setBookingJustCompleted,
     setAnnotationTrigger: state.setAnnotationTrigger,
-    setImageError: state.setImageError
+    setImageError: state.setImageError,
+    setShowFullDescription: state.setShowFullDescription
   });
 
   const isModalOpen = state.showBookingForm || state.showPaymentModal;
@@ -313,8 +314,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
   const getButtonContent = () => {
     if (state.isBooked && state.bookingStatus !== 'cancelled') {
       return (
-      <div className="flex items-center mt-5 -mb-5 gap-2">
-        <span>Booked!</span>
+        <div className="flex items-center mt-5 -mb-5 gap-2">
+          <span>Booked!</span>
         </div>
       )
       // return (
@@ -369,11 +370,11 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     <motion.div
       ref={state.cardRef}
       className={`${getContainerClasses()} ${state.showFullDescription
-          ? [
-            'relative z-50 bg-white shadow-2xl overflow-hidden transform-gpu',
-            getActiveCardRounding(index),
-          ].join(' ')
-          : ''
+        ? [
+          'relative z-50 bg-white shadow-2xl overflow-hidden transform-gpu',
+          getActiveCardRounding(index),
+        ].join(' ')
+        : ''
         }`}
 
       // // CONDITIONAL ANIMATION - Only animate on desktop
@@ -497,23 +498,23 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
       {/* Booking Form Modal */}
       {state.showBookingForm && (
-  <BookingForm
-    onSubmit={handlers.handleFormSubmit}
-    onCancel={handlers.handleCancelForm}
-    loading={state.loading}
-    isFirstTime={state.isFirstTimeBooking}
-    existingData={state.existingUserData}
-    event={{
-      ...event,
-      paymentAmount: state.applicablePrice,
-      userMembershipStatus: state.userMembershipStatus
-    }}
-    user={user}
-    isBooked={state.isBooked}
-    bookingStatus={state.bookingStatus}
-    userEmail={user?.email}
-  />
-)}
+        <BookingForm
+          onSubmit={handlers.handleFormSubmit}
+          onCancel={handlers.handleCancelForm}
+          loading={state.loading}
+          isFirstTime={state.isFirstTimeBooking}
+          existingData={state.existingUserData}
+          event={{
+            ...event,
+            paymentAmount: state.applicablePrice,
+            userMembershipStatus: state.userMembershipStatus
+          }}
+          user={user}
+          isBooked={state.isBooked}
+          bookingStatus={state.bookingStatus}
+          userEmail={user?.email}
+        />
+      )}
 
       {/* Payment Modal */}
       {state.showPaymentModal && (

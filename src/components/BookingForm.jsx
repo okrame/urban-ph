@@ -68,35 +68,35 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
   // Lock body scroll when modal opens and unlock when it closes
   useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    const originalPosition = document.body.style.position;
-    const originalTop = document.body.style.top;
-    const scrollY = window.scrollY;
+  const originalStyle = window.getComputedStyle(document.body).overflow;
+  const originalPosition = document.body.style.position;
+  const originalTop = document.body.style.top;
+  const scrollY = window.scrollY;
 
-    // Lock body scroll
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
+  // FORZARE scroll to top in modo sincrono e aggressivo
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 
-    window.scrollTo({
-    top: 0,
-    behavior: 'instant'
-  });
+  // Lock body scroll SENZA offset (così il contenuto resta in cima)
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.top = '0px'; // NESSUN offset negativo
+  document.body.style.left = '0';
+  document.body.style.right = '0';
 
-    return () => {
-      // Restore body scroll
-      document.body.style.overflow = originalStyle;
-      document.body.style.position = originalPosition;
-      document.body.style.top = originalTop;
-      document.body.style.left = '';
-      document.body.style.right = '';
+  return () => {
+    // Restore body scroll
+    document.body.style.overflow = originalStyle;
+    document.body.style.position = originalPosition;
+    document.body.style.top = originalTop;
+    document.body.style.left = '';
+    document.body.style.right = '';
 
-      // Restore scroll position
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
+    // Restore scroll position alla posizione originale
+    window.scrollTo(0, scrollY);
+  };
+}, []);
 
 
   // Pre-fill form data from existing data and reset page on mount

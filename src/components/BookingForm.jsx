@@ -80,6 +80,11 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     document.body.style.left = '0';
     document.body.style.right = '0';
 
+    window.scrollTo({
+    top: 0,
+    behavior: 'instant'
+  });
+
     return () => {
       // Restore body scroll
       document.body.style.overflow = originalStyle;

@@ -102,10 +102,9 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
       // Salva in sessionStorage per sicurezza
       sessionStorage.setItem('bookingModalScrollPosition', savedPosition.toString());
 
-      // Scroll in cima con animazione smooth
       window.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: 'instant'
       });
 
       // Cleanup function per ripristinare la posizione

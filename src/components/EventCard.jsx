@@ -25,7 +25,7 @@ import {
   getButtonText
 } from '../utils/eventCardUtils';
 
-function EventCard({ event, user, onAuthNeeded, index = 0 }) {
+function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter}) {
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -43,6 +43,12 @@ function EventCard({ event, user, onAuthNeeded, index = 0 }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    if (authModalCloseCounter > 0) {
+      state.setAuthRequested(false);
+    }
+  }, [authModalCloseCounter]);
 
   // State management via custom hook
   const state = useEventCardState(event, user);

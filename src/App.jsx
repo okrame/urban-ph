@@ -22,6 +22,7 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [paymentNotification, setPaymentNotification] = useState(null);
+  const [authModalCloseCounter, setAuthModalCloseCounter] = useState(0);
 
 
   const getVerticalLinePosition = () => {
@@ -316,6 +317,7 @@ function App() {
           onClose={() => {
             setShowAuthModal(false);
             setSelectedEvent(null);  
+            setAuthModalCloseCounter(prev => prev + 1);
           }}
           event={selectedEvent}
         />
@@ -366,6 +368,7 @@ function App() {
           user={user}
           setSelectedEvent={setSelectedEvent}
           setShowAuthModal={setShowAuthModal}
+          authModalCloseCounter={authModalCloseCounter}
         />
 
         {/* about us with animated squares */}
@@ -381,7 +384,7 @@ function App() {
   );
 }
 
-function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
+function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter }) {
   const { eventCardPosition, isPositionReady } = useEventCardPosition();
 
   // Custom breakpoint detection - hide extensions earlier than mobile
@@ -417,6 +420,7 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal }) {
                     }}
                     index={index}
                     isLastEvent={index === array.length - 1}
+                    authModalCloseCounter={authModalCloseCounter}
                   />
 
                   {/* Estensioni per l'ultima card - SOLO SU DESKTOP CON BREAKPOINT PERSONALIZZATO */}

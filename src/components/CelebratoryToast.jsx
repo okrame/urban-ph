@@ -21,6 +21,42 @@ function CelebratoryToast({ isVisible, onComplete, message = "Booking Confirmed!
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+
+  useEffect(() => {
+  if (isVisible) {
+    // Salva lo stato corrente
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const scrollY = window.scrollY;
+
+    // FORZARE scroll to top in modo sincrono e aggressivo
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // Lock body scroll SENZA offset (così il contenuto resta in cima)
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '0px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+
+    // Cleanup function per quando il toast scompare
+    return () => {
+      // Restore body scroll
+      document.body.style.overflow = originalStyle;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.left = '';
+      document.body.style.right = '';
+
+      // Restore scroll position alla posizione originale
+      window.scrollTo(0, scrollY);
+    };
+  }
+}, [isVisible]);
+
   // Handle close directly
   const handleClose = () => {
     onComplete?.();

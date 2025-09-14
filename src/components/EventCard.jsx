@@ -544,7 +544,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         eventTime={event.time}
         eventLocation={event.location}
         eventVenueName={event.venueName}
-        eventUrl={`/events?open=${event.id}&name=${slugify(event.title)}`}
+        eventUrl={`/urban-ph/?open=${event.id}&name=${slugify(event.title)}`}
       />
 
     </>

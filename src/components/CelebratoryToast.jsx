@@ -74,7 +74,7 @@ function CelebratoryToast({
     if (isVisible) {
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 220000);
+      }, 20000);
 
       return () => clearTimeout(timer);
     }
@@ -197,7 +197,7 @@ function CelebratoryToast({
       // Fallback: copia negli appunti
       try {
         await navigator.clipboard.writeText(eventUrl);
-        alert('Event link copied to clipboard!');
+        //alert('Event link copied to clipboard!');
       } catch (clipboardError) {
         console.error('Clipboard error:', clipboardError);
       }
@@ -328,8 +328,8 @@ function CelebratoryToast({
                 transition={{ delay: 0.6 }}
               >
                 {eventDate && (
-                  <div className="flex items-center justify-center gap-2 text-gray-700">
-                    <Calendar className="w-4 h-4 text-[#8c69ef]" />
+                  <div className="flex items-center justify-center gap-2 text-gray-700 text-sm sm:text-base">
+                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8c69ef]" />
                     <span className="font-medium">
                       {formatDisplayDate(eventDate)}
                       {eventTime && (
@@ -342,8 +342,8 @@ function CelebratoryToast({
                 )}
 
                 {(eventLocation || eventVenueName) && (
-                  <div className="flex items-center justify-center gap-2 text-gray-700">
-                    <MapPin className="w-4 h-4 text-[#8c69ef]" />
+                  <div className="flex items-center justify-center gap-2 text-gray-700 text-sm sm:text-base">
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8c69ef]" />
                     <span className="font-medium">
                       {eventVenueName && eventLocation
                         ? `${eventVenueName}, ${eventLocation}`
@@ -365,11 +365,12 @@ function CelebratoryToast({
                 {eventTitle && eventDate && (
                   <motion.button
                     onClick={handleAddToCalendar}
-                    className="bg-[#a98df3] hover:bg-[#8c69ef] text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                    className={`bg-[#a98df3] hover:bg-[#8c69ef] text-white font-semibold transition-colors duration-200 flex items-center gap-2 rounded-lg
+      ${isMobile ? "py-1.5 px-3 text-sm" : "py-2 px-4 text-base"}`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Calendar className="w-4 h-4" />
+                    <Calendar className={isMobile ? "w-3.5 h-3.5" : "w-4 h-4"} />
                     Add to Calendar
                   </motion.button>
                 )}
@@ -377,11 +378,12 @@ function CelebratoryToast({
                 {eventUrl && (
                   <motion.button
                     onClick={handleShare}
-                    className="bg-[#b1bda5] hover:bg-[#9aa892] text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                    className={`bg-[#b1bda5] hover:bg-[#9aa892] text-white font-semibold transition-colors duration-200 flex items-center gap-2 rounded-lg
+      ${isMobile ? "py-1.5 px-3 text-sm" : "py-2 px-4 text-base"}`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className={isMobile ? "w-3.5 h-3.5" : "w-4 h-4"} />
                     Share
                   </motion.button>
                 )}
@@ -389,13 +391,14 @@ function CelebratoryToast({
             ) : null}
 
             <motion.p
-              className="text-gray-600"
+              className={`text-gray-600 ${isMobile ? "text-sm" : "text-base"}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
             >
               Hold tight, your confirmation email is landing in your inbox any moment now 🛬
             </motion.p>
+
           </motion.div>
         </motion.div>
       )}

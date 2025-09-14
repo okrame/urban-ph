@@ -240,6 +240,14 @@ export const useEventCardHandlers = ({
     setAuthError(null);
     setShouldAnimate(false);
     setAllowRoughAnimations(true);
+    setShowFullDescription(false);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('open') === String(event.id)) {
+      params.delete('open');
+      params.delete('name');
+      const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+      window.history.replaceState({}, '', newUrl);
+    }
   };
 
   const handleImageError = () => {

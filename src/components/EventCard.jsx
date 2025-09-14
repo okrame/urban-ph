@@ -212,7 +212,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
             (state.cardRef.current ??
               document.getElementById(`event-${event.id}`))
               ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 50);
+          }, 200);
         }
       }
     };

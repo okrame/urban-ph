@@ -540,6 +540,11 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         onComplete={handlers.handleCelebrationComplete}
         message={celebrationMessage}
         eventTitle={event.title}
+        eventDate={event.date}
+        eventTime={event.time}
+        eventLocation={event.location}
+        eventVenueName={event.venueName}
+        eventUrl={`/events?open=${event.id}&name=${slugify(event.title)}`}
       />
 
     </>

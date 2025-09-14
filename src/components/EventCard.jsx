@@ -105,6 +105,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         if (result?.success && !result?.requiresPayment) {
           setCelebrationMessage('Booking Confirmed!');
           setShowCelebration(true);
+          setOpenInURL(null);
         }
 
         return result;
@@ -122,6 +123,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         if (result?.success) {
           setCelebrationMessage('Payment Successful!');
           setShowCelebration(true);
+          setOpenInURL(null);
         }
 
         return result;

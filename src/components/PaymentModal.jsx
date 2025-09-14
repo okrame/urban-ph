@@ -91,6 +91,8 @@ function PaymentModal({ isOpen, onClose, event, userData, onPaymentSuccess, onPa
           return actions.order.capture().then(function (details) {
             console.log('Payment approved:', details);
 
+           onClose();
+
             // Create payment details object for passing to callbacks
             const paymentDetails = {
               paymentId: details.id,

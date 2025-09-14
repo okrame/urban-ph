@@ -58,6 +58,18 @@ function Hero({ user, onSignInClick }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+  let timeout;
+  
+  if (isMobileMenuOpen) {
+    timeout = setTimeout(() => {
+      setIsMobileMenuOpen(false);
+    }, 5000); // 5 secondi
+  }
+  
+  return () => clearTimeout(timeout);
+}, [isMobileMenuOpen]);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);

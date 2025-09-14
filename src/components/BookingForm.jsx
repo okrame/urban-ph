@@ -93,36 +93,6 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     };
   }, []);
 
-  useEffect(() => {
-    // Mobile scroll management - same as AuthModal
-    if (window.innerWidth < 768) {
-      // Salva la posizione corrente prima dello scroll
-      const savedPosition = window.scrollY;
-
-      // Salva in sessionStorage per sicurezza
-      sessionStorage.setItem('bookingModalScrollPosition', savedPosition.toString());
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'instant'
-      });
-
-      // Cleanup function per ripristinare la posizione
-      return () => {
-        const savedPosition = sessionStorage.getItem('bookingModalScrollPosition');
-        if (savedPosition) {
-          setTimeout(() => {
-            window.scrollTo({
-              top: parseInt(savedPosition),
-              behavior: 'instant'
-            });
-            sessionStorage.removeItem('bookingModalScrollPosition');
-          }, 0);
-        }
-      };
-    }
-  }, []); // Empty dependency array since this should only run on mount
-
 
   // Pre-fill form data from existing data and reset page on mount
   useEffect(() => {

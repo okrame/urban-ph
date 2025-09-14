@@ -515,6 +515,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
           isBooked={state.isBooked}
           bookingStatus={state.bookingStatus}
           userEmail={user?.email}
+          eventCardRef={state.cardRef}
         />
       )}
 

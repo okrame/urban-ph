@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
-function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, isBooked = false, bookingStatus = null, userEmail = null }) {
+function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, 
+  isBooked = false, bookingStatus = null, userEmail = null, eventCardRef = null }) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -67,11 +68,10 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   const minDate = new Date(eighteenYearsAgo).toISOString().split('T')[0];
 
   // Lock body scroll when modal opens and unlock when it closes
-  useEffect(() => {
+useEffect(() => {
   const originalStyle = window.getComputedStyle(document.body).overflow;
   const originalPosition = document.body.style.position;
   const originalTop = document.body.style.top;
-  const scrollY = window.scrollY;
 
   // FORZARE scroll to top in modo sincrono e aggressivo
   window.scrollTo(0, 0);
@@ -81,7 +81,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   // Lock body scroll SENZA offset (così il contenuto resta in cima)
   document.body.style.overflow = 'hidden';
   document.body.style.position = 'fixed';
-  document.body.style.top = '0px'; // NESSUN offset negativo
+  document.body.style.top = '0px';
   document.body.style.left = '0';
   document.body.style.right = '0';
 
@@ -93,10 +93,17 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     document.body.style.left = '';
     document.body.style.right = '';
 
-    // Restore scroll position alla posizione originale
-    window.scrollTo(0, scrollY);
+    // Su mobile, scrolla alla cima dell'evento specifico
+    if (eventCardRef?.current) {
+      setTimeout(() => {
+        eventCardRef.current.scrollIntoView({ 
+          behavior: 'instant',
+          block: 'start' 
+        });
+      }, 0);
+    }
   };
-}, []);
+}, [eventCardRef]);
 
 
   // Pre-fill form data from existing data and reset page on mount

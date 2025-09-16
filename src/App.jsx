@@ -269,7 +269,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center #A1B4A4">
+      <div className="flex items-center justify-center" style={{minHeight: 'var(--stable-viewport-height)', backgroundColor: '#A1B4A4'}}>
         <div className="text-center">
           <svg
             className="animate-spin h-10 w-10 mx-auto mb-4"
@@ -292,7 +292,7 @@ function App() {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          <p className="text-xl" style={{ color: '#FFFADE' }}>...</p>
+          <p className="text-xl" style={{ color: '#4A7E74' }}>...</p>
         </div>
       </div>
     );
@@ -301,7 +301,7 @@ function App() {
   return (
     // WRAP EVERYTHING WITH THE PROVIDER:
     <EventCardPositionProvider>
-      <div className="min-h-screen bg-white">
+      <div className="bg-white" style={{minHeight: 'var(--stable-viewport-height)'}}>
         {/* Hero section with integrated navigation */}
         <Hero
           user={user}

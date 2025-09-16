@@ -206,10 +206,10 @@ const EventCardDesktopLayout = ({
 
           {/* Status messages */}
           {authError && (
-  <div className="p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
-    {authError}
-  </div>
-)}
+            <div className="p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
+              {authError}
+            </div>
+          )}
 
           {/* {bookingStatus === 'cancelled' && (
             <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">

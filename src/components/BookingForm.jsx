@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
-function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event, 
+function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event,
   isBooked = false, bookingStatus = null, userEmail = null, eventCardRef = null }) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,42 +68,44 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   const minDate = new Date(eighteenYearsAgo).toISOString().split('T')[0];
 
   // Lock body scroll when modal opens and unlock when it closes
-useEffect(() => {
-  const originalStyle = window.getComputedStyle(document.body).overflow;
-  const originalPosition = document.body.style.position;
-  const originalTop = document.body.style.top;
+  useEffect(() => {
 
-  // FORZARE scroll to top in modo sincrono e aggressivo
-  window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
+    const currentEventCardRef = eventCardRef?.current;
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
 
-  // Lock body scroll SENZA offset (così il contenuto resta in cima)
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.top = '0px';
-  document.body.style.left = '0';
-  document.body.style.right = '0';
+    // FORZARE scroll to top in modo sincrono e aggressivo
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
 
-  return () => {
-    // Restore body scroll
-    document.body.style.overflow = originalStyle;
-    document.body.style.position = originalPosition;
-    document.body.style.top = originalTop;
-    document.body.style.left = '';
-    document.body.style.right = '';
+    // Lock body scroll SENZA offset (così il contenuto resta in cima)
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '0px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
 
-    // Su mobile, scrolla alla cima dell'evento specifico
-    if (eventCardRef?.current) {
-      setTimeout(() => {
-        eventCardRef.current.scrollIntoView({ 
-          behavior: 'instant',
-          block: 'start' 
-        });
-      }, 0);
-    }
-  };
-}, [eventCardRef]);
+    return () => {
+      // Restore body scroll
+      document.body.style.overflow = originalStyle;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.left = '';
+      document.body.style.right = '';
+
+      // Su mobile, scrolla alla cima dell'evento specifico
+      if (currentEventCardRef) {
+        setTimeout(() => {
+          currentEventCardRef.scrollIntoView({
+            behavior: 'instant',
+            block: 'start'
+          });
+        }, 0);
+      }
+    };
+  }, [eventCardRef]);
 
 
   // Pre-fill form data from existing data and reset page on mount
@@ -740,17 +742,17 @@ useEffect(() => {
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="instagram">
+                      <label className="block text-gray-700 font-medium mb-1 text-sm sm:text-sm" htmlFor="instagram">
                         Instagram Name (optional)
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">@</span>
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm">@</span>
                         <input
                           type="text"
                           id="instagram"
                           value={instagram}
                           onChange={(e) => setInstagram(e.target.value)}
-                          className="w-full pl-7 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="yourinstagram"
                         />
                       </div>

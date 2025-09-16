@@ -38,17 +38,23 @@ function Info() {
   const [squareSize, setSquareSize] = useState(400);
 
   useEffect(() => {
-    const updateSize = () => {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const size = vw < 768 ? Math.max(vw, vh) * 2.1 : Math.max(vw, vh) * 2;
-      setSquareSize(size);
-    };
-
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
+  // Calcola una volta sola all'inizio
+  const vw = window.innerWidth;
+  const vh = window.innerHeight; // Prendi il valore iniziale con barra visibile
+  const size = vw < 768 ? Math.max(vw, vh) * 2.1 : Math.max(vw, vh) * 2;
+  setSquareSize(size);
+  
+  // Aggiorna SOLO se cambia la larghezza (orientamento)
+  const handleOrientationChange = () => {
+    const newVw = window.innerWidth;
+    // Usa sempre la stessa altezza iniziale
+    const size = newVw < 768 ? Math.max(newVw, vh) * 2.1 : Math.max(newVw, vh) * 2;
+    setSquareSize(size);
+  };
+  
+  window.addEventListener('orientationchange', handleOrientationChange);
+  return () => window.removeEventListener('orientationchange', handleOrientationChange);
+}, []);
 
   const getSquare2Target = () => {
     if (!eventCardPosition || !eventCardPosition.width) return -200;

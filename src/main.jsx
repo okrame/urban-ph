@@ -1,4 +1,4 @@
-import React from 'react'
+import { React, useEffect} from 'react'
 import ReactDOM from 'react-dom/client'
 //import { createHashRouter, RouterProvider } from 'react-router-dom'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
@@ -8,12 +8,6 @@ import './index.css'
 import AdminPanel from './pages/AdminPanel.jsx'
 import NotFound from './pages/NotFound.jsx'
 
-// // Function to handle iOS viewport resize
-// function handleViewportResize() {
-//   const vh = window.innerHeight;
-//   document.body.style.height = `${vh}px`;
-//   document.getElementById('root').style.height = `${vh}px`;
-// }
 
 // PayPal initial options
 const paypalOptions = {
@@ -46,6 +40,17 @@ const router = createBrowserRouter([
   basename: import.meta.env.BASE_URL
 });
 
+(() => {
+  const setStableHeight = () => {
+    // Calcola solo se il browser non supporta svh
+    if (!CSS.supports('height', '100svh')) {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--stable-viewport-height', `${vh}px`);
+    }
+  };
+  
+  setStableHeight();
+})();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -54,11 +59,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </PayPalScriptProvider>
   </React.StrictMode>,
 );
-
-// let resizeTimeout;
-// window.addEventListener('resize', () => {
-//   clearTimeout(resizeTimeout);
-//   resizeTimeout = setTimeout(handleViewportResize, 100);
-// });
-// window.addEventListener('orientationchange', handleViewportResize);
-// handleViewportResize();

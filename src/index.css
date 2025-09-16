@@ -10,22 +10,34 @@ body {
   @apply font-sans;
 }
 
-/* Fix semplice per viewport dinamico mobile */
 :root {
-  --viewport-height: 100vh;
+  /* Usa svh (small viewport height) che considera sempre la barra visibile */
+  --stable-viewport-height: 100svh;
+  
+  /* Fallback per browser che non supportano svh */
+  --stable-viewport-height: 100vh;
 }
 
-/* Dynamic viewport height dove supportato */
-@supports (height: 100dvh) {
+/* Per browser che supportano svh */
+@supports (height: 100svh) {
   :root {
-    --viewport-height: 100dvh;
+    --stable-viewport-height: 100svh;
   }
 }
 
-/* Applica l'altezza dinamica - SENZA !important */
+/* Override del Tailwind min-h-screen per usare altezza stabile */
 .min-h-screen {
-  min-height: var(--viewport-height);
+  min-height: var(--stable-viewport-height);
 }
+
+/* Specifico per Hero section - fissa l'altezza */
+.hero-container {
+  height: var(--stable-viewport-height);
+  min-height: var(--stable-viewport-height);
+  max-height: var(--stable-viewport-height);
+  overflow: hidden;
+}
+
 
 /* iOS specific: Momentum scrolling and viewport stabilization */
 @supports (-webkit-overflow-scrolling: touch) {

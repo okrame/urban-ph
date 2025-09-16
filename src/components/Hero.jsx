@@ -119,7 +119,8 @@ function Hero({ user, onSignInClick }) {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
+    <section className="relative hero-container flex items-center justify-center text-white">
+
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <img

@@ -46,10 +46,16 @@ const router = createBrowserRouter([
   basename: import.meta.env.BASE_URL
 });
 
-if (!CSS.supports('height', '100svh')) {
-  const vh = window.innerHeight;
-  document.documentElement.style.setProperty('--stable-viewport-height', `${vh}px`);
+// Imposta la quota stabile SOLO se 100svh non è supportato
+function setStableViewportHeightOnce() {
+  if (!CSS.supports('height', '100svh')) {
+    const vh = window.innerHeight; // “fotografiamo” l’altezza con barra visibile
+    document.documentElement.style.setProperty('--stable-viewport-height', `${vh}px`);
+    document.documentElement.style.setProperty('--viewport-height', `${vh}px`);
+  }
 }
+setStableViewportHeightOnce();
+window.addEventListener('orientationchange', setStableViewportHeightOnce);
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(

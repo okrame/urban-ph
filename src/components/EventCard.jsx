@@ -258,11 +258,22 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
     const resizeObserver = new ResizeObserver(updatePosition);
     resizeObserver.observe(state.cardRef.current);
-    window.addEventListener('resize', updatePosition);
+    //window.addEventListener('resize', updatePosition);
+    // ⬇️ Ignora i resize solo verticali
+    const widthRef = { current: window.innerWidth };
+    const handleResize = () => {
+      const w = window.innerWidth;
+      if (w !== widthRef.current) {
+        widthRef.current = w;
+        updatePosition();
+      }
+    };
+    window.addEventListener('resize', handleResize);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', updatePosition);
+      //window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('resize', handleResize);
     };
   }, [updateEventCardPosition, index]);
 
@@ -283,8 +294,28 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
   }, [state.showFullDescription, state.roughAnimationsReady]);
 
   useEffect(() => {
+    // let resizeTimer;
+    // const handleResize = () => {
+    //   if (state.roughAnimationsReady) {
+    //     if (resizeTimer) clearTimeout(resizeTimer);
+    //     resizeTimer = setTimeout(() => {
+    //       state.setAnnotationTrigger(prev => prev + 1);
+    //     }, 200);
+    //   }
+    // };
+
+    // window.addEventListener('resize', handleResize);
+    // return () => {
+    //   window.removeEventListener('resize', handleResize);
+    //   if (resizeTimer) clearTimeout(resizeTimer);
+    // };
+
     let resizeTimer;
+    const widthRef2 = { current: window.innerWidth };
     const handleResize = () => {
+      const w = window.innerWidth;
+      if (w === widthRef2.current) return; // ignora variazioni di sola altezza
+      widthRef2.current = w;
       if (state.roughAnimationsReady) {
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
@@ -486,7 +517,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         {state.showFullDescription && !isModalOpen && ( // don’t show scrim if a modal is open
           <motion.div
             key="eventcard-scrim"
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
+            className="fixed-full z-40 bg-black/50 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

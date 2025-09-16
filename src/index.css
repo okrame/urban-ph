@@ -10,15 +10,18 @@ body {
   @apply font-sans;
 }
 
-:root {  
-  /* Fallback per browser che non supportano svh */
+:root {
+  /* fallback: vecchi browser → 100vh */
   --stable-viewport-height: 100vh;
+  /* alias usato in alcune regole */
+  --viewport-height: var(--stable-viewport-height);
 }
 
-/* Per browser che supportano svh */
+/* browser moderni: usa sempre la “small viewport height” */
 @supports (height: 100svh) {
   :root {
     --stable-viewport-height: 100svh;
+    --viewport-height: 100svh;
   }
 }
 
@@ -27,12 +30,20 @@ body {
   min-height: var(--stable-viewport-height);
 }
 
+
 /* Specifico per Hero section - fissa l'altezza */
 .hero-container {
   height: var(--stable-viewport-height);
-  min-height: var(--stable-viewport-height);
+  min-height: var(--stable-viewport-height);.relative.min-h-screen
   max-height: var(--stable-viewport-height);
   overflow: hidden;
+}
+
+/* Utility per overlay full-screen stabili (scrim, modali full) */
+.fixed-full {
+  position: fixed;
+  inset: 0;
+  height: var(--stable-viewport-height);
 }
 
 

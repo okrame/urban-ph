@@ -46,6 +46,11 @@ const router = createBrowserRouter([
   basename: import.meta.env.BASE_URL
 });
 
+if (!CSS.supports('height', '100svh')) {
+  const vh = window.innerHeight;
+  document.documentElement.style.setProperty('--stable-viewport-height', `${vh}px`);
+}
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

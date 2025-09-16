@@ -153,17 +153,17 @@ function Hero({ user, onSignInClick }) {
           left: '54.5%',
           // Gap fisso basato su dimensioni dello schermo e orientamento
           top: (() => {
-            const screenHeight = window.innerHeight;
             const screenWidth = window.innerWidth;
 
-            // Dispositivi molto piccoli 
-            if (screenWidth <= 375 || screenHeight <= 667) {
+            // Dispositivi molto piccoli (fino a 375px)
+            if (screenWidth <= 375) {
               return 'calc(50% + 3rem + 0.5rem)';
             }
             // Mobile standard
             else if (screenWidth < 768) {
               return 'calc(50% + 3.5rem + 0.5rem)';
             }
+            // Tablet
             else if (screenWidth < 1024) {
               return 'calc(50% + 5rem + 0.3rem)';
             }
@@ -172,6 +172,7 @@ function Hero({ user, onSignInClick }) {
               return 'calc(50% + 5rem + 0.3rem)';
             }
           })(),
+
           transform: 'translate(-50%, -50%)',
         }}
       >

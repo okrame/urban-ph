@@ -10,10 +10,7 @@ body {
   @apply font-sans;
 }
 
-:root {
-  /* Usa svh (small viewport height) che considera sempre la barra visibile */
-  --stable-viewport-height: 100svh;
-  
+:root {  
   /* Fallback per browser che non supportano svh */
   --stable-viewport-height: 100vh;
 }

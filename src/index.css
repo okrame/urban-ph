@@ -34,11 +34,17 @@ body {
 /* Specifico per Hero section - fissa l'altezza */
 .hero-container {
   height: var(--stable-viewport-height);
-  min-height: var(--stable-viewport-height);.relative.min-h-screen
+  min-height: var(--stable-viewport-height);
   max-height: var(--stable-viewport-height);
   overflow: hidden;
 }
 
+/* (opzionale) Override del Tailwind min-h-screen per usare altezza stabile */
+.relative.min-h-screen {
+  height: var(--stable-viewport-height);
+  min-height: var(--stable-viewport-height);
+  overflow: hidden;
+}
 /* Utility per overlay full-screen stabili (scrim, modali full) */
 .fixed-full {
   position: fixed;

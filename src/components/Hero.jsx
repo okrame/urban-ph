@@ -59,16 +59,16 @@ function Hero({ user, onSignInClick }) {
   }, []);
 
   useEffect(() => {
-  let timeout;
-  
-  if (isMobileMenuOpen) {
-    timeout = setTimeout(() => {
-      setIsMobileMenuOpen(false);
-    }, 5000); // 5 secondi
-  }
-  
-  return () => clearTimeout(timeout);
-}, [isMobileMenuOpen]);
+    let timeout;
+
+    if (isMobileMenuOpen) {
+      timeout = setTimeout(() => {
+        setIsMobileMenuOpen(false);
+      }, 5000); // 5 secondi
+    }
+
+    return () => clearTimeout(timeout);
+  }, [isMobileMenuOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -174,12 +174,14 @@ function Hero({ user, onSignInClick }) {
           transform: 'translate(-50%, -50%)',
         }}
       >
-        <p
-          className="text-base xs:text-lg md:text-xl font-light text-center" // Testo più piccolo su dispositivi mini
-          style={{ color: 'white' }}
-        >
-          Urban pH
-        </p>
+        <Link to="/">
+          <p
+            className="text-base xs:text-lg md:text-xl font-light text-center hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+            style={{ color: 'white' }}
+          >
+            Urban pH
+          </p>
+        </Link>
       </div>
 
       {/* Desktop Navigation Overlay */}
@@ -390,15 +392,15 @@ function Hero({ user, onSignInClick }) {
                 </Link>
               </motion.div>
               <motion.button
-  onClick={scrollToContactUs}
-  className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
-  variants={{
-    open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
-    closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
-  }}
->
-  .contactUs
-</motion.button>
+                onClick={scrollToContactUs}
+                className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left"
+                variants={{
+                  open: { y: 0, opacity: 1, transition: { y: { stiffness: 1000, velocity: -100 } } },
+                  closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
+                }}
+              >
+                .contactUs
+              </motion.button>
               {user && isAdmin && (
                 <motion.div
                   variants={{

@@ -451,14 +451,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
               {/* Page indicator for paginated forms */}
               {needsPagination && (
                 <div className="flex justify-center mb-4">
-                  <div className="flex space-x-2">
-                    {[1, 2].map((page) => (
-                      <div
-                        key={page}
-                        className={`w-2 h-2 rounded-full ${currentPage === page ? 'bg-green-800' : 'bg-gray-300'
-                          }`}
-                      />
-                    ))}
+                  <div className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-600">
+                    {currentPage}/{totalPages}
                   </div>
                 </div>
               )}
@@ -476,12 +470,6 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                   <p className="text-sm text-blue-600 mt-1">
                     You'll be redirected to a secure payment page after completing this form.
                   </p>
-                </div>
-              )}
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
-                  {error}
                 </div>
               )}
 
@@ -784,7 +772,15 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                         />
                         <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
-                          I accept the <span className="text-blue-600 hover:underline cursor-pointer">Terms and Conditions</span> *
+                          I accept the <a
+                            href="src/assets/termsandco.pdf"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-blue-600 hover:underline cursor-pointer"
+                          >
+                            Terms and Conditions
+                          </a> *
                         </label>
                       </div>
                       <div className="flex items-start">
@@ -796,11 +792,25 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                         />
                         <label htmlFor="acceptPrivacy" className="ml-2 block text-sm text-gray-700">
-                          I consent to the processing of my personal data as per the <span className="text-blue-600 hover:underline cursor-pointer">Privacy Policy</span> *
+                          I consent to the processing of my personal data as per the <a
+                            href="src/assets/termsandco.pdf"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-blue-600 hover:underline cursor-pointer"
+                          >
+                            Privacy Policy
+                          </a> *
                         </label>
                       </div>
                     </div>
                   </>
+                )}
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
+                    {error}
+                  </div>
                 )}
 
                 {/* Navigation Buttons */}

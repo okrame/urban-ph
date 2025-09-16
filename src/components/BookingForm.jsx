@@ -577,7 +577,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="taxId"
                         value={taxId}
                         onChange={handleTaxIdChange}
-                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${taxId && !validateTaxId(taxId) ? 'border-red-300 bg-red-50' : 'border-gray-300'
                           }`}
                         required
                         maxLength={16}
@@ -709,7 +709,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
                           }`}
                         placeholder="your@email.com"
                         required
@@ -730,7 +730,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="phone"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${phone && !validatePhone(phone) ? 'border-red-300 bg-red-50' : 'border-gray-300'
                           }`}
                         placeholder="+39 123 456 7890"
                         required
@@ -747,13 +747,13 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         Instagram Name (optional)
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm">@</span>
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-base pointer-events-none z-10">@</span>
                         <input
                           type="text"
                           id="instagram"
                           value={instagram}
                           onChange={(e) => setInstagram(e.target.value)}
-                          className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                           placeholder="yourinstagram"
                         />
                       </div>

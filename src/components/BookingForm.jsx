@@ -499,7 +499,8 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           id="name"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+
                           required
                         />
                       </div>
@@ -513,7 +514,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           id="surname"
                           value={surname}
                           onChange={(e) => setSurname(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                           required
                         />
                       </div>
@@ -528,7 +529,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="birthDate"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         required
                         max={minDate}
                       />
@@ -543,7 +544,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="address"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         required
                         placeholder="Street, number, city, zip code"
                       />
@@ -557,7 +558,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="country"
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         required
                       >
                         <option value="">Select a country</option>
@@ -607,7 +608,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                               id="name-single"
                               value={name}
                               onChange={(e) => setName(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                               required
                             />
                           </div>
@@ -621,7 +622,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                               id="surname-single"
                               value={surname}
                               onChange={(e) => setSurname(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                               required
                             />
                           </div>
@@ -636,7 +637,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                             id="birthDate-single"
                             value={birthDate}
                             onChange={(e) => setBirthDate(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                             required
                             max={minDate}
                           />
@@ -651,7 +652,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                             id="address-single"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                             required
                             placeholder="Street, number, city, zip code"
                           />
@@ -665,7 +666,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                             id="country-single"
                             value={country}
                             onChange={(e) => setCountry(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                             required
                           >
                             <option value="">Select a country</option>
@@ -766,7 +767,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         id="requests"
                         value={requests}
                         onChange={(e) => setRequests(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         rows="3"
                         placeholder="Any special requirements or requests..."
                       />

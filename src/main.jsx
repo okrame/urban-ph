@@ -46,16 +46,28 @@ const router = createBrowserRouter([
   basename: import.meta.env.BASE_URL
 });
 
-// Imposta la quota stabile SOLO se 100svh non è supportato
-function setStableViewportHeightOnce() {
-  if (!CSS.supports('height', '100svh')) {
-    const vh = window.innerHeight; // “fotografiamo” l’altezza con barra visibile
-    document.documentElement.style.setProperty('--stable-viewport-height', `${vh}px`);
-    document.documentElement.style.setProperty('--viewport-height', `${vh}px`);
-  }
+// Fissa SEMPRE la quota stabile con un'istantanea in px
+function freezeStableViewportHeight() {
+  const h = Math.round(window.visualViewport?.height || window.innerHeight);
+  const px = `${h}px`;
+  const root = document.documentElement;
+  root.style.setProperty('--stable-viewport-height', px);
+  root.style.setProperty('--viewport-height', px);
 }
-setStableViewportHeightOnce();
-window.addEventListener('orientationchange', setStableViewportHeightOnce);
+
+// 1) Scatta la foto al primo paint
+freezeStableViewportHeight();
+
+// 2) Aggiorna solo nei casi utili (niente resize continui)
+window.addEventListener('orientationchange', () => {
+  // piccolo delay per lasciare all’OS il tempo di assestarsi
+  setTimeout(freezeStableViewportHeight, 60);
+});
+
+// 3) Rientro da bfcache (iOS/Chromium)
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) freezeStableViewportHeight();
+});
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(

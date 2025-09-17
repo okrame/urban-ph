@@ -108,6 +108,17 @@ const EventCardMobileLayout = ({
       whileInView={shouldAnimate && !forceAlwaysVisible ? "visible" : undefined}
       viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
     >
+
+        {/* X di chiusura - AGGIUNGERE QUESTO BLOCCO */}
+  {showFullDescription && (
+    <button
+      onClick={() => setShowFullDescription(false)}
+      className="absolute top-2 right-1 z-50 w-5 h-5 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+      aria-label="Close expanded view"
+    >
+      ×
+    </button>
+  )}
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div
         className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}

@@ -53,6 +53,16 @@ const EventCardDesktopLayout = ({
     ${getBorderClasses(index)} 
     ${showFullDescription ? getActiveFrameThickness(index) : ''}`}
     >
+      {/* X di chiusura - AGGIUNGERE QUESTO BLOCCO */}
+      {showFullDescription && (
+        <button
+          onClick={() => setShowFullDescription(false)}
+          className="absolute top-3 right-3 z-50 w-6 h-6 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+          aria-label="Close expanded view"
+        >
+          ×
+        </button>
+      )}
       {/* Image section */}
       <motion.div
         className="w-[30%] flex flex-col"

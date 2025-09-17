@@ -109,16 +109,16 @@ const EventCardMobileLayout = ({
       viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
     >
 
-        {/* X di chiusura - AGGIUNGERE QUESTO BLOCCO */}
-  {showFullDescription && (
-    <button
-      onClick={() => setShowFullDescription(false)}
-      className="absolute top-2 right-1 z-50 w-5 h-5 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
-      aria-label="Close expanded view"
-    >
-      ×
-    </button>
-  )}
+      {/* X di chiusura - AGGIUNGERE QUESTO BLOCCO */}
+      {showFullDescription && (
+        <button
+          onClick={() => setShowFullDescription(false)}
+          className="absolute top-2 right-1 z-50 w-5 h-5 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+          aria-label="Close expanded view"
+        >
+          ×
+        </button>
+      )}
       {/* Mobile Header Section - Image + Basic Info */}
       <motion.div
         className={`w-full h-48 sm:h-56 flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'}`}
@@ -193,7 +193,7 @@ const EventCardMobileLayout = ({
               </ReactMarkdown>
               <button
                 onClick={() => setShowFullDescription(true)}
-                className="ml-2 text-purple-800 hover:text-purple-600 underline text-sm"
+                className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
               >
                 Show more
               </button>
@@ -208,7 +208,7 @@ const EventCardMobileLayout = ({
                   h2: ({ children }) => <h2 className="text-lg font-semibold mb-2">{children}</h2>,
                   h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
                   p: ({ children }) => <p className="mb-2">{children}</p>,
-                  a: ({ children, href }) => <a href={href} className="text-purple-600 hover:text-purple-800 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                  a: ({ children, href }) => <a href={href} className="text-[#9333EA] hover:text-purple-700 underline focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-sm" target="_blank" rel="noopener noreferrer">{children}</a>,
                 }}
               >
                 {event.description}
@@ -216,7 +216,7 @@ const EventCardMobileLayout = ({
               {shouldTruncate && (
                 <button
                   onClick={() => setShowFullDescription(false)}
-                  className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                  className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
                 >
                   Show less
                 </button>
@@ -255,12 +255,12 @@ const EventCardMobileLayout = ({
 
         {/* Status messages */}
         <div className="h-0 -mb-8 relative">
-  {authError && (
-  <div className="fixed top-40 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
-    {authError}
-  </div>
-)}
-</div>
+          {authError && (
+            <div className="fixed top-40 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
+              {authError}
+            </div>
+          )}
+        </div>
         {/* {bookingStatus === 'cancelled' && (
           <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
             <p className="font-medium">Booking Cancelled</p>

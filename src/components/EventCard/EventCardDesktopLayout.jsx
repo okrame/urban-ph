@@ -74,7 +74,7 @@ const EventCardDesktopLayout = ({
         viewport={shouldAnimate ? { once: true, amount: 0.25 } : undefined}
       >
         {/* Main image */}
-        <div className="h-96 overflow-hidden">
+        <div className="h-[26rem] overflow-hidden">
           <img
             src={getImageSource(event, imageError)}
             alt={event.title}
@@ -89,8 +89,8 @@ const EventCardDesktopLayout = ({
             className="border-t border-black"
             style={{
               height: `${getMapHeight(showFullDescription, contentHeight)}px`,
-              minHeight: '220px',
-              maxHeight: '350px'
+              minHeight: '250px',
+              maxHeight: '380px'
             }}
             initial={{ height: 0, opacity: 0 }}
             animate={{
@@ -105,7 +105,7 @@ const EventCardDesktopLayout = ({
                 <LocationMap
                   location={event.location}
                   isVisible={showFullDescription}
-                  style={{ height: '100%', width: '100%' }}
+                  style={{ height: '120%', width: '100%' }}
                 />
               </div>
             </div>
@@ -143,7 +143,7 @@ const EventCardDesktopLayout = ({
             <span>{event.venueName || event.location}</span>
           </div>
 
-          <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+          <div className="text-[1.05rem] text-black opacity-80 mb-4 leading-relaxed">
             {shouldTruncate && !showFullDescription ? (
               <>
                 <ReactMarkdown
@@ -173,7 +173,7 @@ const EventCardDesktopLayout = ({
                 </ReactMarkdown>
                 <button
                   onClick={() => setShowFullDescription(true)}
-                  className="ml-2 text-purple-800 hover:text-purple-600 underline text-sm"
+                  className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
                 >
                   Show more
                 </button>
@@ -188,7 +188,7 @@ const EventCardDesktopLayout = ({
                     h2: ({ children }) => <h2 className="text-lg font-semibold mb-2">{children}</h2>,
                     h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
                     p: ({ children }) => <p className="mb-2">{children}</p>,
-                    a: ({ children, href }) => <a href={href} className="text-purple-600 hover:text-purple-800 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                    a: ({ children, href }) => <a href={href} className="text-[#9333EA] hover:text-purple-700 underline focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-sm" target="_blank" rel="noopener noreferrer">{children}</a>,
                   }}
                 >
                   {event.description}
@@ -196,7 +196,7 @@ const EventCardDesktopLayout = ({
                 {shouldTruncate && (
                   <button
                     onClick={() => setShowFullDescription(false)}
-                    className="ml-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                    className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
                   >
                     Show less
                   </button>

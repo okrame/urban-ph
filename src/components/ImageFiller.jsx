@@ -233,14 +233,13 @@ const ImageFiller = ({
 
   // Calculate if conditions are met (boolean)
   const shouldShow = useTransform(
-    [progressPhase1, progressPhase2, intersectionWidth, intersectionHeight],
-    ([phase1, phase2, width, height]) => {
-      const minWidth = windowWidth <= 375 ? 150 : 200;
-      const minHeight = windowWidth <= 375 ? 100 : 150;
-      return isInView && phase1 >= 1 && phase2 > 0.3 && width > minWidth && height > minHeight;
-    }
-  );
-
+  [progressPhase1, progressPhase2, intersectionWidth, intersectionHeight],
+  ([phase1, phase2, width, height]) => {
+    const minWidth = windowWidth <= 375 ? 80 : windowWidth <= 768 ? 120 : 200;
+    const minHeight = windowWidth <= 375 ? 60 : windowWidth <= 768 ? 80 : 150;
+    return isInView && phase1 >= 1 && phase2 > 0.3 && width > minWidth && height > minHeight;
+  }
+);
   // State to track when to trigger animations
   const [showImages, setShowImages] = useState(false);
 

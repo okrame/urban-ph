@@ -2,7 +2,6 @@
 import { motion } from 'framer-motion';
 import LocationMap from '../LocationMap';
 import RoughNotationText from '../RoughNotationText';
-import LoadingSpinner from '../LoadingSpinner';
 import {
   getBorderClasses,
   getImageRoundingDesktop,
@@ -14,6 +13,7 @@ import {
 } from '../../utils/eventCardUtils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MapPin } from 'lucide-react';
 
 const EventCardDesktopLayout = ({
   event,
@@ -123,24 +123,29 @@ const EventCardDesktopLayout = ({
         variants={shouldAnimate ? contentVariants : undefined}
         viewport={shouldAnimate ? { once: true, amount: 0.25 } : undefined}
       >
-        <div ref={contentRef} className="flex-1">
+        <div ref={contentRef} className="flex-1 -mb-6">
           <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
 
-          <div className="flex items-center text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
+          <div className="flex items-center font-mono text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
             <RoughNotationText
               type="underline" f
               color="#4A7E74"
               strokeWidth={2}
               animationDelay={roughAnimationsReady ? 200 : 0}
-              disabled={!allowRoughAnimations || !roughAnimationsReady}
+              animate="false"
+              //disabled={!allowRoughAnimations || !roughAnimationsReady}
               trigger={annotationTrigger}
             >
               {event.date}
             </RoughNotationText>
             <span className="mx-2">·</span>
             <span>{event.time}</span>
-            <span className="mx-2">·</span>
-            <span>{event.venueName || event.location}</span>
+            <div className="w-full mt-1">
+              <span className="flex items-center gap-1 text-sm text-gray-800">
+                <MapPin className="w-4 h-4" />
+                {event.venueName || event.location}
+              </span>
+            </div>
           </div>
 
           <div className="text-[1.05rem] text-black opacity-80 mb-4 leading-relaxed">
@@ -195,7 +200,15 @@ const EventCardDesktopLayout = ({
                 </ReactMarkdown>
                 {shouldTruncate && (
                   <button
-                    onClick={() => setShowFullDescription(false)}
+                    onClick={() => {
+                      setShowFullDescription(false);
+                      setTimeout(() => {
+                        contentRef.current?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start'
+                        });
+                      }, 150);
+                    }}
                     className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
                   >
                     Show less
@@ -208,15 +221,18 @@ const EventCardDesktopLayout = ({
           {/* Event meta info */}
           {!isBooked && (
             <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
-              <span className="px-2 py-1">
-                {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-              </span>
+              {event.spotsLeft === 0 ? (
+                <span className="px-2 py-1">Fully booked</span>
+              ) : event.spotsLeft < 4 ? (
+                <span className="px-2 py-1">{event.spotsLeft} spots left !</span>
+              ) : null}
             </div>
           )}
 
+
           {/* Status messages */}
           {authError && (
-            <div className="p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div className="absolute p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
               {authError}
             </div>
           )}
@@ -228,22 +244,23 @@ const EventCardDesktopLayout = ({
           )} */}
 
           {isFullyBooked && bookingStatus !== 'cancelled' && (
-            <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
+            <div className="absolute mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">This event is fully booked</p>
             </div>
           )}
 
           {eventStatus === 'past' && (
-            <div className="mb-3 p-3 bg-gray-50 border border-gray-200">
+            <div className="absolute mb-3 p-3 bg-gray-50 border border-gray-200">
               <p className="font-medium text-black text-sm">This event has ended</p>
             </div>
           )}
 
           {isClosedForBooking && bookingStatus !== 'cancelled' && (
-            <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
+            <div className="absolute p-3" style={{ backgroundColor: '#FFFADE' }}>
               <p className="font-medium text-black text-sm">Booking closed</p>
             </div>
           )}
+
         </div>
 
         {/* Book button */}

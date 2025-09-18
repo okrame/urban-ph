@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import BookingForm from './BookingForm';
 import PaymentModal from './PaymentModal';
 import CelebratoryToast from './CelebratoryToast';
-import RoughNotationText from './RoughNotationText';
 import LoadingSpinner from './LoadingSpinner';
 import EventCardDesktopLayout from './EventCard/EventCardDesktopLayout';
 import EventCardMobileLayout from './EventCard/EventCardMobileLayout';
@@ -192,6 +191,14 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     } else {
       if (getOpenFromURL() === String(event.id)) setOpenInURL(null);
       state.setShowFullDescription(false);
+
+      // Scroll to top of event card when closing
+      setTimeout(() => {
+        state.cardRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 150);
     }
   };
 
@@ -288,10 +295,17 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
   // Animation effects
   useEffect(() => {
-    if (state.roughAnimationsReady) {
+  if (state.roughAnimationsReady) {
+    // Add delay when closing description to let layout settle
+    const delay = state.showFullDescription ? 0 : 600;
+    
+    const timeoutId = setTimeout(() => {
       state.setAnnotationTrigger(prev => prev + 1);
-    }
-  }, [state.showFullDescription, state.roughAnimationsReady]);
+    }, delay);
+    
+    return () => clearTimeout(timeoutId);
+  }
+}, [state.showFullDescription, state.roughAnimationsReady]);
 
   useEffect(() => {
     // let resizeTimer;
@@ -351,20 +365,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
           <span>Booked!</span>
         </div>
       )
-      // return (
-      //   <RoughNotationText
-      //     type="box"
-      //     color="#AFACFB"
-      //     strokeWidth={2}
-      //     animationDelay={100}
-      //     disabled={!state.allowRoughAnimations || !state.roughAnimationsReady || state.bookingJustCompleted}
-      //     trigger={state.annotationTrigger}
-      //     className="relative z-[70]"
-
-      //   >
-      //     Booking Confirmed!
-      //   </RoughNotationText>
-      // );
     }
 
     if (state.loading) {

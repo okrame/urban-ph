@@ -14,6 +14,9 @@ import {
 } from '../../utils/eventCardUtils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { X, MapPin } from "lucide-react";
+
+
 
 const EventCardMobileLayout = ({
   event,
@@ -69,15 +72,6 @@ const EventCardMobileLayout = ({
   const roughTrigger = (annotationTrigger || dateInView || forceAlwaysVisible);
 
 
-  const getContentClasses = () => {
-    // Don't apply opacity/filter classes that would affect child elements
-    return "transition-all duration-700 ease-in-out";
-  };
-  const getContentAnimationProps = () => {
-    // Don't apply any animation props that would create a new stacking context
-    return {};
-  };
-
   return (
     <motion.div
       id={`event-${event.id}`}
@@ -109,14 +103,14 @@ const EventCardMobileLayout = ({
       viewport={shouldAnimate && !forceAlwaysVisible ? { once: true, amount: 0.3 } : undefined}
     >
 
-      {/* X di chiusura - AGGIUNGERE QUESTO BLOCCO */}
+      {/* X di chiusura  */}
       {showFullDescription && (
         <button
           onClick={() => setShowFullDescription(false)}
-          className="absolute top-2 right-1 z-50 w-5 h-5 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+          className={`absolute top-1 -right-1 ${isImageLeft ? 'right-0' : 'left-0'} z-50 w-3 h-3 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow-sm border border-gray-300 text-gray-900 hover:text-gray-800 transition-colors`}
           aria-label="Close expanded view"
         >
-          ×
+          <X className="w-2 h-2" />
         </button>
       )}
       {/* Mobile Header Section - Image + Basic Info */}
@@ -136,23 +130,25 @@ const EventCardMobileLayout = ({
 
         {/* Info Half */}
         <div className="w-1/2 h-full p-3 sm:p-4 flex flex-col justify-center bg-white">
-          <h3 className="text-lg sm:text-xl font-light text-black mb-2 line-clamp-2">{event.title}</h3>
+          <h3 className="text-lg sm:text-xl font-light text-black mb-2 line-clamp-3">{event.title}</h3>
           <div className="flex flex-col text-xs sm:text-sm text-black opacity-70 gap-1">
-            <div className="flex items-center gap-1" ref={dateRef}>
+            <div className="flex items-center gap-1 font-bold" ref={dateRef}>
               <RoughNotationText
                 key={`rn-${Number(roughTrigger)}-${showFullDescription ? 'open' : 'closed'}`}
                 type="underline"
                 color="#4A7E74"
                 strokeWidth={2}
-                animationDelay={150}
-                disabled={!allowRoughAnimations}
+                animationDelay={0}
+                animate="false"
+                //disabled={!allowRoughAnimations}
                 trigger={roughTrigger}
               >
                 {event.date}
               </RoughNotationText>
             </div>
             <span>{event.time}</span>
-            <span className="text-xs sm:text-sm truncate">
+            <span className="flex gap-1 text-xs sm:text-sm">
+              <MapPin className="w-4 h-4" />
               {event.venueName || event.location}
             </span>
           </div>
@@ -215,7 +211,15 @@ const EventCardMobileLayout = ({
               </ReactMarkdown>
               {shouldTruncate && (
                 <button
-                  onClick={() => setShowFullDescription(false)}
+                  onClick={() => {
+                    setShowFullDescription(false);
+                    setTimeout(() => {
+                      cardRef.current?.scrollIntoView({
+                        behavior: 'instant',
+                        block: 'smooth'
+                      });
+                    }, 150);
+                  }}
                   className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
                 >
                   Show less
@@ -247,16 +251,19 @@ const EventCardMobileLayout = ({
         {/* Event meta info */}
         {!isBooked && (
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            <span className="px-2 py-1">
-              {event.spotsLeft > 0 ? `${event.spotsLeft} spots left` : "Fully booked"}
-            </span>
+            {event.spotsLeft === 0 ? (
+              <span className="px-2 py-1">Fully booked</span>
+            ) : event.spotsLeft < 4 ? (
+              <span className="px-2 py-1">{event.spotsLeft} spots left</span>
+            ) : null}
           </div>
         )}
+
 
         {/* Status messages */}
         <div className="h-0 -mb-8 relative">
           {authError && (
-            <div className="fixed top-40 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
+            <div className="fixed top-44 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
               {authError}
             </div>
           )}
@@ -268,19 +275,19 @@ const EventCardMobileLayout = ({
         )} */}
 
         {isFullyBooked && bookingStatus !== 'cancelled' && (
-          <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
+          <div className="absolute mt-12 right-10" style={{ backgroundColor: '#FFFADE' }}>
             <p className="font-medium text-black text-sm">This event is fully booked</p>
           </div>
         )}
 
         {eventStatus === 'past' && (
-          <div className="mb-3 p-3 bg-gray-50 border border-gray-200">
+          <div className="absolute mt-11 right-2 bg-gray-50 border border-gray-200">
             <p className="font-medium text-black text-sm">This event has ended</p>
           </div>
         )}
 
         {isClosedForBooking && bookingStatus !== 'cancelled' && (
-          <div className="mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
+          <div className="absolute mt-5 left-5" style={{ backgroundColor: '#FFFADE' }}>
             <p className="font-medium text-black text-sm">Booking closed</p>
           </div>
         )}

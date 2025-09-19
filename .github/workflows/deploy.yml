@@ -26,7 +26,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          
+          echo "urbanph.it" > dist/CNAME
           # Create important GitHub Pages files
           touch dist/.nojekyll
           

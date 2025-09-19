@@ -517,7 +517,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         {state.showFullDescription && !isModalOpen && ( // don’t show scrim if a modal is open
           <motion.div
             key="eventcard-scrim"
-            className="fixed-full z-40 bg-black/50 backdrop-blur-[2px]"
+            className="fixed-full-document z-40 bg-black/50 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

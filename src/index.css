@@ -52,6 +52,13 @@ body {
   height: var(--stable-viewport-height);
 }
 
+.fixed-full-document {
+  position: fixed;
+  inset: 0;
+  height: 100%;
+  min-height: var(--stable-viewport-height);
+}
+
 
 /* iOS specific: Momentum scrolling and viewport stabilization */
 @supports (-webkit-overflow-scrolling: touch) {

@@ -5,21 +5,15 @@
     <title>Redirecting…</title>
     <script>
       (function () {
-        // Your repo base, e.g. "/urban-ph/"
-        var base = '/urban-ph/';
+        // Per dominio custom (urbanph.it) - redirect direttamente alla root
         var l = window.location;
-
-        // Only rewrite if the request is within your repo base.
-        if (l.pathname.indexOf(base) !== 0) return;
-
-        // Strip the base and keep everything else.
-        var rest = l.pathname.slice(base.length); // e.g. "events"
+        var rest = l.pathname.slice(1); // rimuovi il "/" iniziale
         var search = l.search || '';
         var hash = l.hash || '';
 
-        // Encode original path+query+hash into ?~<encoded>
+        // Codifica il path originale in ?~<encoded>
         var encoded = encodeURIComponent('/' + rest + search + hash);
-        var target = base + '?~' + encoded;
+        var target = '/?~' + encoded;
 
         l.replace(target);
       })();

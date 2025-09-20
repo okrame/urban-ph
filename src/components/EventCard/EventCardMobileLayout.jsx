@@ -161,7 +161,7 @@ const EventCardMobileLayout = ({
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
       >
         <div
-    className="text-sm text-black opacity-80 mb-4 leading-relaxed text-left sm:text-justify"
+    className="text-sm text-black opacity-90 mb-4 leading-relaxed text-left sm:text-justify"
   style={{  textJustify: 'auto', hyphens: 'auto', textWrap: 'pretty' }}
 >
           {shouldTruncate && !showFullDescription ? (
@@ -197,7 +197,7 @@ const EventCardMobileLayout = ({
               </ReactMarkdown>
               <button
                 onClick={() => setShowFullDescription(true)}
-                className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
+                className="ml-2 text-black hover:text-green-700 underline text-sm"
               >
                 Show more
               </button>
@@ -231,7 +231,7 @@ const EventCardMobileLayout = ({
                       });
                     }, 150);
                   }}
-                  className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
+                  className="ml-2 text-black hover:text-green-700 underline text-sm"
                 >
                   Show less
                 </button>

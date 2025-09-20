@@ -171,7 +171,7 @@ const EventCardDesktopLayout = ({
             </div>
           </div>
 
-          <div className="text-[1.05rem] text-black opacity-80 mb-4 leading-relaxed text-justify">
+          <div className="text-[1.05rem] text-black opacity-90 mb-4 leading-relaxed text-justify">
             {shouldTruncate && !showFullDescription ? (
               <>
                 <ReactMarkdown
@@ -205,7 +205,7 @@ const EventCardDesktopLayout = ({
                 </ReactMarkdown>
                 <button
                   onClick={() => setShowFullDescription(true)}
-                  className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
+                  className="ml-2 text-[#000000] hover:text-green-800 underline text-sm"
                 >
                   Show more
                 </button>
@@ -239,7 +239,7 @@ const EventCardDesktopLayout = ({
                         });
                       }, 150);
                     }}
-                    className="ml-2 text-[#9333EA] hover:text-purple-700 underline text-sm"
+                    className="ml-2 text-black hover:text-green-800 underline text-sm"
                   >
                     Show less
                   </button>

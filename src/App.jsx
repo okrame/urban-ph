@@ -23,6 +23,7 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [paymentNotification, setPaymentNotification] = useState(null);
   const [authModalCloseCounter, setAuthModalCloseCounter] = useState(0);
+  const [verticalLinePosition, setVerticalLinePosition] = useState(30);
 
 
   const getVerticalLinePosition = () => {
@@ -269,7 +270,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center" style={{minHeight: 'var(--stable-viewport-height)', backgroundColor: '#A1B4A4'}}>
+      <div className="flex items-center justify-center" style={{ minHeight: 'var(--stable-viewport-height)', backgroundColor: '#A1B4A4' }}>
         <div className="text-center">
           <svg
             className="animate-spin h-10 w-10 mx-auto mb-4"
@@ -301,7 +302,7 @@ function App() {
   return (
     // WRAP EVERYTHING WITH THE PROVIDER:
     <EventCardPositionProvider>
-      <div className="bg-white" style={{minHeight: 'var(--stable-viewport-height)'}}>
+      <div className="bg-white" style={{ minHeight: 'var(--stable-viewport-height)' }}>
         {/* Hero section with integrated navigation */}
         <Hero
           user={user}
@@ -316,7 +317,7 @@ function App() {
           isOpen={showAuthModal}
           onClose={() => {
             setShowAuthModal(false);
-            setSelectedEvent(null);  
+            setSelectedEvent(null);
             setAuthModalCloseCounter(prev => prev + 1);
           }}
           event={selectedEvent}
@@ -369,10 +370,11 @@ function App() {
           setSelectedEvent={setSelectedEvent}
           setShowAuthModal={setShowAuthModal}
           authModalCloseCounter={authModalCloseCounter}
+          onVerticalLinePositionChange={setVerticalLinePosition}
         />
 
         {/* about us with animated squares */}
-        <AboutUs verticalLinePosition={getVerticalLinePosition()} />
+        <AboutUs verticalLinePosition={verticalLinePosition} />
 
         <ContactForm />
 
@@ -384,8 +386,27 @@ function App() {
   );
 }
 
-function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter }) {
+function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter, onVerticalLinePositionChange }) {
   const { eventCardPosition, isPositionReady } = useEventCardPosition();
+
+  const [showAllEvents, setShowAllEvents] = useState(false);
+
+
+  const calculateVerticalLinePosition = () => {
+    if (events.length === 0) return 30;
+
+    const displayedEvents = showAllEvents ? events : events.slice(0, 3);
+    const lastEventIndex = displayedEvents.length - 1;
+    const isLastEventImageLeft = lastEventIndex % 2 === 0;
+
+    return isLastEventImageLeft ? 30 : 70;
+  };
+
+  useEffect(() => {
+    const newPosition = calculateVerticalLinePosition();
+    onVerticalLinePositionChange?.(newPosition);
+  }, [events, showAllEvents, onVerticalLinePositionChange]);
+
 
   // Custom breakpoint detection - hide extensions earlier than mobile
   const [shouldShowExtensions, setShouldShowExtensions] = useState(false);
@@ -409,7 +430,8 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authM
         <div className="max-w-6xl mx-auto px-4">
           {events.length > 0 ? (
             <div className="space-y-0 relative">
-              {events.slice(0, 3).map((event, index, array) => (
+              {/* CAMBIA QUESTA LINEA: */}
+              {(showAllEvents ? events : events.slice(0, 3)).map((event, index, array) => (
                 <div key={event.id} className="relative">
                   <EventCard
                     event={event}
@@ -491,16 +513,59 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authM
               ))}
 
               {events.length > 3 && (
-                <div className="text-center mt-8 pt-8">
-                  <Link
-                    to="/events"
-                    className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                <div
+                  className={`mt-8 pt-8 flex 
+      ${
+                    // calcola il lato: sx se ultimo evento pari, dx se dispari
+                    ((showAllEvents ? events : events.slice(0, 3)).length - 1) % 2 === 0
+                      ? 'justify-start' // ultimo evento pari → sx
+                      : 'justify-end'   // ultimo evento dispari → dx
+                    }`}
+                >
+                  <button
+                    onClick={() => setShowAllEvents(!showAllEvents)}
+                    className="inline-flex items-center text-black hover:text-green-800 font-medium transition-colors rounded-md px-2 py-1"
                   >
-                    View all {events.length} events
-                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                    </svg>
-                  </Link>
+                    {showAllEvents ? (
+                      <>
+                        Show fewer events
+                        <svg
+                          className="ml-2 w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M5 15l7-7 7 7"
+                          />
+                        </svg>
+
+                      </>
+                    ) : (
+                      <>
+                        View all {events.length} events
+                        <svg
+                          className="ml-2 w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>

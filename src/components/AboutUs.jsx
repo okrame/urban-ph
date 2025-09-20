@@ -315,7 +315,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
           {isMobile ? (
             // Mobile: Centered title
             <h1 className="text-2xl sm:text-3xl font-bold text-black text-center">
-              about Us
+              About us
             </h1>
           ) : (
             // Desktop: Split title across vertical line
@@ -328,7 +328,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
                   transform: 'translateX(-100%) translateX(-10px) translateY(-20px)',
                 }}
               >
-                about
+                About
               </span>
 
               <span
@@ -339,7 +339,7 @@ export default function AboutUs({ verticalLinePosition = 30 }) {
                   transform: 'translateX(10px) translateY(-20px)',
                 }}
               >
-                Us
+                us
               </span>
             </>
           )}

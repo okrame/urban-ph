@@ -19,6 +19,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     description: '',
     spots: 10,
     image: '',
+    secondaryImage: '',
     status: 'active',
     // Updated payment fields for member pricing
     isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
@@ -63,6 +64,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
   // Image state for Storage
   const [imageUrl, setImageUrl] = useState(initialValues.image || '');
+  const [secondaryImageUrl, setSecondaryImageUrl] = useState(initialValues.secondaryImage || '');
 
   // Location search function
   const searchLocations = async (query) => {
@@ -248,6 +250,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       description: '',
       spots: 10,
       image: '',
+      secondaryImage: '',
       status: 'active',
       // Initialize payment fields with member pricing
       isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
@@ -532,6 +535,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     setIsImageChanged(true);
   };
 
+  const handleSecondaryImageUploaded = (url) => {
+    setSecondaryImageUrl(url);
+  };
+
   const validateDateFormat = (dateStr) => {
     // Format: Month DD, YYYY
     const dateRegex = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i;
@@ -623,7 +630,8 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         nonMemberPrice: formData.isPaid ? (typeof formData.nonMemberPrice === 'string' ? parseFloat(formData.nonMemberPrice) : formData.nonMemberPrice) : null,
         paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
         // Use uploaded image URL
-        image: imageUrl
+        image: imageUrl,
+        secondaryImage: secondaryImageUrl
       };
 
       // Remove isPaid as it's not needed in the database
@@ -770,6 +778,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
               <option value="hunt">Photo Hunt</option>
               <option value="workshop">Workshop</option>
               <option value="exhibition">Exhibition</option>
+              <option value="walk">Walk</option>
             </select>
           </div>
 
@@ -1229,6 +1238,20 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
           />
           <p className="text-xs text-gray-500 mt-1">
             Upload an image for the event card (PNG, JPG, GIF up to 5MB)
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Secondary Image (Below Map)
+          </label>
+          <ImageUploader
+            initialImage={secondaryImageUrl}
+            onImageUploaded={handleSecondaryImageUploaded}
+            eventId={initialValues.id ? `${initialValues.id}_secondary` : `temp-secondary-${Date.now()}`}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Upload secondary image to display below the map (PNG, JPG, GIF up to 5MB)
           </p>
         </div>
 

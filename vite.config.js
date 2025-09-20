@@ -20,10 +20,10 @@ export default defineConfig(({ command }) => {
     }
   };
   
-  // Add base path for production builds only (GitHub Pages deployment)
-  if (command === 'build') {
-    config.base = '/urban-ph/';
-  }
+  // // Add base path for production builds only (GitHub Pages deployment)
+  // if (command === 'build') {
+  //   config.base = '/urban-ph/';
+  // }
   
   return config;
 });

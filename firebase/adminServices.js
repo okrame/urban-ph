@@ -1,14 +1,14 @@
-import { 
-  collection, 
-  doc, 
+import {
+  collection,
+  doc,
   addDoc,
-  getDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where,  
-  serverTimestamp 
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from './config';
 
@@ -19,11 +19,11 @@ export const isUserAdmin = async (userId) => {
   try {
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
-    
+
     if (!userDoc.exists()) {
       return false;
     }
-    
+
     const userData = userDoc.data();
     return userData.role === 'admin';
   } catch (error) {
@@ -37,16 +37,16 @@ export const promoteUserToAdmin = async (userId) => {
   try {
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
-    
+
     if (!userDoc.exists()) {
       throw new Error('User not found');
     }
-    
+
     await updateDoc(userRef, {
       role: 'admin',
       updatedAt: serverTimestamp()
     });
-    
+
     return true;
   } catch (error) {
     console.error('Error promoting user to admin:', error);
@@ -66,7 +66,7 @@ export const createNewEvent = async (eventData) => {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
-    
+
     // Validazione dei campi obbligatori (eccetto image/imageBase64 che gestiamo separatamente)
     const standardRequiredFields = ['title', 'type', 'date', 'time', 'location', 'description', 'spots'];
     for (const field of standardRequiredFields) {
@@ -74,17 +74,17 @@ export const createNewEvent = async (eventData) => {
         throw new Error(`Missing required field: ${field}`);
       }
     }
-    
+
     if (!newEvent.image) {
       throw new Error('Missing required image: Please upload an image');
     }
-    
+
     // Validazione del tipo
-    const validTypes = ['hunt', 'workshop', 'exhibition'];
+    const validTypes = ['hunt', 'workshop', 'exhibition', 'walk'];
     if (!validTypes.includes(newEvent.type)) {
       throw new Error(`Invalid event type: ${newEvent.type}. Must be one of: ${validTypes.join(', ')}`);
     }
-    
+
     const docRef = await addDoc(collection(db, 'events'), newEvent);
     return docRef.id;
   } catch (error) {
@@ -97,19 +97,19 @@ export const updateEvent = async (eventId, eventData) => {
   try {
     const eventRef = doc(db, 'events', eventId);
     const eventDoc = await getDoc(eventRef);
-    
+
     if (!eventDoc.exists()) {
       throw new Error('Event not found');
     }
-    
+
     const existingData = eventDoc.data();
-    
+
     // Prepare update data
     const updateData = {
       ...eventData,
       updatedAt: serverTimestamp()
     };
-    
+
     // Validazione dei campi obbligatori
     const requiredFields = ['title', 'type', 'date', 'time', 'location', 'description', 'spots'];
     for (const field of requiredFields) {
@@ -117,23 +117,23 @@ export const updateEvent = async (eventId, eventData) => {
         throw new Error(`Missing required field: ${field}`);
       }
     }
-    
+
     // Validazione del tipo
-    const validTypes = ['hunt', 'workshop', 'exhibition'];
+    const validTypes = ['hunt', 'workshop', 'exhibition', 'walk'];
     if (!validTypes.includes(updateData.type)) {
       throw new Error(`Invalid event type: ${updateData.type}. Must be one of: ${validTypes.join(', ')}`);
     }
-    
+
     // Preserve existing fields that shouldn't be overridden
     updateData.attendees = existingData.attendees || [];
     updateData.createdAt = existingData.createdAt;
-    
+
     // If spotsLeft is provided, use it; otherwise calculate it
     if (updateData.spotsLeft === undefined) {
       const currentBookings = (existingData.attendees || []).length;
       updateData.spotsLeft = Math.max(0, updateData.spots - currentBookings);
     }
-    
+
     await updateDoc(eventRef, updateData);
     return true;
   } catch (error) {
@@ -148,33 +148,33 @@ export const deleteEvent = async (eventId) => {
     // Verifica se l'evento esiste
     const eventRef = doc(db, 'events', eventId);
     const eventDoc = await getDoc(eventRef);
-    
+
     if (!eventDoc.exists()) {
       throw new Error('Event not found');
     }
-    
+
     // Verifica se ci sono prenotazioni
     const bookingsQuery = query(
       collection(db, 'bookings'),
       where('eventId', '==', eventId)
     );
-    
+
     const bookingsSnapshot = await getDocs(bookingsQuery);
-    
+
     if (!bookingsSnapshot.empty) {
       // Se ci sono prenotazioni, elimina anche quelle
       const deleteBookingPromises = [];
-      
+
       bookingsSnapshot.forEach(doc => {
         deleteBookingPromises.push(deleteDoc(doc.ref));
       });
-      
+
       await Promise.all(deleteBookingPromises);
     }
-    
+
     // Elimina l'evento
     await deleteDoc(eventRef);
-    
+
     return true;
   } catch (error) {
     console.error('Error deleting event:', error);
@@ -189,41 +189,48 @@ export const getDetailedEventsStats = async () => {
   try {
     // Query per eventi per tipo
     const huntQuery = query(
-      collection(db, 'events'), 
+      collection(db, 'events'),
       where('type', '==', 'hunt')
     );
-    
+
     const workshopQuery = query(
-      collection(db, 'events'), 
+      collection(db, 'events'),
       where('type', '==', 'workshop')
     );
-    
+
     const exhibitionQuery = query(
-      collection(db, 'events'), 
+      collection(db, 'events'),
       where('type', '==', 'exhibition')
     );
-    
+
+    const walksQuery = query(
+      collection(db, 'events'),
+      where('type', '==', 'walk')
+    );
+
+
     // Query per eventi per stato
     const activeQuery = query(
-      collection(db, 'events'), 
+      collection(db, 'events'),
       where('status', '==', 'active')
     );
-    
+
     const pastQuery = query(
-      collection(db, 'events'), 
+      collection(db, 'events'),
       where('status', '==', 'past')
     );
-    
+
     const upcomingQuery = query(
-      collection(db, 'events'), 
+      collection(db, 'events'),
       where('status', '==', 'upcoming')
     );
-    
+
     // Esegui tutte le query in parallelo
     const [
-      huntEvents, 
-      workshopEvents, 
+      huntEvents,
+      workshopEvents,
       exhibitionEvents,
+      walkEvents,
       activeEvents,
       pastEvents,
       upcomingEvents
@@ -231,27 +238,29 @@ export const getDetailedEventsStats = async () => {
       getDocs(huntQuery),
       getDocs(workshopQuery),
       getDocs(exhibitionQuery),
+      getDocs(walksQuery),
       getDocs(activeQuery),
       getDocs(pastQuery),
       getDocs(upcomingQuery)
     ]);
-    
+
     // Query per prenotazioni totali
     const bookingsSnapshot = await getDocs(collection(db, 'bookings'));
-    
+
     // Ritorna le statistiche
     return {
       eventsByType: {
         hunt: huntEvents.size,
         workshop: workshopEvents.size,
-        exhibition: exhibitionEvents.size
+        exhibition: exhibitionEvents.size,
+        walk: walkEvents.size,
       },
       eventsByStatus: {
         active: activeEvents.size,
         past: pastEvents.size,
         upcoming: upcomingEvents.size
       },
-      totalEvents: huntEvents.size + workshopEvents.size + exhibitionEvents.size,
+      totalEvents: huntEvents.size + workshopEvents.size + exhibitionEvents.size + walkEvents.size,
       totalBookings: bookingsSnapshot.size
     };
   } catch (error) {
@@ -266,7 +275,7 @@ export const exportCompleteData = async () => {
     // Ottieni tutti gli eventi
     const eventsSnapshot = await getDocs(collection(db, 'events'));
     const events = [];
-    
+
     eventsSnapshot.forEach(doc => {
       const eventData = doc.data();
       // Remove large base64 image data from export to keep it manageable
@@ -276,29 +285,29 @@ export const exportCompleteData = async () => {
         ...eventWithoutBase64
       });
     });
-    
+
     // Ottieni tutte le prenotazioni
     const bookingsSnapshot = await getDocs(collection(db, 'bookings'));
     const bookings = [];
-    
+
     bookingsSnapshot.forEach(doc => {
       bookings.push({
         id: doc.id,
         ...doc.data()
       });
     });
-    
+
     // Ottieni tutti gli utenti
     const usersSnapshot = await getDocs(collection(db, 'users'));
     const users = [];
-    
+
     usersSnapshot.forEach(doc => {
       users.push({
         id: doc.id,
         ...doc.data()
       });
     });
-    
+
     // Costruisci un report completo
     const report = {
       generatedAt: new Date().toISOString(),
@@ -326,7 +335,7 @@ export const exportCompleteData = async () => {
       })),
       bookings
     };
-    
+
     return report;
   } catch (error) {
     console.error('Error exporting complete data:', error);

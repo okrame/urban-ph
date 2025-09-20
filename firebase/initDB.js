@@ -104,9 +104,27 @@ export const initializeDatabase = async () => {
         updatedAt: serverTimestamp()
       }
     ];
+
+    // Events of type "walk"
+    const walkEvents = [
+      {
+        title: "Urban walk: Community Photo walk",
+        type: "walk",
+        date: "June 11, 2025",
+        time: "7:00 PM - 10:00 PM",
+        location: "Modern walk",
+        description: "A curated walk featuring the best works from our community photography hunts. Join us for the opening night with drinks, music, and inspiring conversations with fellow photographers.",
+        spots: 50,
+        spotsLeft: 50,
+        image: "https://images.unsplash.com/photo-1553547272-0cb9c602b4b1?q=80&w=600&auto=format",
+        status: "upcoming",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+    ];
     
     // Combine all events
-    const allEvents = [...huntEvents, ...workshopEvents, ...exhibitionEvents];
+    const allEvents = [...huntEvents, ...workshopEvents, ...exhibitionEvents, ...walkEvents];
     
     // Add events to the database
     const promises = allEvents.map(event => addDoc(collection(db, 'events'), event));

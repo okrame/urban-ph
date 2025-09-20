@@ -1,6 +1,6 @@
 // utils/eventCardUtils.js
 
-export const DESCRIPTION_LIMIT = 400;
+export const DESCRIPTION_LIMIT = 320;
 
 // BORDER CLASSES FUNCTIONS
 export const getBorderClasses = (index) => {

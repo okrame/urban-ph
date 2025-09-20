@@ -38,27 +38,27 @@ function Info() {
   const [squareSize, setSquareSize] = useState(400);
 
   useEffect(() => {
-  // Calcola una volta sola all'inizio
-  const vw = window.innerWidth;
-  const vh = window.innerHeight; // Prendi il valore iniziale con barra visibile
-  const size = vw < 768 ? Math.max(vw, vh) * 2.1 : Math.max(vw, vh) * 2;
-  setSquareSize(size);
-  
-  // Aggiorna SOLO se cambia la larghezza (orientamento)
-  const handleOrientationChange = () => {
-    const newVw = window.innerWidth;
-    // Usa sempre la stessa altezza iniziale
-    const size = newVw < 768 ? Math.max(newVw, vh) * 2.1 : Math.max(newVw, vh) * 2;
+    // Calcola una volta sola all'inizio
+    const vw = window.innerWidth;
+    const vh = window.innerHeight; // Prendi il valore iniziale con barra visibile
+    const size = vw < 768 ? Math.max(vw, vh) * 2.1 : Math.max(vw, vh) * 2;
     setSquareSize(size);
-  };
-  
-  window.addEventListener('orientationchange', handleOrientationChange);
-  return () => window.removeEventListener('orientationchange', handleOrientationChange);
-}, []);
+
+    // Aggiorna SOLO se cambia la larghezza (orientamento)
+    const handleOrientationChange = () => {
+      const newVw = window.innerWidth;
+      // Usa sempre la stessa altezza iniziale
+      const size = newVw < 768 ? Math.max(newVw, vh) * 2.1 : Math.max(newVw, vh) * 2;
+      setSquareSize(size);
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    return () => window.removeEventListener('orientationchange', handleOrientationChange);
+  }, []);
 
   const getSquare2Target = () => {
     if (!eventCardPosition || !eventCardPosition.width) return -200;
-    const dynamicBorderOffset = isMobile ? 7.5 : borderOffset+7.5;
+    const dynamicBorderOffset = isMobile ? 7.5 : borderOffset + 7.5;
     return eventCardPosition.left + dynamicBorderOffset + (squareSize / 2);
   };
 
@@ -116,8 +116,8 @@ function Info() {
   );
 
   const italianTextOpacity = useTransform(
-    isMobile ? scrollYProgress : progressPhase2, 
-    isMobile ? [0.6, 0.64] : [0, 0.4], 
+    isMobile ? scrollYProgress : progressPhase2,
+    isMobile ? [0.6, 0.64] : [0, 0.4],
     [0, 1]
   );
 
@@ -131,11 +131,15 @@ function Info() {
       title: "Workshops",
       text: "<span class='text-2xl font-bold inline'>The workshops</span> we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>, <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, and more. We are always open to new collaborations."
     },
-    
+
     exhibitions: {
       title: "Exhibitions",
       text: "We regularly organize exhibitions to <strong>showcase the artwork of our community</strong>, be it photos, collages or other. We also host a <strong>biennial open-call event</strong>, called Boring Exhibition, which revisits and re-imagines holiday photos."
-    }
+    },
+    walks: {
+    title: "Walks",
+    text: "<span class='text-2xl font-bold inline'>The walks</span> we organize are <strong>guided explorations</strong> of the city focusing on storytelling, local history, and discovering hidden gems. These leisurely walking tours combine culture, conversation, and community building in a relaxed, social atmosphere."
+  }
   };
 
   const currentContent = content[activityKind];
@@ -230,9 +234,14 @@ function Info() {
       </motion.div>
 
       <motion.button
-        onClick={() => setActivityKind(activityKind === 'hunts' ? 'workshops' : activityKind === 'workshops' ? 'exhibitions' : 'hunts')}
-        className="absolute p-2 hover:bg-gray-200/50 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
-        aria-label={`Switch to ${activityKind === 'hunts' ? 'workshops' : 'hunts'}`}
+        onClick={() => setActivityKind(
+          activityKind === 'hunts' ? 'workshops' :
+            activityKind === 'workshops' ? 'exhibitions' :
+              activityKind === 'exhibitions' ? 'walks' :  // <-- Nuovo
+                'hunts'
+        )}
+ className="absolute p-2 bg-gray-200/50 rounded-full transition-all duration-200 
+            focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"        aria-label={`Switch to ${activityKind === 'hunts' ? 'workshops' : 'hunts'}`}
         aria-expanded={activityKind === 'workshops'}
         style={{
           left: '50%',
@@ -244,12 +253,12 @@ function Info() {
         }}
       >
         <svg
-          width={isMobile ? "18" : "20"}
-          height={isMobile ? "18" : "20"}
+          width={isMobile ? "18" : "24"}
+          height={isMobile ? "18" : "24"}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.5"
+          strokeWidth="3.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="text-gray-700"
@@ -280,9 +289,9 @@ function Info() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -15 }}
-          transition={{ 
-            duration: 0.4, 
-            ease: "easeInOut", 
+          transition={{
+            duration: 0.4,
+            ease: "easeInOut",
             delay: isMobile ? 0.3 : 0.1
           }}
           dangerouslySetInnerHTML={{ __html: currentContent.text }}

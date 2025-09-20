@@ -14,6 +14,7 @@ import {
 } from '../../utils/eventCardUtils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { X, MapPin } from "lucide-react";
 
 
@@ -130,7 +131,7 @@ const EventCardMobileLayout = ({
 
         {/* Info Half */}
         <div className="w-1/2 h-full p-3 sm:p-4 flex flex-col justify-center bg-white">
-          <h3 className="text-lg sm:text-xl font-light text-black mb-2 line-clamp-3">{event.title}</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-black mb-2 line-clamp-3">{event.title}</h3>
           <div className="flex flex-col text-xs sm:text-sm text-black opacity-70 gap-1">
             <div className="flex items-center gap-1 font-bold" ref={dateRef}>
               <RoughNotationText
@@ -159,13 +160,20 @@ const EventCardMobileLayout = ({
       <motion.div
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
       >
-        <div className="text-sm text-black opacity-80 mb-4 leading-relaxed">
+        <div
+    className="text-sm text-black opacity-80 mb-4 leading-relaxed text-left sm:text-justify"
+  style={{  textJustify: 'auto', hyphens: 'auto', textWrap: 'pretty' }}
+>
           {shouldTruncate && !showFullDescription ? (
             <>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
                 components={{
-                  p: ({ children }) => <span>{children}</span>,
+                  h1: ({ children }) => <h1 className="text-base font-bold mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-sm font-semibold mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+                  p: ({ children }) => <p className="mb-2">{children}</p>,
                   a: ({ children, href }) => {
                     // Auto-fix URLs without protocol
                     let finalHref = href;
@@ -198,6 +206,7 @@ const EventCardMobileLayout = ({
             <>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
                 components={{
                   // Override default styles to match your design
                   h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
@@ -205,6 +214,8 @@ const EventCardMobileLayout = ({
                   h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
                   p: ({ children }) => <p className="mb-2">{children}</p>,
                   a: ({ children, href }) => <a href={href} className="text-[#9333EA] hover:text-purple-700 underline focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-sm" target="_blank" rel="noopener noreferrer">{children}</a>,
+                  ul: ({ children }) => <ul className="list-disc pl-6">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
                 }}
               >
                 {event.description}

@@ -12,6 +12,7 @@ import {
   getActiveFrameThickness
 } from '../../utils/eventCardUtils';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { MapPin } from 'lucide-react';
 
@@ -111,6 +112,28 @@ const EventCardDesktopLayout = ({
             </div>
           </motion.div>
         )}
+
+        {showFullDescription && event.secondaryImage && (
+          <motion.div
+            className=""
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut", delay: 0.1 }}
+          >
+            <div className="w-full overflow-hidden">
+              <img
+                src={event.secondaryImage}
+                alt={`${event.title} - Additional view`}
+                className="w-full h-auto object-cover mt-20 p-4"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+
       </motion.div>
 
       {/* Content section */}
@@ -124,7 +147,7 @@ const EventCardDesktopLayout = ({
         viewport={shouldAnimate ? { once: true, amount: 0.25 } : undefined}
       >
         <div ref={contentRef} className="flex-1 -mb-6">
-          <h3 className="text-2xl font-light text-black mb-4">{event.title}</h3>
+          <h3 className="text-2xl font-bold text-black mb-4">{event.title}</h3>
 
           <div className="flex items-center font-mono text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
             <RoughNotationText
@@ -148,12 +171,16 @@ const EventCardDesktopLayout = ({
             </div>
           </div>
 
-          <div className="text-[1.05rem] text-black opacity-80 mb-4 leading-relaxed">
+          <div className="text-[1.05rem] text-black opacity-80 mb-4 leading-relaxed text-justify">
             {shouldTruncate && !showFullDescription ? (
               <>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
                   components={{
+                    h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-semibold mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
                     p: ({ children }) => <span>{children}</span>,
                     a: ({ children, href }) => {
                       // Auto-fix URLs without protocol
@@ -187,6 +214,7 @@ const EventCardDesktopLayout = ({
               <>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
                   components={{
                     // Override default styles to match your design
                     h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
@@ -194,6 +222,8 @@ const EventCardDesktopLayout = ({
                     h3: ({ children }) => <h3 className="text-base font-semibold mb-1">{children}</h3>,
                     p: ({ children }) => <p className="mb-2">{children}</p>,
                     a: ({ children, href }) => <a href={href} className="text-[#9333EA] hover:text-purple-700 underline focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-sm" target="_blank" rel="noopener noreferrer">{children}</a>,
+                    ul: ({ children }) => <ul className="list-disc pl-6">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
                   }}
                 >
                   {event.description}

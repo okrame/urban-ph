@@ -670,6 +670,62 @@ export const getUserContactInfo = async (userId) => {
   }
 };
 
+
+export const getEventById = async (eventId) => {
+  try {
+    const eventDoc = await getDoc(doc(db, 'events', eventId));
+    if (eventDoc.exists()) {
+      return { id: eventDoc.id, ...eventDoc.data() };
+    } else {
+      console.log("No event found with ID:", eventId);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error getting event:", error);
+    return null;
+  }
+};
+
+export const getPastEvents = async () => {
+  try {
+    const eventsQuery = query(
+      collection(db, 'events'),
+      where('status', 'in', ['active', 'upcoming', 'past'])
+    );
+    
+    const snapshot = await getDocs(eventsQuery);
+    const events = [];
+    
+    snapshot.forEach(doc => {
+      const eventData = doc.data();
+      
+      // Calculate the actual status based on date/time
+      const actualStatus = determineEventStatus(eventData.date, eventData.time);
+      
+      // Only include events that are actually past based on date
+      if (actualStatus === 'past') {
+        events.push({
+          id: doc.id,
+          ...eventData,
+          actualStatus
+        });
+      }
+    });
+    
+    // Sort events by date (most recent first)
+    events.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB - dateA;
+    });
+    
+    return events;
+  } catch (error) {
+    console.error("Error fetching past events:", error);
+    return [];
+  }
+};
+
 // Get all attendees for an event
 export const getEventAttendees = async (eventId) => {
   try {

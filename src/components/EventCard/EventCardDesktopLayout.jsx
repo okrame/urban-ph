@@ -148,29 +148,30 @@ const EventCardDesktopLayout = ({
       >
         <div ref={contentRef} className="flex-1 -mb-6">
           <h3 className="text-2xl font-bold text-black mb-4">{event.title}</h3>
+          {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
 
-          <div className="flex items-center font-mono text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
-            <RoughNotationText
-              type="underline" f
-              color="#4A7E74"
-              strokeWidth={2}
-              animationDelay={roughAnimationsReady ? 200 : 0}
-              animate="false"
-              //disabled={!allowRoughAnimations || !roughAnimationsReady}
-              trigger={annotationTrigger}
-            >
-              {event.date}
-            </RoughNotationText>
-            <span className="mx-2">·</span>
-            <span>{event.time}</span>
-            <div className="w-full mt-1">
-              <span className="flex items-center gap-1 text-sm text-gray-800">
-                <MapPin className="w-4 h-4" />
-                {event.venueName || event.location}
-              </span>
+            <div className="flex items-center font-mono text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
+              <RoughNotationText
+                type="underline"
+                color="#4A7E74"
+                strokeWidth={2}
+                animationDelay={roughAnimationsReady ? 200 : 0}
+                animate="false"
+                //disabled={!allowRoughAnimations || !roughAnimationsReady}
+                trigger={annotationTrigger}
+              >
+                {event.date}
+              </RoughNotationText>
+              <span className="mx-2">·</span>
+              <span>{event.time}</span>
+              <div className="w-full mt-1">
+                <span className="flex items-center gap-1 text-sm text-gray-800">
+                  <MapPin className="w-4 h-4" />
+                  {event.venueName || event.location}
+                </span>
+              </div>
             </div>
-          </div>
-
+          )}
           <div className="text-[1.05rem] text-black opacity-90 mb-4 leading-relaxed text-justify">
             {shouldTruncate && !showFullDescription ? (
               <>
@@ -251,44 +252,44 @@ const EventCardDesktopLayout = ({
           {/* Event meta info */}
           {!isBooked && (
             <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
-              {event.spotsLeft === 0 ? (
-                <span className="px-2 py-1">Fully booked</span>
-              ) : event.spotsLeft < 4 ? (
-                <span className="px-2 py-1">{event.spotsLeft} spots left !</span>
-              ) : null}
+              {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+                event.spotsLeft === 0 ? (
+                  <span className="px-2 py-1">Fully booked</span>
+                ) : event.spotsLeft < 4 ? (
+                  <span className="px-2 py-1">{event.spotsLeft} spots left !</span>
+                ) : null
+              )}
             </div>
           )}
+          {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+            <>
+              {/* Status messages */}
+              {authError && (
+                <div className="absolute p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
+                  {authError}
+                </div>
+              )}
 
-
-          {/* Status messages */}
-          {authError && (
-            <div className="absolute p-2 h-9 -mb-8 bg-red-50 border border-red-200 text-red-700 text-sm">
-              {authError}
-            </div>
-          )}
-
-          {/* {bookingStatus === 'cancelled' && (
+              {/* {bookingStatus === 'cancelled' && (
             <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
               <p className="font-medium">Booking Cancelled</p>
             </div>
           )} */}
 
-          {isFullyBooked && bookingStatus !== 'cancelled' && (
-            <div className="absolute mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
-              <p className="font-medium text-black text-sm">This event is fully booked</p>
-            </div>
-          )}
+              {isFullyBooked && bookingStatus !== 'cancelled' && (
+                <div className="absolute mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
+                  <p className="font-medium text-black text-sm">This event is fully booked</p>
+                </div>
+              )}
 
-          {eventStatus === 'past' && (
-            <div className="absolute mb-3 p-3 bg-gray-50 border border-gray-200">
-              <p className="font-medium text-black text-sm">This event has ended</p>
-            </div>
-          )}
 
-          {isClosedForBooking && bookingStatus !== 'cancelled' && (
-            <div className="absolute p-3" style={{ backgroundColor: '#FFFADE' }}>
-              <p className="font-medium text-black text-sm">Booking closed</p>
-            </div>
+              {isClosedForBooking && bookingStatus !== 'cancelled' && (
+                <div className="absolute p-3" style={{ backgroundColor: '#FFFADE' }}>
+                  <p className="font-medium text-black text-sm">Booking closed</p>
+                </div>
+              )}
+
+            </>
           )}
 
         </div>
@@ -297,12 +298,12 @@ const EventCardDesktopLayout = ({
         <div className="w-full mt-2">
           <button
             onClick={handleBookEvent}
-            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled')}
+            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')}
             className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
               ? 'bg-transparent text-black'
               : loading
                 ? 'bg-transparent text-black cursor-wait'
-                : (!isBookable && bookingStatus !== 'cancelled')
+                : (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                   : 'bg-transparent text-black hover:text-green-800 transition-colors'
               }`}
@@ -311,21 +312,23 @@ const EventCardDesktopLayout = ({
               border: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'none' : undefined
             }}
           >
-            {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
-              getButtonContent()
-            ) : isInteractiveButton ? (
-              <RoughNotationText
-                type="box"
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={roughAnimationsReady ? 100 : 0}
-                disabled={!allowRoughAnimations || !roughAnimationsReady}
-                trigger={annotationTrigger}
-              >
-                {getButtonText()}
-              </RoughNotationText>
-            ) : (
-              getButtonText()
+            {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+              ((isBooked && bookingStatus !== 'cancelled') || loading) ? (
+                getButtonContent()
+              ) : isInteractiveButton ? (
+                <RoughNotationText
+                  type="box"
+                  color="#4A7E74"
+                  strokeWidth={2}
+                  animationDelay={roughAnimationsReady ? 100 : 0}
+                  disabled={!allowRoughAnimations || !roughAnimationsReady}
+                  trigger={annotationTrigger}
+                >
+                  {getButtonText()}
+                </RoughNotationText>
+              ) : (
+                getButtonText()
+              )
             )}
           </button>
         </div>

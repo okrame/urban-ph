@@ -132,27 +132,29 @@ const EventCardMobileLayout = ({
         {/* Info Half */}
         <div className="w-1/2 h-full p-3 sm:p-4 flex flex-col justify-center bg-white">
           <h3 className="text-lg sm:text-xl font-bold text-black mb-2 line-clamp-3">{event.title}</h3>
-          <div className="flex flex-col text-xs sm:text-sm text-black opacity-70 gap-1">
-            <div className="flex items-center gap-1 font-bold" ref={dateRef}>
-              <RoughNotationText
-                key={`rn-${Number(roughTrigger)}-${showFullDescription ? 'open' : 'closed'}`}
-                type="underline"
-                color="#4A7E74"
-                strokeWidth={2}
-                animationDelay={0}
-                animate="false"
-                //disabled={!allowRoughAnimations}
-                trigger={roughTrigger}
-              >
-                {event.date}
-              </RoughNotationText>
+          {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+            <div className="flex flex-col text-xs sm:text-sm text-black opacity-70 gap-1">
+              <div className="flex items-center gap-1 font-bold" ref={dateRef}>
+                <RoughNotationText
+                  key={`rn-${Number(roughTrigger)}-${showFullDescription ? 'open' : 'closed'}`}
+                  type="underline"
+                  color="#4A7E74"
+                  strokeWidth={2}
+                  animationDelay={0}
+                  animate="false"
+                  //disabled={!allowRoughAnimations}
+                  trigger={roughTrigger}
+                >
+                  {event.date}
+                </RoughNotationText>
+              </div>
+              <span>{event.time}</span>
+              <span className="flex gap-1 text-xs sm:text-sm">
+                <MapPin className="w-4 h-4" />
+                {event.venueName || event.location}
+              </span>
             </div>
-            <span>{event.time}</span>
-            <span className="flex gap-1 text-xs sm:text-sm">
-              <MapPin className="w-4 h-4" />
-              {event.venueName || event.location}
-            </span>
-          </div>
+          )}
         </div>
       </motion.div>
 
@@ -161,9 +163,9 @@ const EventCardMobileLayout = ({
         className={`py-6 px-4 sm:px-6 md:px-8 ${getContentBorderClassesMobile(index)}`}
       >
         <div
-    className="text-sm text-black opacity-90 mb-4 leading-relaxed text-left sm:text-justify"
-  style={{  textJustify: 'auto', hyphens: 'auto', textWrap: 'pretty' }}
->
+          className="text-sm text-black opacity-90 mb-4 leading-relaxed text-left sm:text-justify"
+          style={{ textJustify: 'auto', hyphens: 'auto', textWrap: 'pretty' }}
+        >
           {shouldTruncate && !showFullDescription ? (
             <>
               <ReactMarkdown
@@ -262,45 +264,45 @@ const EventCardMobileLayout = ({
         {/* Event meta info */}
         {!isBooked && (
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
-            {event.spotsLeft === 0 ? (
-              <span className="px-2 py-1">Fully booked</span>
-            ) : event.spotsLeft < 4 ? (
-              <span className="px-2 py-1">{event.spotsLeft} spots left</span>
-            ) : null}
+            {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+              event.spotsLeft === 0 ? (
+                <span className="px-2 py-1">Fully booked</span>
+              ) : event.spotsLeft < 4 ? (
+                <span className="px-2 py-1">{event.spotsLeft} spots left</span>
+              ) : null
+            )}
           </div>
         )}
 
-
-        {/* Status messages */}
-        <div className="h-0 -mb-8 relative">
-          {authError && (
-            <div className="fixed top-44 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
-              {authError}
+        {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+          <>
+            {/* Status messages */}
+            <div className="h-0 -mb-8 relative">
+              {authError && (
+                <div className="fixed top-44 left-4 right-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm z-50 rounded shadow-lg">
+                  {authError}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        {/* {bookingStatus === 'cancelled' && (
+            {/* {bookingStatus === 'cancelled' && (
           <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
             <p className="font-medium">Booking Cancelled</p>
           </div>
         )} */}
 
-        {isFullyBooked && bookingStatus !== 'cancelled' && (
-          <div className="absolute mt-12 right-10" style={{ backgroundColor: '#FFFADE' }}>
-            <p className="font-medium text-black text-sm">This event is fully booked</p>
-          </div>
-        )}
+            {isFullyBooked && bookingStatus !== 'cancelled' && (
+              <div className="absolute mt-12 right-10" style={{ backgroundColor: '#FFFADE' }}>
+                <p className="font-medium text-black text-sm">This event is fully booked</p>
+              </div>
+            )}
 
-        {eventStatus === 'past' && (
-          <div className="absolute mt-11 right-2 bg-gray-50 border border-gray-200">
-            <p className="font-medium text-black text-sm">This event has ended</p>
-          </div>
-        )}
 
-        {isClosedForBooking && bookingStatus !== 'cancelled' && (
-          <div className="absolute mt-5 left-5" style={{ backgroundColor: '#FFFADE' }}>
-            <p className="font-medium text-black text-sm">Booking closed</p>
-          </div>
+            {isClosedForBooking && bookingStatus !== 'cancelled' && (
+              <div className="absolute mt-5 left-5" style={{ backgroundColor: '#FFFADE' }}>
+                <p className="font-medium text-black text-sm">Booking closed</p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Mobile Book button */}
@@ -310,13 +312,13 @@ const EventCardMobileLayout = ({
             disabled={
               (isBooked && bookingStatus !== 'cancelled') ||
               loading ||
-              (!isBookable && bookingStatus !== 'cancelled')
+              (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
             }
             className={`relative w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
               ? 'bg-transparent text-black'
               : loading
                 ? 'bg-transparent text-black cursor-wait'
-                : (!isBookable && bookingStatus !== 'cancelled')
+                : (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                   : 'bg-transparent text-black hover:text-purple-700 transition-colors'
               }`}
@@ -334,28 +336,37 @@ const EventCardMobileLayout = ({
             }}
           >
             {/* Use the same logic as desktop: getButtonContent() for booked/loading states */}
-            {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
-              <span className="relative z-[70]">
-                {getButtonContent()}
-              </span>
-            ) : isInteractiveButton ? (
-              <span ref={btnRef} className="inline-block align-middle relative z-[70]">
-                <RoughNotationText
-                  key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
-                  type="box"
-                  color="#4A7E74"
-                  strokeWidth={2}
-                  animationDelay={100}
-                  disabled={!allowRoughAnimations}
-                  trigger={annotationTrigger || btnInView || forceAlwaysVisible}
-                  className="relative z-[70]"
-                >
-                  {getButtonText()}
-                </RoughNotationText>
-              </span>
-            ) : (
-              getButtonText()
+
+            {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+              <>
+                {((isBooked && bookingStatus !== 'cancelled') || loading) ? (
+                  <span className="relative z-[70]">
+                    {getButtonContent()}
+                  </span>
+                ) : isInteractiveButton ? (
+                  <span
+                    ref={btnRef}
+                    className="inline-block align-middle relative z-[70]"
+                  >
+                    <RoughNotationText
+                      key={`btn-rn-${Number(annotationTrigger)}-${Number(btnInView)}-${showFullDescription ? 'open' : 'closed'}`}
+                      type="box"
+                      color="#4A7E74"
+                      strokeWidth={2}
+                      animationDelay={100}
+                      disabled={!allowRoughAnimations}
+                      trigger={annotationTrigger || btnInView || forceAlwaysVisible}
+                      className="relative z-[70]"
+                    >
+                      {getButtonText()}
+                    </RoughNotationText>
+                  </span>
+                ) : (
+                  getButtonText()
+                )}
+              </>
             )}
+
           </button>
         </div>
       </motion.div>

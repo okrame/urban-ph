@@ -257,16 +257,32 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     if (!state.cardRef.current || !updateEventCardPosition) return;
 
     const updatePosition = () => {
-      const rect = state.cardRef.current.getBoundingClientRect();
-      updateEventCardPosition(rect, index);
+      // AGGIUNGI CONTROLLO NULL SAFETY
+      if (!state.cardRef.current) return;
+
+      try {
+        const rect = state.cardRef.current.getBoundingClientRect();
+        updateEventCardPosition(rect, index);
+      } catch (error) {
+        // Elemento smontato durante l'operazione - ignora silenziosamente
+        console.debug('Element unmounted during position update');
+      }
     };
 
     updatePosition();
 
-    const resizeObserver = new ResizeObserver(updatePosition);
-    resizeObserver.observe(state.cardRef.current);
-    //window.addEventListener('resize', updatePosition);
-    // ⬇️ Ignora i resize solo verticali
+    const resizeObserver = new ResizeObserver(() => {
+      // AGGIUNGI CONTROLLO ANCHE QUI
+      if (state.cardRef.current) {
+        updatePosition();
+      }
+    });
+
+    if (state.cardRef.current) {
+      resizeObserver.observe(state.cardRef.current);
+    }
+
+    // Rest del codice rimane uguale...
     const widthRef = { current: window.innerWidth };
     const handleResize = () => {
       const w = window.innerWidth;
@@ -279,7 +295,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
     return () => {
       resizeObserver.disconnect();
-      //window.removeEventListener('resize', updatePosition);
       window.removeEventListener('resize', handleResize);
     };
   }, [updateEventCardPosition, index]);
@@ -295,17 +310,17 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
   // Animation effects
   useEffect(() => {
-  if (state.roughAnimationsReady) {
-    // Add delay when closing description to let layout settle
-    const delay = state.showFullDescription ? 0 : 600;
-    
-    const timeoutId = setTimeout(() => {
-      state.setAnnotationTrigger(prev => prev + 1);
-    }, delay);
-    
-    return () => clearTimeout(timeoutId);
-  }
-}, [state.showFullDescription, state.roughAnimationsReady]);
+    if (state.roughAnimationsReady) {
+      // Add delay when closing description to let layout settle
+      const delay = state.showFullDescription ? 0 : 600;
+
+      const timeoutId = setTimeout(() => {
+        state.setAnnotationTrigger(prev => prev + 1);
+      }, delay);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [state.showFullDescription, state.roughAnimationsReady]);
 
   useEffect(() => {
     // let resizeTimer;

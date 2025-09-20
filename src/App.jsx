@@ -7,12 +7,11 @@ import EventCard from './components/EventCard';
 import ContactForm from "./components/ContactForm";
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, setupFirebase } from '../firebase/config';
-import { getActiveEvents } from '../firebase/firestoreServices';
+import { getActiveEvents, getEventById, getPastEvents } from '../firebase/firestoreServices';
 import { createUserProfile } from '../firebase/userServices';
 import { bookEventSimple } from '../firebase/firestoreServices';
 import AuthModal from './components/AuthModal';
 import { EventCardPositionProvider, useEventCardPosition } from './contexts/EventCardPositionContext';
-
 
 
 function App() {
@@ -24,16 +23,9 @@ function App() {
   const [paymentNotification, setPaymentNotification] = useState(null);
   const [authModalCloseCounter, setAuthModalCloseCounter] = useState(0);
   const [verticalLinePosition, setVerticalLinePosition] = useState(30);
-
-
-  const getVerticalLinePosition = () => {
-    if (events.length === 0) return 30; // Default position
-
-    const lastEventIndex = Math.min(events.length - 1, 2); // Only consider first 3 events
-    const isLastEventImageLeft = lastEventIndex % 2 === 0;
-
-    return isLastEventImageLeft ? 30 : 70; // 30% if image left, 70% if image right
-  };
+  const [specificEvent, setSpecificEvent] = useState(null);
+  const [showingPastEvents, setShowingPastEvents] = useState(false);
+  const [pastEventsLoading, setPastEventsLoading] = useState(false);
 
 
 
@@ -54,10 +46,29 @@ function App() {
     // Load events
     const loadEvents = async () => {
       try {
-        const eventsData = await getActiveEvents();
+        let eventsData;
+        if (showingPastEvents) {
+          setPastEventsLoading(true);
+          eventsData = await getPastEvents();
+        } else {
+          eventsData = await getActiveEvents();
+        }
+
         setEvents(eventsData);
+
+        // Se non ci sono eventi attivi, carica l'evento specifico
+        if (eventsData.length === 0 && !showingPastEvents) {
+          const specificEventData = await getEventById('Xx35S2HvQhoCW3eLzfCM');
+          setSpecificEvent(specificEventData);
+        } else {
+          setSpecificEvent(null);
+        }
       } catch (error) {
         console.error("Error loading events:", error);
+      } finally {
+        if (showingPastEvents) {
+          setPastEventsLoading(false); // Fine loading
+        }
       }
     };
 
@@ -255,7 +266,7 @@ function App() {
     }
 
     return () => unsubscribe();
-  }, [user, loading]); // Depend on user and loading to run after auth is determined
+  }, [user, loading, showingPastEvents]); // Depend on user and loading to run after auth is determined
 
   // Auto-hide payment notification after 5 seconds
   useEffect(() => {
@@ -366,11 +377,15 @@ function App() {
 
         <EventsSection
           events={events}
+          specificEvent={specificEvent}
           user={user}
           setSelectedEvent={setSelectedEvent}
           setShowAuthModal={setShowAuthModal}
           authModalCloseCounter={authModalCloseCounter}
           onVerticalLinePositionChange={setVerticalLinePosition}
+          showingPastEvents={showingPastEvents}
+          setShowingPastEvents={setShowingPastEvents}
+          setPastEventsLoading={setPastEventsLoading}
         />
 
         {/* about us with animated squares */}
@@ -386,20 +401,28 @@ function App() {
   );
 }
 
-function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter, onVerticalLinePositionChange }) {
+function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter, onVerticalLinePositionChange, showingPastEvents, setShowingPastEvents, pastEventsLoading }) {
   const { eventCardPosition, isPositionReady } = useEventCardPosition();
 
   const [showAllEvents, setShowAllEvents] = useState(false);
 
 
   const calculateVerticalLinePosition = () => {
-    if (events.length === 0) return 30;
+    // Se ci sono eventi normali, usa la logica esistente
+    if (events.length > 0) {
+      const displayedEvents = showAllEvents ? events : events.slice(0, 3);
+      const lastEventIndex = displayedEvents.length - 1;
+      const isLastEventImageLeft = lastEventIndex % 2 === 0;
+      return isLastEventImageLeft ? 30 : 70;
+    }
 
-    const displayedEvents = showAllEvents ? events : events.slice(0, 3);
-    const lastEventIndex = displayedEvents.length - 1;
-    const isLastEventImageLeft = lastEventIndex % 2 === 0;
+    // Se c'è solo l'evento specifico, considera l'index 0 (immagine a destra)
+    if (specificEvent) {
+      return 30; // index 0 = immagine a destra, quindi linea a sx (30%)
+    }
 
-    return isLastEventImageLeft ? 30 : 70;
+    // Fallback se non ci sono eventi
+    return 30;
   };
 
   useEffect(() => {
@@ -428,6 +451,32 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authM
     <main>
       <section id="current-events-section" className="pb-16">
         <div className="max-w-6xl mx-auto px-4">
+
+          {showingPastEvents && events.length > 0 && (
+            <div className="mb-6 flex justify-start">
+              <button
+                onClick={() => setShowingPastEvents(false)}
+                className="inline-flex items-center text-black hover:text-green-800 font-medium transition-colors rounded-md px-2 py-1"
+              >
+                <svg
+                  className="mr-2 w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Close past events
+              </button>
+            </div>
+          )}
+
           {events.length > 0 ? (
             <div className="space-y-0 relative">
               {/* CAMBIA QUESTA LINEA: */}
@@ -569,9 +618,83 @@ function EventsSection({ events, user, setSelectedEvent, setShowAuthModal, authM
                 </div>
               )}
             </div>
+          ) : specificEvent ? (
+            <div className="space-y-8">
+              <div className="relative">
+                <EventCard
+                  key={specificEvent.id}
+                  event={specificEvent}
+                  user={user}
+                  onAuthNeeded={() => {
+                    setSelectedEvent(specificEvent);
+                    setShowAuthModal(true);
+                  }}
+                  index={0}
+                  isLastEvent={true}
+                  authModalCloseCounter={authModalCloseCounter}
+                />
+
+                {/* Vertical line per evento specifico - SOLO se non mobile */}
+                {!isMobile && isPositionReady && eventCardPosition.width > 0 && (
+                  <>
+                    {/* Estensioni orizzontali SOLO se shouldShowExtensions è true */}
+                    {shouldShowExtensions && (
+                      <div
+                        className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
+                        style={{
+                          width: `${eventCardPosition.width * 0.50}px`,
+                          transform: 'translateX(100%)'
+                        }}
+                      ></div>
+                    )}
+
+                    {/* Vertical line dall'evento specifico */}
+                    <div
+                      className="absolute bg-black z-10"
+                      style={{
+                        width: '2px',
+                        height: '350px',
+                        left: `${eventCardPosition.width * 0.30}px`, // index 0 = immagine a destra
+                        top: '150%',
+                        marginTop: '5px'
+                      }}
+                    ></div>
+                  </>
+                )}
+              </div>
+
+              <div className="pt-2 flex justify-start">
+                <button
+                  onClick={() => setShowingPastEvents(true)}
+                  disabled={pastEventsLoading}
+                  className={`inline-flex items-center font-medium transition-colors rounded-md px-2 py-1 ${pastEventsLoading
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-black hover:text-green-800'
+                    }`}
+                >
+                  {pastEventsLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Loading past events...
+                    </>
+                  ) : (
+                    <>
+                      View all past events
+                      <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </div>
           ) : (
             <div className="text-center p-8 bg-white rounded-lg shadow">
-              <p className="text-gray-600">No events available at the moment. Check back soon!</p>
+              <p className="text-gray-600">Loading...</p>
             </div>
           )}
         </div>

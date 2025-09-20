@@ -174,16 +174,22 @@ export const getButtonState = (isBooked, bookingStatus, loading, isBookable) => 
 };
 
 export const getButtonText = (isBooked, bookingStatus, loading, isBookable, eventStatus, user, bookableReason) => {
-  if (isBooked && bookingStatus !== 'cancelled') return 'Booking Confirmed!';
   if (loading) return 'Hold on...';
+  
+  // Check event status FIRST - events that have ended should never be bookable
+  if (eventStatus === 'past') return 'Event Ended';
+  
+  if (isBooked && bookingStatus !== 'cancelled') return 'Booking Confirmed!';
+  
   if (!isBookable && bookingStatus !== 'cancelled') {
     if (bookableReason === "No spots left") return 'Fully Booked';
-    if (eventStatus === 'past') return 'Event Ended';
     return 'Booking Closed';
   }
+  
   if (user) {
     if (bookingStatus === 'cancelled') return 'Book Again';
     return 'Book Now';
   }
+  
   return 'Sign In to Book';
 };

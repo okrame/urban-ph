@@ -203,7 +203,7 @@ export default function AboutUs() {
       name: 'Marco',
       role: 'Web Designer',
       image: marcoImg,
-      bio: 'I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I’ve been observing for years. Sharing these experiences with others turns it into a genuine journey.'
+      bio: "I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I've been observing for years. Sharing these experiences with others turns it into a genuine journey."
     }
   ];
 
@@ -258,15 +258,16 @@ export default function AboutUs() {
             and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
           </div>
 
-          {/* RIGHT: 4 stats allineate a destra (inclusi active members) */}
+          {/* RIGHT: 4 stats - centered on mobile, right-aligned on desktop */}
           <div ref={counterRef} className="relative z-10 p-8 bg-transparent">
             <div
               ref={statsRef}
-              className="grid grid-cols-2 gap-4 sm:gap-6 justify-items-end text-center"
+                className={`grid grid-cols-2 gap-4 sm:gap-6 justify-items-center sm:justify-items-end text-center
+    ${isMobile ? '-mt-10' : 'mt-0'}`} 
             >
               {/* Members */}
               <motion.div
-                className="flex flex-col items-end"
+                className="flex flex-col items-center sm:items-end"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{
                   opacity: isStatsInView ? 1 : 0,
@@ -284,7 +285,7 @@ export default function AboutUs() {
 
               {/* Events */}
               <motion.div
-                className="flex flex-col items-end"
+                className="flex flex-col items-center sm:items-end"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{
                   opacity: isStatsInView ? 1 : 0,
@@ -302,7 +303,7 @@ export default function AboutUs() {
 
               {/* Locations */}
               <motion.div
-                className="flex flex-col items-end"
+                className="flex flex-col items-center sm:items-end"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{
                   opacity: isStatsInView ? 1 : 0,
@@ -320,7 +321,7 @@ export default function AboutUs() {
 
               {/* Partnerships */}
               <motion.div
-                className="flex flex-col items-end"
+                className="flex flex-col items-center sm:items-end"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{
                   opacity: isStatsInView ? 1 : 0,

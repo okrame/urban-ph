@@ -22,7 +22,6 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [paymentNotification, setPaymentNotification] = useState(null);
   const [authModalCloseCounter, setAuthModalCloseCounter] = useState(0);
-  const [verticalLinePosition, setVerticalLinePosition] = useState(30);
   const [specificEvent, setSpecificEvent] = useState(null);
   const [showingPastEvents, setShowingPastEvents] = useState(false);
   const [pastEventsLoading, setPastEventsLoading] = useState(false);
@@ -382,14 +381,13 @@ function App() {
           setSelectedEvent={setSelectedEvent}
           setShowAuthModal={setShowAuthModal}
           authModalCloseCounter={authModalCloseCounter}
-          onVerticalLinePositionChange={setVerticalLinePosition}
           showingPastEvents={showingPastEvents}
           setShowingPastEvents={setShowingPastEvents}
           setPastEventsLoading={setPastEventsLoading}
         />
 
         {/* about us with animated squares */}
-        <AboutUs verticalLinePosition={verticalLinePosition} />
+        <AboutUs/>
 
         <ContactForm />
 
@@ -401,34 +399,10 @@ function App() {
   );
 }
 
-function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter, onVerticalLinePositionChange, showingPastEvents, setShowingPastEvents, pastEventsLoading }) {
+function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowAuthModal, authModalCloseCounter, showingPastEvents, setShowingPastEvents, pastEventsLoading }) {
   const { eventCardPosition, isPositionReady } = useEventCardPosition();
 
   const [showAllEvents, setShowAllEvents] = useState(false);
-
-
-  const calculateVerticalLinePosition = () => {
-    // Se ci sono eventi normali, usa la logica esistente
-    if (events.length > 0) {
-      const displayedEvents = showAllEvents ? events : events.slice(0, 3);
-      const lastEventIndex = displayedEvents.length - 1;
-      const isLastEventImageLeft = lastEventIndex % 2 === 0;
-      return isLastEventImageLeft ? 30 : 70;
-    }
-
-    // Se c'è solo l'evento specifico, considera l'index 0 (immagine a destra)
-    if (specificEvent) {
-      return 30; // index 0 = immagine a destra, quindi linea a sx (30%)
-    }
-
-    // Fallback se non ci sono eventi
-    return 30;
-  };
-
-  useEffect(() => {
-    const newPosition = calculateVerticalLinePosition();
-    onVerticalLinePositionChange?.(newPosition);
-  }, [events, showAllEvents, onVerticalLinePositionChange]);
 
 
   // Custom breakpoint detection - hide extensions earlier than mobile
@@ -507,8 +481,8 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
                               <div
                                 className="absolute bottom-0 left-0 h-0.5 bg-black z-10"
                                 style={{
-                                  width: `${eventCardPosition.width * 0.50}px`,
-                                  transform: 'translateX(-100%)'
+                                  width: `${eventCardPosition.width*0.01}px`,
+                                  transform: 'translateX(-1%)'
                                 }}
                               ></div>
                             )}
@@ -518,44 +492,14 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
                               <div
                                 className="absolute bottom-0 right-0 h-0.5 bg-black z-10"
                                 style={{
-                                  width: `${eventCardPosition.width * 0.50}px`,
-                                  transform: 'translateX(100%)'
+                                  width: `${eventCardPosition.width*0.01}px`,
+                                  transform: 'translateX(1%)'
                                 }}
                               ></div>
                             )}
                           </>
                         )}
 
-                        {/* Vertical line from separation point - SOLO se non mobile */}
-                        {!isMobile && (
-                          <>
-                            <div
-                              className="absolute bg-black z-10"
-                              style={{
-                                width: '2px',
-                                height: '400px', // Adjust this value as needed
-                                left: index % 2 === 0
-                                  ? `${eventCardPosition.width * 0.30}px`
-                                  : `${eventCardPosition.width * 0.70}px`,
-                                top: '150%',
-                                marginTop: '0px'
-                              }}
-                            ></div>
-                            <svg
-                              className="absolute z-50"
-                              style={{
-                                left: index % 2 === 0
-                                  ? `${eventCardPosition.width * 0.30}px`
-                                  : `${eventCardPosition.width * 0.70}px`,
-                                top: 'calc(100% + 16px)',
-                                pointerEvents: 'none',
-                              }}
-                              width="2"
-                              height="400"
-                            >
-                            </svg>
-                          </>
-                        )}
                       </>
                     )}
                 </div>
@@ -647,18 +591,6 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
                         }}
                       ></div>
                     )}
-
-                    {/* Vertical line dall'evento specifico */}
-                    <div
-                      className="absolute bg-black z-10"
-                      style={{
-                        width: '2px',
-                        height: '350px',
-                        left: `${eventCardPosition.width * 0.30}px`, // index 0 = immagine a destra
-                        top: '150%',
-                        marginTop: '5px'
-                      }}
-                    ></div>
                   </>
                 )}
               </div>

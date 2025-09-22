@@ -290,11 +290,6 @@ const EventCardMobileLayout = ({
           </div>
         )} */}
 
-            {isFullyBooked && bookingStatus !== 'cancelled' && (
-              <div className="absolute mt-12 right-10" style={{ backgroundColor: '#FFFADE' }}>
-                <p className="font-medium text-black text-sm">This event is fully booked</p>
-              </div>
-            )}
 
 
             {isClosedForBooking && bookingStatus !== 'cancelled' && (

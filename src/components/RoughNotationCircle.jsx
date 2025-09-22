@@ -34,7 +34,7 @@ const RoughNotationCircle = ({
     if (!isMobile) {
       return {
         strokeWidth,
-        padding: 3.4, 
+        padding: 5, 
         animationDuration: 600
       };
     }
@@ -42,7 +42,7 @@ const RoughNotationCircle = ({
     // Mobile optimizations - ultra-tight circle
     return {
       strokeWidth: Math.max(1, strokeWidth - 0.7), // Thinner strokes on mobile
-      padding: 4.5, // Ultra-minimal padding on mobile for precise fit
+      padding: 5, // Ultra-minimal padding on mobile for precise fit
       animationDuration: 500 // Faster animations on mobile
     };
   };

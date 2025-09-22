@@ -1,6 +1,6 @@
 // src/components/Info.jsx
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useScroll, useTransform, useMotionValue } from 'framer-motion';
+import { motion, useInView, useScroll, useTransform, useMotionValue, useMotionTemplate } from 'framer-motion';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 import { useDisplayDetection } from '../hooks/useDisplayDetection';
 import ImageFiller from './ImageFiller';
@@ -121,6 +121,9 @@ function Info() {
     [0, 1]
   );
 
+  const solidClipPath = 'inset(0 0 90% 0)';
+  const clipInsetDashed = useTransform(scrollYProgress, [0.5, 1], [squareSize * 0.90, 0]);
+
 
   const content = {
     hunts: {
@@ -137,9 +140,9 @@ function Info() {
       text: "We regularly organize exhibitions to <strong>showcase the artwork of our community</strong>, be it photos, collages or other. We also host a <strong>biennial open-call event</strong>, called Boring Exhibition, which revisits and re-imagines holiday photos."
     },
     walks: {
-    title: "Walks",
-    text: "<span class='text-2xl font-bold inline'>The walks</span> we organize are <strong>guided explorations</strong> of the city focusing on storytelling, local history, and discovering hidden gems. These leisurely walking tours combine culture, conversation, and community building in a relaxed, social atmosphere."
-  }
+      title: "Walks",
+      text: "<span class='text-2xl font-bold inline'>The walks</span> we organize are <strong>guided explorations</strong> of the city focusing on storytelling, local history, and discovering hidden gems. These leisurely walking tours combine culture, conversation, and community building in a relaxed, social atmosphere."
+    }
   };
 
   const currentContent = content[activityKind];
@@ -153,7 +156,7 @@ function Info() {
     square2TopY,
     (y) => y + (isMobile ? -offset : 0)
   );
-
+  
   return (
     <section ref={ref} className="relative flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
       <div className="w-full" style={{
@@ -174,6 +177,7 @@ function Info() {
         transition={{ duration: 0.3 }}
       />
 
+      {/* Bordo pieno: copre tutto */}
       <motion.div
         className="absolute border-2 border-black"
         style={{
@@ -181,12 +185,29 @@ function Info() {
           height: squareSize,
           x: square2X,
           y: square2Y,
-          borderRadius: borderRadius
+          borderRadius: borderRadius,
+          clipPath: solidClipPath
         }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isInView ? 1 : 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
       />
+
+      <motion.svg
+        className="absolute pointer-events-none"
+        style={{ x: square2X, y: square2Y }}
+        width={squareSize}
+        height={squareSize}
+      >
+        <motion.rect
+          x="0" y="0"
+          width={squareSize} height={squareSize}
+          rx={borderRadius} ry={borderRadius}
+          fill="none"
+          stroke="black"
+          strokeWidth="4"
+          strokeDasharray="4 20" // dash=12, gap=8
+          style={{ clipPath: useMotionTemplate`inset(10% 0 ${clipInsetDashed} 0)` }}
+        />
+      </motion.svg>
+
 
       <ImageFiller
         square1X={square1X}
@@ -240,7 +261,7 @@ function Info() {
               activityKind === 'exhibitions' ? 'walks' :  // <-- Nuovo
                 'hunts'
         )}
- className="absolute p-2 bg-gray-200/50 rounded-full transition-all duration-200 
+        className="absolute p-2 bg-gray-200/50 rounded-full transition-all duration-200 
             focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"        aria-label={`Switch to ${activityKind === 'hunts' ? 'workshops' : 'hunts'}`}
         aria-expanded={activityKind === 'workshops'}
         style={{

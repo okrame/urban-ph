@@ -1,0 +1,37 @@
+
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #3c6c64 0%, #2d5148 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">Booking Confirmed!</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking has been confirmed</p>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+        <h2 style="color: #3c6c64; margin-top: 0;">Event Details</h2>
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h3 style="color: #2d5148; margin-top: 0;">${eventData?.title || 'Event'}</h3>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${formatDate(eventData?.date)}</p>
+          <p style="margin: 5px 0;"><strong>Location:</strong> ${eventData?.location || 'TBD'}</p>
+        </div>
+
+        ${paymentDetails.paymentId ? `
+        <h2 style="color: #3c6c64;">Payment Details</h2>
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <p style="margin: 5px 0;"><strong>Amount:</strong> €${paymentDetails.amount || bookingData.amount || 0}</p>
+          <p style="margin: 5px 0;"><strong>Payment ID:</strong> ${paymentDetails.paymentId}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">COMPLETED</span></p>
+        </div>
+        ` : ''}
+
+        <h2 style="color: #3c6c64;">Booking Information</h2>
+        <div style="background: white; padding: 20px; border-radius: 8px;">
+          <p style="margin: 5px 0;"><strong>Name:</strong> ${userName} ${userSurname}</p>
+          <p style="margin: 5px 0;"><strong>Email:</strong> ${contactInfo.email || userData.email}</p>
+          <p style="margin: 5px 0;"><strong>Booking Date:</strong> ${formatDate(new Date())}</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+          <p style="color: #6c757d; margin: 0;">Thank you for your booking!</p>
+          <p style="color: #6c757d; margin: 5px 0 0 0; font-size: 14px;">Urban Photo Hunts</p>
+        </div>
+      </div>
+    </div>

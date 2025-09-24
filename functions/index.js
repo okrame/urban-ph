@@ -28,13 +28,13 @@ exports.paypalWebhook = onRequest(
       // Log webhook data for debugging
       console.log("Received webhook request with headers:", JSON.stringify(req.headers));
       console.log("Webhook body summary:", summarizeWebhookBody(req.body));
-      
+
       // Get PayPal webhook signature from headers
       const transmissionId = req.headers["paypal-transmission-id"];
       const timestamp = req.headers["paypal-transmission-time"];
       const webhookSignature = req.headers["paypal-transmission-sig"];
       const certUrl = req.headers["paypal-cert-url"];
-      
+
       // For validation request, just return success
       if (req.body && req.body.event_type === "VALIDATION") {
         console.log("Received validation request from PayPal");
@@ -42,12 +42,12 @@ exports.paypalWebhook = onRequest(
           verification_status: "SUCCESS"
         });
       }
-      
+
       // Process webhook
       if (req.body && req.body.event_type) {
         const webhookEvent = req.body;
         console.log(`Received PayPal webhook: ${webhookEvent.event_type}`);
-        
+
         // Optional: Verify webhook signature with PayPal
         if (transmissionId && timestamp && webhookSignature && certUrl) {
           try {
@@ -62,7 +62,7 @@ exports.paypalWebhook = onRequest(
             // Continue for development
           }
         }
-        
+
         // Store the webhook event for reference
         try {
           const db = getFirestore();
@@ -80,24 +80,24 @@ exports.paypalWebhook = onRequest(
           console.error("Error storing webhook metadata:", dbError);
           // Continue processing regardless
         }
-        
+
         // Process different event types
         switch (webhookEvent.event_type) {
           case "PAYMENT.CAPTURE.COMPLETED":
             await handlePaymentCompleted(webhookEvent);
             break;
-          
+
           case "PAYMENT.CAPTURE.DENIED":
           case "PAYMENT.CAPTURE.REVERSED":
           case "PAYMENT.CAPTURE.REFUNDED":
             await handlePaymentFailed(webhookEvent);
             break;
-            
+
           default:
             console.log(`Unhandled event type: ${webhookEvent.event_type}`);
         }
       }
-      
+
       // Acknowledge receipt of the event
       return res.status(200).send("Webhook received successfully");
     } catch (error) {
@@ -115,24 +115,24 @@ exports.syncEventToSheetsManual = onCall(
   async (request) => {
     try {
       const { eventId } = request.data;
-      
+
       if (!eventId) {
         throw new Error('eventId is required');
       }
 
       console.log(`Manual sync requested for event: ${eventId}`);
-      
+
       const db = getFirestore();
-      
+
       // Get event data
       const eventDoc = await db.collection('events').doc(eventId).get();
-      
+
       if (!eventDoc.exists) {
         throw new Error('Event not found');
       }
 
       const eventData = eventDoc.data();
-      
+
       // SIMPLIFIED APPROACH: Get all bookings for this event without status filter
       // This avoids the composite index requirement
       const bookingsSnapshot = await db.collection('bookings')
@@ -140,20 +140,20 @@ exports.syncEventToSheetsManual = onCall(
         .get();
 
       const bookings = [];
-      
+
       // Process each booking document
       for (const bookingDoc of bookingsSnapshot.docs) {
         const booking = bookingDoc.data();
-        
+
         // Filter out cancelled bookings in code instead of query
         if (booking.status === 'cancelled') {
           continue;
         }
-        
+
         // Get user profile data - FIXED: Use .exists instead of .exists()
         const userDoc = await db.collection('users').doc(booking.userId).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        
+
         const userFullName = userData.name && userData.surname
           ? `${userData.name} ${userData.surname}`
           : null;
@@ -166,7 +166,7 @@ exports.syncEventToSheetsManual = onCall(
           phone: booking.contactInfo?.phone || 'N/A',
           displayName: booking.contactInfo?.displayName || 'N/A',
           birthDate: userData.birthDate || 'N/A',
-          address: userData.address || 'N/A', 
+          address: userData.address || 'N/A',
           taxId: userData.taxId || 'N/A',
           instagram: userData.instagram || 'N/A'
         });
@@ -192,14 +192,14 @@ exports.syncEventToSheetsManual = onCall(
       }, bookings);
 
       console.log(`Manual sync completed: ${result.sheetTitle} with ${result.bookingsCount} bookings`);
-      
+
       return {
         success: true,
         message: `Successfully synced ${result.bookingsCount} bookings to sheet "${result.sheetTitle}"`,
         sheetTitle: result.sheetTitle,
         bookingsCount: result.bookingsCount
       };
-      
+
     } catch (error) {
       console.error('Error in manual sync:', error);
       throw new Error(`Sync failed: ${error.message}`);
@@ -217,47 +217,47 @@ exports.autoSyncNewBookingToSheets = onDocumentCreated(
     try {
       const bookingData = event.data.data();
       const bookingId = event.params.bookingId;
-      
+
       console.log(`New booking created: ${bookingId} for event: ${bookingData.eventId}`);
-      
+
       // Only sync if booking is confirmed (not cancelled or payment-pending)
       if (bookingData.status === 'cancelled') {
         console.log(`Skipping sync for cancelled booking: ${bookingId}`);
         return;
       }
-      
+
       const db = getFirestore();
-      
+
       // Get event data
       const eventDoc = await db.collection('events').doc(bookingData.eventId).get();
-      
+
       if (!eventDoc.exists) {
         console.error(`Event not found for booking: ${bookingId}`);
         return;
       }
 
       const eventData = eventDoc.data();
-      
+
       // Get all current bookings for this event (to update the complete sheet)
       const bookingsSnapshot = await db.collection('bookings')
         .where('eventId', '==', bookingData.eventId)
         .get();
 
       const bookings = [];
-      
+
       // Process each booking document
       for (const bookingDoc of bookingsSnapshot.docs) {
         const booking = bookingDoc.data();
-        
+
         // Filter out cancelled bookings
         if (booking.status === 'cancelled') {
           continue;
         }
-        
+
         // Get user profile data
         const userDoc = await db.collection('users').doc(booking.userId).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        
+
         const userFullName = userData.name && userData.surname
           ? `${userData.name} ${userData.surname}`
           : null;
@@ -270,7 +270,7 @@ exports.autoSyncNewBookingToSheets = onDocumentCreated(
           phone: booking.contactInfo?.phone || 'N/A',
           displayName: booking.contactInfo?.displayName || 'N/A',
           birthDate: userData.birthDate || 'N/A',
-          address: userData.address || 'N/A', 
+          address: userData.address || 'N/A',
           taxId: userData.taxId || 'N/A',
           instagram: userData.instagram || 'N/A'
         });
@@ -296,7 +296,7 @@ exports.autoSyncNewBookingToSheets = onDocumentCreated(
       }, bookings);
 
       console.log(`Auto-sync completed for new booking ${bookingId}: ${result.sheetTitle} updated with ${result.bookingsCount} total bookings`);
-      
+
     } catch (error) {
       console.error(`Error auto-syncing booking to Google Sheets:`, error);
       // Don't throw - we don't want booking creation to fail if sheets sync fails
@@ -315,54 +315,54 @@ exports.autoSyncBookingUpdateToSheets = onDocumentUpdated(
       const beforeData = event.data.before.data();
       const afterData = event.data.after.data();
       const bookingId = event.params.bookingId;
-      
+
       // Only sync if there's a meaningful change (status, payment status, or contact info)
-      const meaningfulChange = 
+      const meaningfulChange =
         beforeData.status !== afterData.status ||
         beforeData.paymentStatus !== afterData.paymentStatus ||
         JSON.stringify(beforeData.contactInfo) !== JSON.stringify(afterData.contactInfo);
-      
+
       if (!meaningfulChange) {
         console.log(`Skipping sync for booking ${bookingId} - no meaningful changes`);
         return;
       }
-      
+
       console.log(`Booking updated: ${bookingId} for event: ${afterData.eventId}`);
       console.log(`Status change: ${beforeData.status} → ${afterData.status}`);
       console.log(`Payment status change: ${beforeData.paymentStatus} → ${afterData.paymentStatus}`);
-      
+
       const db = getFirestore();
-      
+
       // Get event data
       const eventDoc = await db.collection('events').doc(afterData.eventId).get();
-      
+
       if (!eventDoc.exists) {
         console.error(`Event not found for booking: ${bookingId}`);
         return;
       }
 
       const eventData = eventDoc.data();
-      
+
       // Get all current bookings for this event
       const bookingsSnapshot = await db.collection('bookings')
         .where('eventId', '==', afterData.eventId)
         .get();
 
       const bookings = [];
-      
+
       // Process each booking document
       for (const bookingDoc of bookingsSnapshot.docs) {
         const booking = bookingDoc.data();
-        
+
         // Filter out cancelled bookings
         if (booking.status === 'cancelled') {
           continue;
         }
-        
+
         // Get user profile data
         const userDoc = await db.collection('users').doc(booking.userId).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        
+
         const userFullName = userData.name && userData.surname
           ? `${userData.name} ${userData.surname}`
           : null;
@@ -375,7 +375,7 @@ exports.autoSyncBookingUpdateToSheets = onDocumentUpdated(
           phone: booking.contactInfo?.phone || 'N/A',
           displayName: booking.contactInfo?.displayName || 'N/A',
           birthDate: userData.birthDate || 'N/A',
-          address: userData.address || 'N/A', 
+          address: userData.address || 'N/A',
           taxId: userData.taxId || 'N/A',
           instagram: userData.instagram || 'N/A'
         });
@@ -401,7 +401,7 @@ exports.autoSyncBookingUpdateToSheets = onDocumentUpdated(
       }, bookings);
 
       console.log(`Auto-sync completed for updated booking ${bookingId}: ${result.sheetTitle} updated with ${result.bookingsCount} total bookings`);
-      
+
     } catch (error) {
       console.error(`Error auto-syncing booking update to Google Sheets:`, error);
       // Don't throw - we don't want booking updates to fail if sheets sync fails
@@ -412,7 +412,7 @@ exports.autoSyncBookingUpdateToSheets = onDocumentUpdated(
 // Create a summary of the webhook body to avoid overly large logs
 function summarizeWebhookBody(body) {
   if (!body) return "Empty body";
-  
+
   const summary = {
     event_type: body.event_type,
     event_id: body.id,
@@ -420,7 +420,7 @@ function summarizeWebhookBody(body) {
     resource_id: body.resource?.id,
     create_time: body.create_time,
   };
-  
+
   // Add payment-specific fields if available
   if (body.resource) {
     if (body.resource.status) summary.status = body.resource.status;
@@ -428,7 +428,7 @@ function summarizeWebhookBody(body) {
     if (body.resource.custom_id) summary.custom_id = body.resource.custom_id;
     if (body.resource.invoice_id) summary.invoice_id = body.resource.invoice_id;
   }
-  
+
   return summary;
 }
 
@@ -437,25 +437,25 @@ async function handlePaymentCompleted(event) {
   try {
     const db = getFirestore();
     const paymentData = event.resource;
-    
+
     // Extract key information
     const transactionId = paymentData.id;
     const status = paymentData.status;
     const customId = paymentData.custom_id || ""; // This might be the userId
     const invoiceId = paymentData.invoice_id || ""; // This might contain the orderId
-    
+
     console.log(`Processing completed payment: ${transactionId}, Invoice: ${invoiceId}, Custom: ${customId}`);
-    
+
     // Try to find an order ID in the invoice field
     let orderId = null;
     if (invoiceId && invoiceId.startsWith('order_')) {
       orderId = invoiceId;
     }
-    
+
     // First, try to find the payment by transactionId
     const paymentsQuery = db.collection("payments").where("paymentId", "==", transactionId);
     const paymentsSnapshot = await paymentsQuery.get();
-    
+
     if (!paymentsSnapshot.empty) {
       // Update existing payment record
       const paymentDoc = paymentsSnapshot.docs[0];
@@ -464,9 +464,9 @@ async function handlePaymentCompleted(event) {
         updatedAt: new Date(),
         webhookDetails: summarizeWebhookBody(event)
       });
-      
+
       console.log(`Updated payment status for ${transactionId} to COMPLETED`);
-      
+
       // Update related booking if it exists
       const paymentData = paymentDoc.data();
       if (paymentData.bookingId) {
@@ -475,15 +475,15 @@ async function handlePaymentCompleted(event) {
         // Try to find the booking by event and user
         await updateBookingByEventAndUser(db, paymentData.eventId, paymentData.userId, "COMPLETED");
       }
-      
+
       return true;
     }
-    
+
     // If not found by transaction ID, try by orderId if available
     if (orderId) {
       const orderQuery = db.collection("payments").where("orderId", "==", orderId);
       const orderSnapshot = await orderQuery.get();
-      
+
       if (!orderSnapshot.empty) {
         // Update payment with real PayPal transaction ID
         const paymentDoc = orderSnapshot.docs[0];
@@ -493,9 +493,9 @@ async function handlePaymentCompleted(event) {
           updatedAt: new Date(),
           webhookDetails: summarizeWebhookBody(event)
         });
-        
+
         console.log(`Updated payment by orderId ${orderId} to COMPLETED with transaction ID ${transactionId}`);
-        
+
         // Update related booking if it exists
         const paymentData = paymentDoc.data();
         if (paymentData.bookingId) {
@@ -504,11 +504,11 @@ async function handlePaymentCompleted(event) {
           // Try to find the booking by event and user
           await updateBookingByEventAndUser(db, paymentData.eventId, paymentData.userId, "COMPLETED");
         }
-        
+
         return true;
       }
     }
-    
+
     // Payment not found - create a new entry
     await db.collection("payments").add({
       paymentId: transactionId,
@@ -522,7 +522,7 @@ async function handlePaymentCompleted(event) {
       webhookDetails: summarizeWebhookBody(event),
       source: "webhook"
     });
-    
+
     console.log(`Created new payment record for ${transactionId} from webhook`);
     return true;
   } catch (error) {
@@ -537,7 +537,7 @@ async function handlePaymentFailed(event) {
     const db = getFirestore();
     const paymentData = event.resource;
     const transactionId = paymentData.id;
-    
+
     // Determine the appropriate status
     let newStatus = "FAILED";
     if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
@@ -545,13 +545,13 @@ async function handlePaymentFailed(event) {
     } else if (event.event_type === "PAYMENT.CAPTURE.REVERSED") {
       newStatus = "REVERSED";
     }
-    
+
     console.log(`Processing failed payment: ${transactionId} with status ${newStatus}`);
-    
+
     // Find and update any related payment records
     const paymentsQuery = db.collection("payments").where("paymentId", "==", transactionId);
     const paymentsSnapshot = await paymentsQuery.get();
-    
+
     if (!paymentsSnapshot.empty) {
       // Update existing payment record
       const paymentDoc = paymentsSnapshot.docs[0];
@@ -560,7 +560,7 @@ async function handlePaymentFailed(event) {
         updatedAt: new Date(),
         webhookDetails: summarizeWebhookBody(event)
       });
-      
+
       // If the payment has a booking ID, update that too
       const paymentData = paymentDoc.data();
       if (paymentData.bookingId) {
@@ -569,7 +569,7 @@ async function handlePaymentFailed(event) {
         // Try to find the booking by event and user
         await updateBookingByEventAndUser(db, paymentData.eventId, paymentData.userId, newStatus);
       }
-      
+
       console.log(`Updated payment status for ${transactionId} to ${newStatus}`);
     } else {
       // Payment record not found - create a new one
@@ -581,10 +581,10 @@ async function handlePaymentFailed(event) {
         webhookDetails: summarizeWebhookBody(event),
         source: "webhook"
       });
-      
+
       console.log(`Created new payment record for ${transactionId} with status ${newStatus}`);
     }
-    
+
     return true;
   } catch (error) {
     console.error("Error handling payment failure:", error);
@@ -597,50 +597,50 @@ async function updateBookingStatus(db, bookingId, status) {
   try {
     const bookingRef = db.collection("bookings").doc(bookingId);
     const bookingDoc = await bookingRef.get();
-    
+
     if (bookingDoc.exists) {
       const bookingData = bookingDoc.data();
-      
+
       // Update booking status and payment status
       await bookingRef.update({
         paymentStatus: status,
         // If payment is now completed, also change the main status to confirmed
-        ...(status === "COMPLETED" && bookingData.status === "payment-pending" 
-            ? { status: "confirmed" } 
-            : {}),
+        ...(status === "COMPLETED" && bookingData.status === "payment-pending"
+          ? { status: "confirmed" }
+          : {}),
         updatedAt: new Date()
       });
-      
+
       console.log(`Updated booking ${bookingId} payment status to ${status}`);
-      
+
       // If payment is completed, also update event and user collections
       if (status === "COMPLETED" && bookingData.eventId && bookingData.userId) {
         // 1. Update the event (add user to attendees, decrease spots, remove from pendingBookings)
         try {
           const eventRef = db.collection("events").doc(bookingData.eventId);
           const eventDoc = await eventRef.get();
-          
+
           if (eventDoc.exists) {
             const eventData = eventDoc.data();
             const attendees = eventData.attendees || [];
             const pendingBookings = eventData.pendingBookings || [];
-            
+
             // Only update if needed
             if (!attendees.includes(bookingData.userId) || pendingBookings.includes(bookingId)) {
               // Prepare update data
               const updateData = {};
-              
+
               // Add user to attendees if not already there
               if (!attendees.includes(bookingData.userId)) {
                 updateData.attendees = [...attendees, bookingData.userId];
                 updateData.spotsLeft = Math.max(0, (eventData.spotsLeft || 0) - 1);
               }
-              
+
               // Remove booking from pendingBookings if it's there
               if (pendingBookings.includes(bookingId)) {
                 updateData.pendingBookings = pendingBookings.filter(id => id !== bookingId);
               }
-              
+
               // Only update if we have changes
               if (Object.keys(updateData).length > 0) {
                 await eventRef.update(updateData);
@@ -651,34 +651,34 @@ async function updateBookingStatus(db, bookingId, status) {
         } catch (error) {
           console.error(`Error updating event for booking ${bookingId}:`, error);
         }
-        
+
         // 2. Update the user (add event to eventsBooked, remove from pendingBookings)
         try {
           const userRef = db.collection("users").doc(bookingData.userId);
           const userDoc = await userRef.get();
-          
+
           if (userDoc.exists) {
             const userData = userDoc.data();
             const eventsBooked = userData.eventsBooked || [];
             const pendingBookings = userData.pendingBookings || [];
-            
+
             // Only update if needed
             if (!eventsBooked.includes(bookingData.eventId) || pendingBookings.includes(bookingId)) {
               // Prepare update data
               const updateData = {
                 updatedAt: new Date()
               };
-              
+
               // Add event to eventsBooked if not already there
               if (!eventsBooked.includes(bookingData.eventId)) {
                 updateData.eventsBooked = [...eventsBooked, bookingData.eventId];
               }
-              
+
               // Remove booking from pendingBookings if it's there
               if (pendingBookings.includes(bookingId)) {
                 updateData.pendingBookings = pendingBookings.filter(id => id !== bookingId);
               }
-              
+
               // Only update if we have changes
               if (Object.keys(updateData).length > 1) { // > 1 because updatedAt is always there
                 await userRef.update(updateData);
@@ -690,7 +690,7 @@ async function updateBookingStatus(db, bookingId, status) {
           console.error(`Error updating user for booking ${bookingId}:`, error);
         }
       }
-      
+
       return true;
     } else {
       console.log(`Booking ${bookingId} not found`);
@@ -710,61 +710,61 @@ async function updateBookingByEventAndUser(db, eventId, userId, status) {
       console.log("Missing eventId or userId for booking lookup");
       return false;
     }
-    
+
     const bookingsQuery = db.collection("bookings")
       .where("eventId", "==", eventId)
       .where("userId", "==", userId);
-    
+
     const bookingsSnapshot = await bookingsQuery.get();
-    
+
     if (!bookingsSnapshot.empty) {
       // Update the first matching booking
       const bookingDoc = bookingsSnapshot.docs[0];
       const bookingData = bookingDoc.data();
-      
+
       // Update booking status
       const updateData = {
         paymentStatus: status,
         updatedAt: new Date()
       };
-      
+
       // If payment is now completed, also change the main status to confirmed
       if (status === "COMPLETED" && bookingData.status === "payment-pending") {
         updateData.status = "confirmed";
       }
-      
+
       await bookingDoc.ref.update(updateData);
-      
+
       console.log(`Updated booking ${bookingDoc.id} by event/user match to status ${status}`);
-      
+
       // If payment is completed, also update event and user collections
       if (status === "COMPLETED") {
         // 1. Update the event (add user to attendees, decrease spots, remove from pendingBookings)
         try {
           const eventRef = db.collection("events").doc(eventId);
           const eventDoc = await eventRef.get();
-          
+
           if (eventDoc.exists) {
             const eventData = eventDoc.data();
             const attendees = eventData.attendees || [];
             const pendingBookings = eventData.pendingBookings || [];
-            
+
             // Only update if needed
             if (!attendees.includes(userId) || pendingBookings.includes(bookingDoc.id)) {
               // Prepare update data
               const updateData = {};
-              
+
               // Add user to attendees if not already there
               if (!attendees.includes(userId)) {
                 updateData.attendees = [...attendees, userId];
                 updateData.spotsLeft = Math.max(0, (eventData.spotsLeft || 0) - 1);
               }
-              
+
               // Remove booking from pendingBookings if it's there
               if (pendingBookings.includes(bookingDoc.id)) {
                 updateData.pendingBookings = pendingBookings.filter(id => id !== bookingDoc.id);
               }
-              
+
               // Only update if we have changes
               if (Object.keys(updateData).length > 0) {
                 await eventRef.update(updateData);
@@ -775,34 +775,34 @@ async function updateBookingByEventAndUser(db, eventId, userId, status) {
         } catch (error) {
           console.error(`Error updating event for booking ${bookingDoc.id}:`, error);
         }
-        
+
         // 2. Update the user (add event to eventsBooked, remove from pendingBookings)
         try {
           const userRef = db.collection("users").doc(userId);
           const userDoc = await userRef.get();
-          
+
           if (userDoc.exists) {
             const userData = userDoc.data();
             const eventsBooked = userData.eventsBooked || [];
             const pendingBookings = userData.pendingBookings || [];
-            
+
             // Only update if needed
             if (!eventsBooked.includes(eventId) || pendingBookings.includes(bookingDoc.id)) {
               // Prepare update data
               const updateData = {
                 updatedAt: new Date()
               };
-              
+
               // Add event to eventsBooked if not already there
               if (!eventsBooked.includes(eventId)) {
                 updateData.eventsBooked = [...eventsBooked, eventId];
               }
-              
+
               // Remove booking from pendingBookings if it's there
               if (pendingBookings.includes(bookingDoc.id)) {
                 updateData.pendingBookings = pendingBookings.filter(id => id !== bookingDoc.id);
               }
-              
+
               // Only update if we have changes
               if (Object.keys(updateData).length > 1) { // > 1 because updatedAt is always there
                 await userRef.update(updateData);
@@ -814,7 +814,7 @@ async function updateBookingByEventAndUser(db, eventId, userId, status) {
           console.error(`Error updating user for booking ${bookingDoc.id}:`, error);
         }
       }
-      
+
       return true;
     } else {
       console.log(`No booking found for eventId=${eventId}, userId=${userId}`);
@@ -824,4 +824,106 @@ async function updateBookingByEventAndUser(db, eventId, userId, status) {
     console.error("Error updating booking by event and user:", error);
     return false;
   }
+}
+
+
+
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+if (!admin.apps.length) admin.initializeApp();
+
+exports.share = functions.https.onRequest(async (req, res) => {
+  try {
+    const { open, name } = req.query;
+    if (!open) return res.status(400).send('Missing "open" param');
+
+    // Cerca l'evento nel database
+    const snap = await admin.firestore().collection('events').doc(String(open)).get();
+    if (!snap.exists) {
+      // Se l'evento non esiste, redirige comunque alla home
+      return res.redirect(302, 'https://urbanph.it/');
+    }
+
+    const e = snap.data();
+    const title = e.title || 'Urban pH – Event';
+
+    // Migliore pulizia della descrizione
+    const desc = (e.description || '')
+      .replace(/[#*_`~\[\]]/g, '')    // rimuovi markdown
+      .replace(/<[^>]+>/g, '')        // rimuovi html
+      .replace(/\s+/g, ' ')           // normalizza spazi
+      .trim()
+      .slice(0, 160) + (e.description && e.description.length > 160 ? '...' : '');
+
+    // Usa l'immagine dell'evento o fallback
+    const image = e.image || 'https://urbanph.it/camera-icon.svg';
+
+    // URL finale della SPA
+    const appUrl = `https://urbanph.it/?open=${encodeURIComponent(open)}${name ? `&name=${encodeURIComponent(name)}` : ''
+      }`;
+
+    // Aggiungi info evento nella descrizione
+    const eventInfo = [];
+    if (e.date) eventInfo.push(e.date);
+    if (e.time) eventInfo.push(e.time);
+    if (e.venueName || e.location) eventInfo.push(e.venueName || e.location);
+
+    const fullDesc = eventInfo.length > 0
+      ? `${desc} | ${eventInfo.join(' - ')}`
+      : desc;
+
+    const html = `<!doctype html><html lang="it"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(title)} - Urban pH</title>
+<meta name="description" content="${esc(fullDesc)}">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Urban pH">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(fullDesc)}">
+<meta property="og:url" content="${appUrl}">
+<meta property="og:image" content="${image}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(fullDesc)}">
+<meta name="twitter:image" content="${image}">
+
+<!-- WhatsApp/Telegram specifici -->
+<meta property="og:image:alt" content="${esc(title)} - Urban pH Event">
+
+<link rel="canonical" href="${appUrl}">
+</head><body style="margin:0;padding:20px;font-family:system-ui,sans-serif;text-align:center;">
+<h1>Redirecting to Urban pH...</h1>
+<p>Opening <strong>${esc(title)}</strong></p>
+<script>
+  // Immediate redirect
+  window.location.replace(${JSON.stringify(appUrl)});
+</script>
+<noscript>
+  <meta http-equiv="refresh" content="0; url=${appUrl}">
+  <p><a href="${appUrl}">Click here if not redirected automatically</a></p>
+</noscript>
+</body></html>`;
+
+    // Cache per 5 minuti (i social media crawler non richiedono spesso)
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+    res.status(200).send(html);
+
+  } catch (err) {
+    console.error('Share function error:', err);
+    // In caso di errore, redirige alla home
+    res.redirect(302, 'https://urbanph.it/');
+  }
+});
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }

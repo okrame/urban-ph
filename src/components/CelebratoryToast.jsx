@@ -174,34 +174,52 @@ function CelebratoryToast({
   const handleShare = async () => {
     if (!eventUrl) return;
 
+    // Ora genera URL pulito: https://urbanph.it/share?open=...
+    const shareUrl = generateShareUrl(eventTitle, event?.id);
+
     const shareData = {
       title: eventTitle ? `${eventTitle} - Urban pH` : 'Urban pH Event',
       text: eventTitle
         ? `I'm going to ${eventTitle}! Check it out:`
         : 'Check out this Urban pH event:',
-      url: eventUrl
+      url: shareUrl
     };
 
     try {
-      // Usa Web Share API se disponibile (mobile)
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        // Fallback: copia URL negli appunti
-        await navigator.clipboard.writeText(eventUrl);
-        // Opzionale: mostra un piccolo feedback
+        await navigator.clipboard.writeText(shareUrl);
         alert('Event link copied to clipboard!');
       }
     } catch (error) {
       console.error('Error sharing:', error);
-      // Fallback: copia negli appunti
       try {
-        await navigator.clipboard.writeText(eventUrl);
-        //alert('Event link copied to clipboard!');
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Event link copied to clipboard!');
       } catch (clipboardError) {
         console.error('Clipboard error:', clipboardError);
       }
     }
+  };
+
+  // Funzione helper per generare l'URL di share
+  const generateShareUrl = (eventTitle, eventId) => {
+    if (!eventId) return 'https://urbanph.it/';
+
+    const eventName = eventTitle
+      ? eventTitle.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+      : '';
+
+    // URL PULITO usando Firebase Hosting rewrite
+    const baseUrl = 'https://urbanph.it/share';
+    const params = new URLSearchParams();
+    params.set('open', eventId);
+    if (eventName) params.set('name', eventName);
+
+    return `${baseUrl}?${params.toString()}`;
   };
 
   const isMobile = window.innerWidth < 640;

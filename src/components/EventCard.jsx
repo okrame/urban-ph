@@ -9,8 +9,6 @@ import EventCardMobileLayout from './EventCard/EventCardMobileLayout';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 import { getActiveCardRounding } from '../utils/eventCardUtils';
-import useEventMetaTags from '../hooks/useEventMetaTags';
-
 
 // Custom hooks
 import { useEventCardState } from '../hooks/useEventCardState';
@@ -180,8 +178,6 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     //navigate(`/events${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
     navigate(`${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
   };
-
-  useEventMetaTags(event, state.showFullDescription);
 
   // Ensures only one card is open at a time
   const handleToggleDescription = (nextOpen) => {

@@ -451,7 +451,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
               {/* Page indicator for paginated forms */}
               {needsPagination && (
                 <div className="flex justify-center mb-4">
-                  <div className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-600">
+                  <div className="px-3 py-1 bg-[#3c6c64] rounded-full text-sm font-medium text-white">
                     {currentPage}/{totalPages}
                   </div>
                 </div>

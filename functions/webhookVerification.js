@@ -1,15 +1,15 @@
-// functions/webhookVerification
+// functions/webhookVerification.js - Enhanced for Production
 const crypto = require('crypto');
 const fetch = require('node-fetch');
 
 /**
  * Verify that the webhook event was sent by PayPal
- * Based on PayPal's verification guidelines: https://developer.paypal.com/docs/api-basics/notifications/webhooks/notification-messages/
+ * Enhanced security for production environment
  */
-async function verifyWebhook(req, webhookId) {
+async function verifyWebhook(req, webhookId, isProduction = false) {
   try {
     if (!webhookId) {
-      console.warn("Missing webhookId for verification");
+      console.error("Missing webhookId for verification");
       return { verified: false, message: "Missing webhookId configuration" };
     }
 
@@ -38,22 +38,42 @@ async function verifyWebhook(req, webhookId) {
       return { verified: true, message: "Validation request accepted" };
     }
 
-    // Validate cert URL - ensure it's from PayPal
-    if (!certUrl.startsWith('https://api.paypal.com/') && 
-        !certUrl.startsWith('https://api.sandbox.paypal.com/')) {
+    // Enhanced cert URL validation for production
+    const isLiveCert = certUrl.startsWith('https://api.paypal.com/');
+    const isSandboxCert = certUrl.startsWith('https://api.sandbox.paypal.com/');
+    
+    if (!isLiveCert && !isSandboxCert) {
       console.error("Invalid certificate URL:", certUrl);
       return { verified: false, message: "Invalid certificate URL" };
     }
 
+    // In production, only accept live certificates
+    if (isProduction && !isLiveCert) {
+      console.error("Production environment but received sandbox certificate");
+      return { verified: false, message: "Production environment requires live PayPal certificate" };
+    }
+
     // 1. Get PayPal certificate
     try {
-      const certResponse = await fetch(certUrl);
+      const certResponse = await fetch(certUrl, {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'User-Agent': 'PayPal-Webhook-Verification/1.0'
+        }
+      });
+      
       if (!certResponse.ok) {
         console.error("Failed to fetch PayPal certificate:", certResponse.status);
         return { verified: false, message: "Failed to fetch PayPal certificate" };
       }
       
       const cert = await certResponse.text();
+
+      // Validate certificate format
+      if (!cert.includes('-----BEGIN CERTIFICATE-----')) {
+        console.error("Invalid certificate format received");
+        return { verified: false, message: "Invalid certificate format" };
+      }
 
       // 2. Form the data string to verify
       const dataToVerify = transmissionId + '|' + timestamp + '|' + webhookId + '|' + sha256(webhookEvent);
@@ -73,10 +93,15 @@ async function verifyWebhook(req, webhookId) {
         } else {
           console.error("Webhook signature verification failed");
           
-          // For sandbox/testing - check if we should proceed anyway
-          const isSandbox = certUrl.includes('sandbox');
-          if (isSandbox) {
-            console.log("Sandbox environment detected - proceeding with caution even though verification failed");
+          // PRODUCTION: Be strict about verification failures
+          if (isProduction) {
+            console.error("Production environment - rejecting unverified webhook");
+            return { verified: false, message: "Signature verification failed in production" };
+          }
+          
+          // SANDBOX: Allow with warning (for development only)
+          if (isSandboxCert) {
+            console.warn("Sandbox environment - proceeding with failed verification (DEVELOPMENT ONLY)");
             return { 
               verified: true, 
               message: "Sandbox webhook accepted with failed verification",

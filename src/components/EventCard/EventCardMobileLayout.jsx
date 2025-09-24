@@ -235,7 +235,7 @@ const EventCardMobileLayout = ({
                   }}
                   className="ml-2 text-black hover:text-green-700 underline text-sm"
                 >
-                  Show less
+                  SHOW LESS
                 </button>
               )}
             </>

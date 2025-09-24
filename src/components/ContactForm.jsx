@@ -79,7 +79,7 @@ export default function ContactForm() {
       await addDoc(collection(db, "mail"), {
         to: "urbanphotohunts.roma@gmail.com",
         message: {
-          subject: `New message from ${name} - Urban Photo Hunts`,
+          subject: `New message from ${name} - Urban pH`,
           text: `
 Name: ${name}
 Email: ${email}
@@ -89,11 +89,11 @@ Message:
 ${message}
 
 ---
-This message was sent from the Urban Photo Hunts contact form.
+This message was sent from the Urban pH contact form.
           `,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #333;">New message from Urban Photo Hunts</h2>
+              <h2 style="color: #333;">New message from Urban pH</h2>
               <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <p><strong>Name:</strong> ${name}</p>
                 <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
@@ -105,7 +105,7 @@ This message was sent from the Urban Photo Hunts contact form.
               </div>
               <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
               <p style="color: #888; font-size: 12px;">
-                This message was sent automatically from the Urban Photo Hunts contact form.
+                This message was sent automatically from the Urban pH contact form.
               </p>
             </div>
           `

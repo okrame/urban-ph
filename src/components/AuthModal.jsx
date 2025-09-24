@@ -334,7 +334,7 @@ function AuthModal({ isOpen, onClose, event }) {
     <div style={modalStyle}>
       <div style={modalContentStyle}>
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px' }}>
-          {useMagicLink ? 'Sign In with Email' : 'Sign In'} to Urban PH
+          {useMagicLink ? 'Sign In with Email' : 'Sign In'} to Urban pH
         </h2>
 
         <button
@@ -509,12 +509,19 @@ function AuthModal({ isOpen, onClose, event }) {
               <h3 style={{
                 fontSize: '18px',
                 fontWeight: 'bold',
-                marginBottom: '8px',
+                marginBottom: '0px',
                 color: '#3c6c64'
               }}>
-                ✉️ Check your email!
+                ✉️ Check your email
               </h3>
-              <p style={{ marginBottom: '8px', color: '#374151' }}>
+              <p style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                marginBottom: '8px'
+              }}>
+                Don't forget to check your <strong>spam folder</strong>!
+              </p>
+              <p style={{ marginBottom: '0px', color: '#374151' }}>
                 A sign-in link has been sent to:
               </p>
               <p style={{
@@ -524,13 +531,7 @@ function AuthModal({ isOpen, onClose, event }) {
               }}>
                 {email}
               </p>
-              <p style={{
-                fontSize: '14px',
-                color: '#6b7280',
-                marginBottom: '8px'
-              }}>
-                Don't forget to check your <strong>spam folder</strong> if you don't see it in your inbox.
-              </p>
+              
             </div>
 
             <button

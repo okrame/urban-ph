@@ -208,7 +208,7 @@ const EventCardDesktopLayout = ({
                   onClick={() => setShowFullDescription(true)}
                   className="ml-2 text-[#000000] hover:text-green-800 underline text-sm"
                 >
-                  Show more
+                  SHOW MORE
                 </button>
               </>
             ) : (
@@ -242,7 +242,7 @@ const EventCardDesktopLayout = ({
                     }}
                     className="ml-2 text-black hover:text-green-800 underline text-sm"
                   >
-                    Show less
+                    SHOW LESS
                   </button>
                 )}
               </>

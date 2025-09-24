@@ -69,12 +69,12 @@ function CelebratoryToast({
     onComplete?.();
   };
 
-  // Auto-complete after 4 seconds
+  // Auto-complete 
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 20000);
+      }, 25000);
 
       return () => clearTimeout(timer);
     }
@@ -175,10 +175,10 @@ function CelebratoryToast({
     if (!eventUrl) return;
 
     const shareData = {
-      title: eventTitle ? `${eventTitle} - Urban Ph` : 'Urban Ph Event',
+      title: eventTitle ? `${eventTitle} - Urban pH` : 'Urban pH Event',
       text: eventTitle
         ? `I'm going to ${eventTitle}! Check it out:`
-        : 'Check out this Urban Ph event:',
+        : 'Check out this Urban pH event:',
       url: eventUrl
     };
 
@@ -343,7 +343,7 @@ function CelebratoryToast({
 
                 {(eventLocation || eventVenueName) && (
                   <div className="flex items-center justify-center gap-2 text-gray-700 text-sm sm:text-base">
-                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8c69ef]" />
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8c69ef] flex-shrink-0" />
                     <span className="font-medium">
                       {eventVenueName && eventLocation
                         ? `${eventVenueName}, ${eventLocation}`

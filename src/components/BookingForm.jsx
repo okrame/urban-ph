@@ -558,7 +558,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId">
-                        Tax ID/Codice Fiscale *
+                        ID Number/Codice Fiscale *
                       </label>
                       <input
                         type="text"
@@ -573,7 +573,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                       />
                       {taxId && !validateTaxId(taxId) && (
                         <p className="text-xs text-red-500 mt-1">
-                          Please enter a valid Tax ID (Codice Fiscale, NINO, SSN, EIN, Steuer-ID, etc.)
+                          Please enter a valid ID Number (Codice Fiscale, NINO, SSN, EIN, Steuer-ID, etc.)
                         </p>
                       )}
                     </div>
@@ -666,7 +666,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                         <div>
                           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId-single">
-                            Tax ID/Codice Fiscale *
+                            ID Number/Codice Fiscale *
                           </label>
                           <input
                             type="text"

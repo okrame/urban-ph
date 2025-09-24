@@ -475,7 +475,7 @@ export const bookEventSimple = async (eventId, userData) => {
             type: 'booking_confirmation',
             bookingRef: existingBookingId,
             senderEmail: 'urbanphotohunts.roma@gmail.com',
-            senderName: 'Urban Photo Hunts'
+            senderName: 'Urban pH'
           });
 
           console.log('Booking reactivation email queued for:', userEmail);
@@ -689,7 +689,7 @@ export const bookEventSimple = async (eventId, userData) => {
           type: 'booking_confirmation',
           bookingRef: newBookingId,
           senderEmail: 'urbanphotohunts.roma@gmail.com',
-          senderName: 'Urban Photo Hunts'
+          senderName: 'Urban pH'
         });
 
         console.log('Booking confirmation email queued for:', userEmail);

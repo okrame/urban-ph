@@ -3,31 +3,81 @@
 
 <head>
   <!-- put this at the top of <head>, before the app bundle -->
-<script>
-  (function () {
-    var l = window.location;
 
-    // Detect our encoded redirect format: ?~<encoded>
-    if (l.search && l.search.indexOf('?~') === 0) {
-      var base =
-        (document.querySelector('base') && document.querySelector('base').getAttribute('href')) ||
-        '/';
+  <script>
+    (function () {
+      // Parse URL parameters for event info
+      const urlParams = new URLSearchParams(window.location.search);
+      const eventId = urlParams.get('open');
+      const eventName = urlParams.get('name');
 
-      var decoded = decodeURIComponent(l.search.slice(2)); // remove "?~"
-      // decoded looks like "/events?open=...#..."
-      // Ensure we don't duplicate slashes when joining base + decoded
-      if (decoded.charAt(0) === '/') decoded = decoded.slice(1);
-      var restored = base + decoded;
+      // Default meta values
+      let title = 'Urban pH Events';
+      let description = 'Join our urban ph community for exciting walks, photo hunts, workshops, and exhibitions.';
+      let image = 'https://urbanph.it/camera-icon.svg'; 
+      let url = window.location.href;
 
-      history.replaceState(null, '', restored);
-    }
+      // If we have event info in URL, customize meta tags
+      if (eventId && eventName) {
+        const eventTitle = eventName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        title = `${eventTitle} - Urban pH`;
+        description = `Join us for ${eventTitle}. Book your spot now!`;
+      }
 
-    // Helps with iOS weirdness around automatic scroll restore
-    if ('scrollRestoration' in history) {
-      history.scrollRestoration = 'manual';
-    }
-  })();
-</script>
+      // Set document title immediately
+      document.title = title;
+
+      // Create meta tags
+      const metaTags = [
+        { name: 'description', content: description },
+        { property: 'og:title', content: title },
+        { property: 'og:description', content: description },
+        { property: 'og:image', content: image },
+        { property: 'og:url', content: url },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'Urban pH' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: title },
+        { name: 'twitter:description', content: description },
+        { name: 'twitter:image', content: image }
+      ];
+
+      // Add meta tags to head
+      metaTags.forEach(tag => {
+        const meta = document.createElement('meta');
+        if (tag.name) meta.name = tag.name;
+        if (tag.property) meta.property = tag.property;
+        meta.content = tag.content;
+        document.head.appendChild(meta);
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var l = window.location;
+
+      // Detect our encoded redirect format: ?~<encoded>
+      if (l.search && l.search.indexOf('?~') === 0) {
+        var base =
+          (document.querySelector('base') && document.querySelector('base').getAttribute('href')) ||
+          '/';
+
+        var decoded = decodeURIComponent(l.search.slice(2)); // remove "?~"
+        // decoded looks like "/events?open=...#..."
+        // Ensure we don't duplicate slashes when joining base + decoded
+        if (decoded.charAt(0) === '/') decoded = decoded.slice(1);
+        var restored = base + decoded;
+
+        history.replaceState(null, '', restored);
+      }
+
+      // Helps with iOS weirdness around automatic scroll restore
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+      }
+    })();
+  </script>
 
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="camera-icon.svg" />

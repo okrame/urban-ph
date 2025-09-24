@@ -27,6 +27,7 @@ function Hero({ user, onSignInClick }) {
   const endTextRef = useRef(null);
   const authButtonRef = useRef(null);
   const location = useLocation();
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -69,6 +70,13 @@ function Hero({ user, onSignInClick }) {
 
     return () => clearTimeout(timeout);
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setIsImageLoaded(true);
+    img.onerror = () => setIsImageLoaded(true); // Fallback
+    img.src = gianicolo;
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -123,10 +131,20 @@ function Hero({ user, onSignInClick }) {
 
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
+        {/* Placeholder background - sempre presente */}
+        <div className="absolute inset-0 w-full h-full bg-[#FFFADE]" />
+
+        {/* Immagine vera - con fade in */}
         <img
           src={gianicolo}
           alt="Panorama dal Gianicolo a Roma"
-          className="w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          style={{
+            willChange: 'opacity',
+            backfaceVisibility: 'hidden',
+            transform: 'translateZ(0)'
+          }}
         />
       </div>
 
@@ -141,6 +159,7 @@ function Hero({ user, onSignInClick }) {
       >
         <AnimateLogo
           className="w-28 h-auto xs:w-32 sm:w-32 md:w-40 lg:w-48" // Ridotto per dispositivi molto piccoli
+          animate={isImageLoaded}
           animationDelay={700}
           animationDuration={4000}
         />

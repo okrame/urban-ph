@@ -131,7 +131,7 @@ const EventCardMobileLayout = ({
 
         {/* Info Half */}
         <div className="w-1/2 h-full p-3 sm:p-4 flex flex-col justify-center bg-white">
-          <h3 className="text-lg sm:text-xl font-bold text-black mb-2 line-clamp-3">{event.title}</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-black mb-2 line-clamp-3 -mt-3">{event.title}</h3>
           {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
             <div className="flex flex-col text-xs sm:text-sm text-black opacity-70 gap-1">
               <div className="flex items-center gap-1 font-bold" ref={dateRef}>

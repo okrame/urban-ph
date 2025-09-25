@@ -265,7 +265,7 @@ function Info() {
         onClick={() => setActivityKind(
           activityKind === 'hunts' ? 'workshops' :
             activityKind === 'workshops' ? 'exhibitions' :
-              activityKind === 'exhibitions' ? 'walks' :  // <-- Nuovo
+              activityKind === 'exhibitions' ? 'walks' :  
                 'hunts'
         )}
         className="absolute p-2 bg-gray-200/50 rounded-full transition-all duration-200 
@@ -277,7 +277,9 @@ function Info() {
           x: useTransform(square1X, (x) => x + (squareSize / 2) + 20),
           y: isMobile ? square2TopY : titleDesktopY,
           opacity: textOpacity,
-          scale: textScale
+          scale: textScale,
+          zIndex: 50,
+          pointerEvents: 'auto'
         }}
       >
         <svg

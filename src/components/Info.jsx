@@ -58,7 +58,7 @@ function Info() {
 
   const getSquare2Target = () => {
     if (!eventCardPosition || !eventCardPosition.width) return -200;
-    const dynamicBorderOffset = isMobile ? 7.5 : borderOffset + 7.5;
+    const dynamicBorderOffset = isMobile ? 7.5 : 7.5//borderOffset + 7.5;
     return eventCardPosition.left + dynamicBorderOffset + (squareSize / 2);
   };
 

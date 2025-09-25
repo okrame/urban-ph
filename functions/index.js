@@ -846,7 +846,7 @@ exports.share = onRequest(
       if (!snap.exists) return res.redirect(302, 'https://urbanph.it/');
 
       const e = snap.data();
-      const title = e.title || 'Urban pH – Event';
+      const title = e.title ? `Urban pH – ${e.title}` : 'Urban pH – Event';
       const desc = (e.description || '')
         .replace(/[#*_`~\[\]]/g, '')
         .replace(/<[^>]+>/g, '')

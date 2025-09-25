@@ -220,6 +220,7 @@ function Info() {
         isInView={isInView}
         progressPhase1={progressPhase1}
         progressPhase2={progressPhase2}
+        currentContent={currentContent} 
       />
 
       <motion.div

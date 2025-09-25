@@ -5,6 +5,11 @@ import hunt2 from '../assets/hunts/2.png';
 import hunt3 from '../assets/hunts/3.jpeg';
 import hunt4 from '../assets/hunts/4.jpeg';
 import hunt5 from '../assets/hunts/5.jpeg';
+import workshop1 from '../assets/workshops/1.jpeg';
+import workshop2 from '../assets/workshops/2.jpeg';
+import workshop3 from '../assets/workshops/3.jpeg';
+import workshop4 from '../assets/workshops/4.jpeg';
+import workshop5 from '../assets/workshops/5.jpeg';
 
 const ImageFiller = ({
   square1X,
@@ -14,7 +19,8 @@ const ImageFiller = ({
   squareSize,
   isInView,
   progressPhase1,
-  progressPhase2
+  progressPhase2,
+  currentContent
 }) => {
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -231,15 +237,21 @@ const ImageFiller = ({
     }
   );
 
+  const imageSets = {
+    hunts: [hunt1, hunt2, hunt3, hunt4, hunt5],
+    workshops: [workshop1, workshop2, workshop3, workshop4, workshop5]
+  };
+
+
   // Calculate if conditions are met (boolean)
   const shouldShow = useTransform(
-  [progressPhase1, progressPhase2, intersectionWidth, intersectionHeight],
-  ([phase1, phase2, width, height]) => {
-    const minWidth = windowWidth <= 375 ? 80 : windowWidth <= 768 ? 120 : 200;
-    const minHeight = windowWidth <= 375 ? 60 : windowWidth <= 768 ? 80 : 150;
-    return isInView && phase1 >= 1 && phase2 > 0.3 && width > minWidth && height > minHeight;
-  }
-);
+    [progressPhase1, progressPhase2, intersectionWidth, intersectionHeight],
+    ([phase1, phase2, width, height]) => {
+      const minWidth = windowWidth <= 375 ? 80 : windowWidth <= 768 ? 120 : 200;
+      const minHeight = windowWidth <= 375 ? 60 : windowWidth <= 768 ? 80 : 150;
+      return isInView && phase1 >= 1 && phase2 > 0.3 && width > minWidth && height > minHeight;
+    }
+  );
   // State to track when to trigger animations
   const [showImages, setShowImages] = useState(false);
 
@@ -252,13 +264,15 @@ const ImageFiller = ({
     return unsubscribe;
   }, [shouldShow]);
 
-  // Images data for cleaner code
+  const imageSet = currentContent === 'workshops' ? 'workshops' : 'hunts';
+  const currentImages = imageSets[imageSet];
+
   const images = [
-    { src: hunt1, alt: "Hunt 1", pos: image1Pos, width: image1Width, height: image1Height, delay: 0 },
-    { src: hunt2, alt: "Hunt 2", pos: image2Pos, width: otherImageWidth, height: imageHeight, delay: 0.15 },
-    { src: hunt3, alt: "Hunt 3", pos: image3Pos, width: otherImageWidth, height: imageHeight, delay: 0.3 },
-    { src: hunt4, alt: "Hunt 4", pos: image4Pos, width: otherImageWidth, height: imageHeight, delay: 0.45 },
-    { src: hunt5, alt: "Hunt 5", pos: image5Pos, width: image5Width, height: image5Height, delay: 0.35 }
+    { src: currentImages[0], alt: `${imageSet} 1`, pos: image1Pos, width: image1Width, height: image1Height, delay: 0 },
+    { src: currentImages[1], alt: `${imageSet} 2`, pos: image2Pos, width: otherImageWidth, height: imageHeight, delay: 0.15 },
+    { src: currentImages[2], alt: `${imageSet} 3`, pos: image3Pos, width: otherImageWidth, height: imageHeight, delay: 0.3 },
+    { src: currentImages[3], alt: `${imageSet} 4`, pos: image4Pos, width: otherImageWidth, height: imageHeight, delay: 0.45 },
+    { src: currentImages[4], alt: `${imageSet} 5`, pos: image5Pos, width: image5Width, height: image5Height, delay: 0.35 }
   ];
 
   const handleImageClick = (index) => {

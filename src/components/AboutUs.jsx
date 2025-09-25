@@ -151,7 +151,7 @@ export default function AboutUs() {
   useEffect(() => {
     if (isStatsInView) {
       const animations = [
-        animate(eventsCount, 76, {
+        animate(eventsCount, 88, {
           duration: 2,
           ease: "easeOut",
           delay: 0.3

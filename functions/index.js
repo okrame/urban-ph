@@ -828,57 +828,45 @@ async function updateBookingByEventAndUser(db, eventId, userId, status) {
 
 
 
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 
-exports.share = functions.https.onRequest(async (req, res) => {
-  try {
-    const { open, name } = req.query;
-    if (!open) return res.status(400).send('Missing "open" param');
+exports.share = onRequest(
+  {
+    region: "europe-west3", 
+    cors: false,
+    maxInstances: 3
+  },
+  async (req, res) => {
+    try {
+      const { open, name } = req.query;
+      if (!open) return res.status(400).send('Missing "open" param');
 
-    // Cerca l'evento nel database
-    const snap = await admin.firestore().collection('events').doc(String(open)).get();
-    if (!snap.exists) {
-      // Se l'evento non esiste, redirige comunque alla home
-      return res.redirect(302, 'https://urbanph.it/');
-    }
+      const snap = await admin.firestore().collection('events').doc(String(open)).get();
+      if (!snap.exists) return res.redirect(302, 'https://urbanph.it/');
 
-    const e = snap.data();
-    const title = e.title || 'Urban pH – Event';
+      const e = snap.data();
+      const title = e.title || 'Urban pH – Event';
+      const desc = (e.description || '')
+        .replace(/[#*_`~\[\]]/g, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 160) + ((e.description || '').length > 160 ? '...' : '');
 
-    // Migliore pulizia della descrizione
-    const desc = (e.description || '')
-      .replace(/[#*_`~\[\]]/g, '')    // rimuovi markdown
-      .replace(/<[^>]+>/g, '')        // rimuovi html
-      .replace(/\s+/g, ' ')           // normalizza spazi
-      .trim()
-      .slice(0, 160) + (e.description && e.description.length > 160 ? '...' : '');
+      const image = e.image || 'https://urbanph.it/camera-icon.svg';
+      const appUrl = `https://urbanph.it/?open=${encodeURIComponent(open)}${name ? `&name=${encodeURIComponent(name)}` : ''}`;
 
-    // Usa l'immagine dell'evento o fallback
-    const image = e.image || 'https://urbanph.it/camera-icon.svg';
+      const eventInfo = [];
+      if (e.date) eventInfo.push(e.date);
+      if (e.time) eventInfo.push(e.time);
+      if (e.venueName || e.location) eventInfo.push(e.venueName || e.location);
+      const fullDesc = eventInfo.length ? `${desc} | ${eventInfo.join(' - ')}` : desc;
 
-    // URL finale della SPA
-    const appUrl = `https://urbanph.it/?open=${encodeURIComponent(open)}${name ? `&name=${encodeURIComponent(name)}` : ''
-      }`;
-
-    // Aggiungi info evento nella descrizione
-    const eventInfo = [];
-    if (e.date) eventInfo.push(e.date);
-    if (e.time) eventInfo.push(e.time);
-    if (e.venueName || e.location) eventInfo.push(e.venueName || e.location);
-
-    const fullDesc = eventInfo.length > 0
-      ? `${desc} | ${eventInfo.join(' - ')}`
-      : desc;
-
-    const html = `<!doctype html><html lang="it"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+      const html = `<!doctype html><html lang="it"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)} - Urban pH</title>
 <meta name="description" content="${esc(fullDesc)}">
-
-<!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Urban pH">
 <meta property="og:title" content="${esc(title)}">
@@ -887,43 +875,22 @@ exports.share = functions.https.onRequest(async (req, res) => {
 <meta property="og:image" content="${image}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-
-<!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(fullDesc)}">
 <meta name="twitter:image" content="${image}">
-
-<!-- WhatsApp/Telegram specifici -->
-<meta property="og:image:alt" content="${esc(title)} - Urban pH Event">
-
 <link rel="canonical" href="${appUrl}">
-</head><body style="margin:0;padding:20px;font-family:system-ui,sans-serif;text-align:center;">
-<h1>Redirecting to Urban pH...</h1>
-<p>Opening <strong>${esc(title)}</strong></p>
-<script>
-  // Immediate redirect
-  window.location.replace(${JSON.stringify(appUrl)});
-</script>
-<noscript>
-  <meta http-equiv="refresh" content="0; url=${appUrl}">
-  <p><a href="${appUrl}">Click here if not redirected automatically</a></p>
-</noscript>
-</body></html>`;
+</head><body><script>location.replace(${JSON.stringify(appUrl)});</script>
+<noscript><meta http-equiv="refresh" content="0; url=${appUrl}">
+<p><a href="${appUrl}">Continue</a></p></noscript></body></html>`;
 
-    // Cache per 5 minuti (i social media crawler non richiedono spesso)
-    res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
-    res.status(200).send(html);
-
-  } catch (err) {
-    console.error('Share function error:', err);
-    // In caso di errore, redirige alla home
-    res.redirect(302, 'https://urbanph.it/');
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+      res.status(200).send(html);
+    } catch (err) {
+      console.error('share error:', err);
+      res.redirect(302, 'https://urbanph.it/');
+    }
   }
-});
+);
 
-function esc(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

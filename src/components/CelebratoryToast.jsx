@@ -13,7 +13,8 @@ function CelebratoryToast({
   eventTime,
   eventLocation,
   eventVenueName,
-  eventUrl
+  eventUrl,
+  eventId
 }) {
   const [windowDimension, setWindowDimension] = useState({
     width: window.innerWidth,
@@ -172,10 +173,8 @@ function CelebratoryToast({
 
 
   const handleShare = async () => {
-    if (!eventUrl) return;
+    const shareUrl = generateShareUrl(eventTitle, eventId);
 
-    // Ora genera URL pulito: https://urbanph.it/share?open=...
-    const shareUrl = generateShareUrl(eventTitle, event?.id);
 
     const shareData = {
       title: eventTitle ? `${eventTitle} - Urban pH` : 'Urban pH Event',
@@ -214,7 +213,7 @@ function CelebratoryToast({
       : '';
 
     // URL PULITO usando Firebase Hosting rewrite
-    const baseUrl = 'https://urbanph.it/share';
+    const baseUrl = 'https://europe-west3-uph-website.cloudfunctions.net/share';
     const params = new URLSearchParams();
     params.set('open', eventId);
     if (eventName) params.set('name', eventName);

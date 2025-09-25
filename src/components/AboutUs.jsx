@@ -253,7 +253,9 @@ export default function AboutUs() {
               animationDelay={1100}
               strokeWidth={1.1}
               trigger={isTextInView}
-            >cultural association</RoughNotationCircle> dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a
+            ><span className="inline-block break-before-all">
+    cultural association
+  </span></RoughNotationCircle> dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a
             platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore,
             and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
           </div>

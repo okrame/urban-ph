@@ -199,7 +199,7 @@ const EventCardMobileLayout = ({
               </ReactMarkdown>
               <button
                 onClick={() => setShowFullDescription(true)}
-                className="ml-2 text-black hover:text-green-700 underline text-sm"
+                className="ml-0 text-black hover:text-green-700 underline text-sm"
               >
                 SHOW MORE
               </button>

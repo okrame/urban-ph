@@ -63,7 +63,11 @@ function Info() {
   };
 
   const square1X = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
-  const square1Y = useTransform(progressPhase1, [0, 1], [-squareSize * 0.35, -squareSize * 0.45]);
+  const square1Y = useTransform(progressPhase1, [0, 1],
+    isMobile
+      ? [-squareSize * 0.35, -squareSize * 0.45]  // mobile
+      : [-squareSize * 0.32, -squareSize * 0.42]  // desktop
+  );
 
   const square2Target = getSquare2Target();
 
@@ -117,11 +121,12 @@ function Info() {
 
   const italianTextOpacity = useTransform(
     isMobile ? scrollYProgress : progressPhase2,
-    isMobile ? [0.6, 0.64] : [0, 0.4],
+    isMobile ? [0.45, 0.65] : [0, 0.4],
     [0, 1]
   );
 
-  const solidClipPath = 'inset(0 0 90% 0)';
+  const tempVal = isMobile ? 90 : 87;
+  const solidClipPath = `inset(0 0 ${tempVal}% 0)`;
   const clipInsetDashed = useTransform(scrollYProgress, [0.5, 1], [squareSize * 0.90, 0]);
 
 
@@ -157,7 +162,7 @@ function Info() {
     square2TopY,
     (y) => y + (isMobile ? -offset : 0)
   );
-  
+
   return (
     <section ref={ref} className="relative flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
       <div className="w-full" style={{
@@ -220,7 +225,7 @@ function Info() {
         isInView={isInView}
         progressPhase1={progressPhase1}
         progressPhase2={progressPhase2}
-        currentContent={activityKind}  
+        currentContent={activityKind}
       />
 
       <motion.div
@@ -320,6 +325,11 @@ function Info() {
           dangerouslySetInnerHTML={{ __html: currentContent.text }}
         />
       </motion.div>
+      <div
+        aria-hidden
+        className="w-full"
+        style={{ height: isMobile ? squareSize * 0.40 : squareSize * 0.48 }}
+      />
     </section>
   );
 }

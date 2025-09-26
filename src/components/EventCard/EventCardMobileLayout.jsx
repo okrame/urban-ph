@@ -16,6 +16,21 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { X, MapPin } from "lucide-react";
+import { useComponentText } from '../../hooks/useText';
+
+const ECARD_TRANSLATIONS = {
+  // Titoli e intestazioni
+  showmore: {
+    it: "SCOPRI DI PIU",
+    en: "SHOW MORE",
+  },
+
+  showless: {
+    it: "MOSTRA MENO",
+    en: "SHOW LESS",
+  },
+
+}
 
 
 
@@ -71,7 +86,7 @@ const EventCardMobileLayout = ({
 
   // Final trigger: after armed, when external trigger OR in-view OR already open
   const roughTrigger = (annotationTrigger || dateInView || forceAlwaysVisible);
-
+  const { t } = useComponentText(ECARD_TRANSLATIONS);
 
   return (
     <motion.div
@@ -201,7 +216,7 @@ const EventCardMobileLayout = ({
                 onClick={() => setShowFullDescription(true)}
                 className="ml-0 text-black hover:text-green-700 underline text-sm"
               >
-                SHOW MORE
+                {t('showmore')}
               </button>
             </>
           ) : (
@@ -235,7 +250,7 @@ const EventCardMobileLayout = ({
                   }}
                   className="ml-2 text-black hover:text-green-700 underline text-sm"
                 >
-                  SHOW LESS
+                  {t('showless')}
                 </button>
               )}
             </>

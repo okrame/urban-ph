@@ -15,6 +15,22 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { MapPin } from 'lucide-react';
+import { useComponentText } from '../../hooks/useText';
+
+const ECARD_TRANSLATIONS = {
+  // Titoli e intestazioni
+  showmore: {
+    it: "SCOPRI DI PIU",
+    en: "SHOW MORE",
+  },
+
+  showless: {
+    it: "MOSTRA MENO",
+    en: "SHOW LESS",
+  },
+
+}
+
 
 const EventCardDesktopLayout = ({
   event,
@@ -46,6 +62,9 @@ const EventCardDesktopLayout = ({
   loading
 }) => {
   const shouldTruncate = shouldTruncateDescription(event.description);
+
+  const { t } = useComponentText(ECARD_TRANSLATIONS);
+
 
   return (
     <div
@@ -208,7 +227,7 @@ const EventCardDesktopLayout = ({
                   onClick={() => setShowFullDescription(true)}
                   className="ml-2 text-[#000000] hover:text-green-800 underline text-sm"
                 >
-                  SHOW MORE
+                  {t('showmore')}
                 </button>
               </>
             ) : (
@@ -242,7 +261,7 @@ const EventCardDesktopLayout = ({
                     }}
                     className="ml-2 text-black hover:text-green-800 underline text-sm"
                   >
-                    SHOW LESS
+                    {t('showless')}
                   </button>
                 )}
               </>

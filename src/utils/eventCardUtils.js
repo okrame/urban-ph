@@ -1,6 +1,34 @@
-// utils/eventCardUtils.js
+// utils/eventCardUtils.js 
+
+//import { useLanguage } from '../contexts/LanguageContext';
 
 export const DESCRIPTION_LIMIT = 320;
+
+//const { language } = useLanguage();
+
+
+const BOOKING_TRANSLATIONS = {
+  bookbutton: { it: "Prenota", en: "Book Now" },
+  loading: { it: "Attendi...", en: "Hold on..." },
+  eventEnded: { it: "Evento Concluso", en: "Event Ended" },
+  confirmed: { it: "Prenotazione Confermata!", en: "Booking Confirmed!" },
+  fullyBooked: { it: "Tutto Esaurito", en: "Fully Booked" },
+  bookingClosed: { it: "Prenotazioni Chiuse", en: "Booking Closed" },
+  bookAgain: { it: "Prenota ancora", en: "Book Again" },
+  signInToBook: { it: "Accedi per Prenotare", en: "Sign In to Book" }
+};
+
+
+// Funzione di traduzione semplice
+const getTranslation = (key, language) => {
+  // Se non viene passata la lingua, leggila dal localStorage
+  if (!language) {
+    language = (typeof window !== 'undefined') ? 
+      localStorage.getItem('urban-ph-language') || 'it' : 'it';
+  }
+  
+  return BOOKING_TRANSLATIONS[key]?.[language] || BOOKING_TRANSLATIONS[key]?.it || key;
+};
 
 // BORDER CLASSES FUNCTIONS
 export const getBorderClasses = (index) => {
@@ -17,21 +45,9 @@ export const getBorderClassesMobile = (index) => {
   } else {
     return "border-b-2 border-r-2 border-black rounded-br-3xl";
   }
-
-  //return "overflow-hidden";
 };
 
 export const getContentBorderClassesMobile = (index) => {
-  // if (index === 0) {
-  //   return "border-r-2 border-black";
-  // }
-
-  // if (index % 2 === 1) {
-  //   return "border-l-2 border-black";
-  // } else {
-  //   return "border-r-2 border-black";
-  // }
-
   return "overflow-hidden";
 };
 
@@ -43,26 +59,22 @@ export const getActiveFrameThickness = (index) =>
     ? 'border-b-2 border-l-2 md:border-b-2 md:border-l-2'
     : 'border-b-2 border-r-2 md:border-b-2 md:border-r-2';
 
-
 export const getImageRoundingMobile = (index) => {
   if (index === 0) return "rounded-tr-2xl";
   return index % 2 === 1 ? "rounded-tl-2xl" : "rounded-tr-2xl";
 };
 
 export const getImageRoundingDesktop = (index, showFullDescription = false) => {
-  // Remove bottom rounding when description is expanded
   if (showFullDescription) {
-    return ""; // No rounding when expanded
+    return "";
   }
   
-  // Original rounding when collapsed
   if (index % 2 === 0) {
     return "rounded-bl-[22px]";
   } else {
     return "rounded-br-[22px]";
   }
 };
-
 
 // ANIMATION VARIANTS
 export const createImageVariants = (isImageLeft) => ({
@@ -163,7 +175,7 @@ export const shouldTruncateDescription = (description) => {
 // BUTTON STATE LOGIC
 export const getButtonState = (isBooked, bookingStatus, loading, isBookable) => {
   const isClosedForBooking = !isBookable;
-  const isFullyBooked = isClosedForBooking; // You might want to check bookableReason === "No spots left"
+  const isFullyBooked = isClosedForBooking;
   const isInteractiveButton = !((isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled'));
   
   return {
@@ -173,23 +185,24 @@ export const getButtonState = (isBooked, bookingStatus, loading, isBookable) => 
   };
 };
 
+// ✅ FUNZIONE CHE ACCETTA 't' COME PARAMETRO
 export const getButtonText = (isBooked, bookingStatus, loading, isBookable, eventStatus, user, bookableReason) => {
-  if (loading) return 'Hold on...';
   
-  // Check event status FIRST - events that have ended should never be bookable
-  if (eventStatus === 'past') return 'Event Ended';
+  if (loading) return getTranslation('loading');
   
-  if (isBooked && bookingStatus !== 'cancelled') return 'Booking Confirmed!';
+  if (eventStatus === 'past') return getTranslation('eventEnded');
+  
+  if (isBooked && bookingStatus !== 'cancelled') return getTranslation('confirmed');
   
   if (!isBookable && bookingStatus !== 'cancelled') {
-    if (bookableReason === "No spots left") return 'Fully Booked';
-    return 'Booking Closed';
+    if (bookableReason === "No spots left") return getTranslation('fullyBooked');
+    return getTranslation('bookingClosed');
   }
   
   if (user) {
-    if (bookingStatus === 'cancelled') return 'Book Again';
-    return 'Book Now';
+    if (bookingStatus === 'cancelled') return getTranslation('bookAgain');
+    return getTranslation('bookbutton');
   }
   
-  return 'Sign In to Book';
+  return getTranslation('signInToBook');
 };

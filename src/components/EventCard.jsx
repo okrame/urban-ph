@@ -9,7 +9,7 @@ import EventCardMobileLayout from './EventCard/EventCardMobileLayout';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 import { getActiveCardRounding } from '../utils/eventCardUtils';
-
+import { useComponentText } from '../hooks/useText';
 // Custom hooks
 import { useEventCardState } from '../hooks/useEventCardState';
 import { useEventCardHandlers } from '../hooks/useEventCardHandlers';
@@ -24,9 +24,15 @@ import {
   getButtonText
 } from '../utils/eventCardUtils';
 
+const TRANSLATION = {
+holdOn: { it: "Un attimo...", en: "Hold on..." },
+
+};
+
 function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter }) {
 
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useComponentText(TRANSLATION);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -386,7 +392,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
       return (
         <div className="flex items-center gap-2">
           <LoadingSpinner size={20} color="#4A7E74" />
-          <span>Hold on...</span>
+          <span>{t('holdOn')}</span>
         </div>
       );
     }

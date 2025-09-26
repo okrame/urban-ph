@@ -6,6 +6,62 @@ import { auth } from '../../firebase/config';
 import { getUserProfile } from '../../firebase/userServices';
 import gianicolo from '../assets/gianicolo.jpg';
 import AnimateLogo from '../components/AnimateLogo';
+import LanguageToggle from './LanguageToggle';
+import { useComponentText } from '../hooks/useText';
+
+
+// Traduzioni del componente Hero
+const HERO_TRANSLATIONS = {
+  title1: {
+    it: 'ESPLORARE',
+    en: 'EXPLORING'
+  },
+  title2: {
+    it: 'IL CORPO',
+    en: 'URBAN'
+  },
+  title3: {
+    it: 'URBANO',
+    en: 'SPACE'
+  },
+  welcome: {
+    it: 'Benvenut*',
+    en: 'Welcome'
+  },
+  signIn: {
+    it: 'Accedi',
+    en: 'Sign In'
+  },
+  signOut: {
+    it: 'Esci',
+    en: 'Sign Out'
+  },
+  loading: {
+    it: 'Caricamento...',
+    en: 'Loading...'
+  },
+  admin: {
+    it: 'Admin',
+    en: 'Admin'
+  },
+  contacts: {
+    it: '.contatti',
+    en: '.contacts'
+  },
+  scrollLabel: {
+    it: 'Scorri agli eventi attuali',
+    en: 'Scroll to current events'
+  },
+  aboutus: {
+   it: '.chiSiamo',
+   en: '.aboutUs'
+  },
+  events: {
+   it: '.eventi',
+   en: '.ourEvents'
+  },
+};
+
 
 // Animated burger menu lines
 const Path = props => (
@@ -28,6 +84,8 @@ function Hero({ user, onSignInClick }) {
   const authButtonRef = useRef(null);
   const location = useLocation();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+  const { t } = useComponentText(HERO_TRANSLATIONS);
 
   // Check if user is admin
   useEffect(() => {
@@ -216,13 +274,13 @@ function Hero({ user, onSignInClick }) {
                 onClick={scrollToCurrentEvents}
                 className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
               >
-                .ourEvents
+                {t('events')}
               </button>
               <button
                 onClick={scrollToAboutUs}
                 className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
               >
-                .aboutUs
+                {t('aboutus')}
               </button>
               <motion.button
                 onClick={scrollToContactUs}
@@ -232,17 +290,19 @@ function Hero({ user, onSignInClick }) {
                   closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
                 }}
               >
-                .contacts
+                {t('contacts')}
               </motion.button>
               {user && isAdmin && (
                 <Link
                   to="/admin"
                   className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
                 >
-                  Admin
+                  {t('admin')}
                 </Link>
               )}
             </div>
+
+
 
             {/* Main Text Content - now anchored to left menu */}
             <div
@@ -255,10 +315,10 @@ function Hero({ user, onSignInClick }) {
                 className="font-medium leading-tight"
                 style={{ color: '#FFFADE' }}
               >
-                <div className="text-4xl md:text-6xl">ESPLORARE</div>
-                <div className="text-4xl md:text-6xl">IL CORPO</div>
+                <div className="text-4xl md:text-6xl">{t('title1')}</div>
+                <div className="text-4xl md:text-6xl">{t('title2')}</div>
                 <div className="text-4xl md:text-6xl">
-                  URBAN<span ref={startLetterRef}>O</span>
+                  {t('title3')}<span ref={startLetterRef}> </span>
                 </div>
               </h1>
             </div>
@@ -267,7 +327,8 @@ function Hero({ user, onSignInClick }) {
           {/* Right side authentication and text content container */}
           <div className="flex flex-col items-end">
             {/* Authentication section */}
-            <div className="flex items-center mb-8">
+            <div className="flex items-center mb-8 space-x-5">
+              <LanguageToggle />
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-[#FFFADE] text-sm">
@@ -278,7 +339,7 @@ function Hero({ user, onSignInClick }) {
                     onClick={handleSignOut}
                     className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium"
                   >
-                    Sign Out
+                    {t('signOut')}
                   </button>
                 </div>
               ) : (
@@ -297,7 +358,8 @@ function Hero({ user, onSignInClick }) {
                       Signing in...
                     </>
                   ) : (
-                    'Sign In'
+                    t('signIn')
+
                   )}
                 </button>
               )}
@@ -397,7 +459,7 @@ function Hero({ user, onSignInClick }) {
                   closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
                 }}
               >
-                .ourEvents
+                {t('events')}
               </motion.button>
               <motion.div
                 variants={{
@@ -409,7 +471,7 @@ function Hero({ user, onSignInClick }) {
                   onClick={scrollToAboutUs}
                   className="text-[#FFFADE] hover:text-white transition-colors duration-200 text-lg font-medium text-left block"
                 >
-                  .aboutUs
+                  {t('aboutus')}
                 </Link>
               </motion.div>
               <motion.button
@@ -420,7 +482,7 @@ function Hero({ user, onSignInClick }) {
                   closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
                 }}
               >
-                .contacts
+                {t('contacts')}
               </motion.button>
               {user && isAdmin && (
                 <motion.div
@@ -454,7 +516,7 @@ function Hero({ user, onSignInClick }) {
                       closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
                     }}
                   >
-                    Welcome, {user.displayName || user.email}
+                    {t('welcome')}, {user.displayName || user.email}
                   </motion.span>
                   <motion.button
                     onClick={() => {
@@ -467,7 +529,7 @@ function Hero({ user, onSignInClick }) {
                       closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
                     }}
                   >
-                    Sign Out
+                    {t('signOut')}
                   </motion.button>
                 </>
               ) : (
@@ -483,13 +545,19 @@ function Hero({ user, onSignInClick }) {
                     closed: { y: 50, opacity: 0, transition: { y: { stiffness: 1000 } } }
                   }}
                 >
-                  {loading ? 'Loading...' : 'Sign In'}
+                  {loading ? 'Loading...' : t('signIn')}
+
                 </motion.button>
               )}
+              <LanguageToggle className="mt-4 justify-center" />
             </motion.div>
+
           </motion.div>
         )}
+
       </div>
+
+
 
       {/* Scroll Arrow */}
       <div

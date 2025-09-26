@@ -1,5 +1,145 @@
 import { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
+import { useComponentText } from '../hooks/useText';
+
+
+// Traduzioni del componente
+const BOOKING_TRANSLATIONS = {
+  // Titoli e intestazioni
+  formTitleMembership: {
+    it: "Iscrizione",
+    en: "Membership for",
+  },
+  formTitleRenew: {
+    it: "Rinnovo Iscrizione",
+    en: "Renew Membership for",
+  },
+  formTitleEvent: {
+    it: "Dettagli Evento",
+    en: "Event Details",
+  },
+  formTitleBooking: {
+    it: "Dettagli Prenotazione",
+    en: "Booking Details",
+  },
+
+  // Messaggi introduttivi
+  introWelcome: {
+    it: "Benvenuto su Urban pH!",
+    en: "Welcome to Urban pH!",
+  },
+  introRegister: {
+    it: "Abbiamo bisogno di alcune info per registrarti per il {year}.",
+    en: "We need some information to register you for {year}.",
+  },
+  introWelcomeBack: {
+    it: "Bentornato, {email}!",
+    en: "Welcome back, {email}!",
+  },
+  introConfirm: {
+    it: "Conferma che i tuoi dati personali siano ancora corretti per {year}.",
+    en: "Please confirm your personal details are still correct for {year}.",
+  },
+  introContact: {
+    it: "Inserisci i tuoi contatti e eventuali richieste per questo evento.",
+    en: "Please provide your contact details and any special requests for this event.",
+  },
+  introCheck: {
+    it: "Controlla i tuoi dati di contatto per completare la prenotazione.",
+    en: "Please check your contact details to complete your booking.",
+  },
+
+  // Avvisi prenotazione
+  alreadyBookedTitle: {
+    it: "⚠️ Ops! Hai già prenotato questo evento",
+    en: "⚠️ Oops! It looks like you have already booked this one",
+  },
+  alreadyBookedDesc: {
+    it: "Controlla la tua email per i dettagli di conferma. Per modifiche contattaci direttamente.",
+    en: "Please check your email for confirmation details. If you need to make changes, please contact us directly.",
+  },
+  // Pagamenti
+  paymentNotice: {
+    it: "Pagamento richiesto: €{amount} {currency}",
+    en: "Payment required: €{amount} {currency}",
+  },
+  paymentRedirect: {
+    it: "Sarai reindirizzato a una pagina di pagamento sicura dopo aver completato questo modulo.",
+    en: "You'll be redirected to a secure payment page after completing this form.",
+  },
+
+  // Campi form
+  name: { it: "Nome *", en: "Name *" },
+  surname: { it: "Cognome *", en: "Surname *" },
+  birthDate: { it: "Data di nascita *", en: "Birth Date *" },
+  birthDateMax: { it: "(devi avere 18+)", en: "(must be 18+)" },
+  address: { it: "Indirizzo *", en: "Street Address *" },
+  country: { it: "Paese *", en: "Country *" },
+  taxId: { it: "Codice Fiscale *", en: "ID Number/Tax ID *" },
+  email: { it: "Email *", en: "Email Address *" },
+  phone: { it: "Telefono *", en: "Phone Number *" },
+  instagram: { it: "Nome Instagram (opzionale)", en: "Instagram Name (optional)" },
+  requests: { it: "Richieste specifiche (opzionale)", en: "Any Specific Request (optional)" },
+
+  // Placeholder
+  placeholderAddress: { it: "Via, numero civico, città, CAP", en: "Street, number, city, zip code" },
+  placeholderTaxId: { it: "16 caratteri", en: "ID characters" },
+  placeholderEmail: { it: "tua@email.com", en: "your@email.com" },
+  placeholderPhone: { it: "+39 123 456 7890", en: "+39 123 456 7890" },
+  placeholderInstagram: { it: "tuoinstagram", en: "yourinstagram" },
+  placeholderRequests: { it: "Eventuali esigenze o richieste...", en: "Any special requirements or requests..." },
+
+  selectCountry: { it: "Seleziona un paese", en: "Select a country" },
+
+  // Errori validazione
+  errorName: { it: "Il nome è obbligatorio", en: "Name is required" },
+  errorSurname: { it: "Il cognome è obbligatorio", en: "Surname is required" },
+  errorBirthDate: { it: "La data di nascita è obbligatoria", en: "Birth date is required" },
+  errorAddress: { it: "L’indirizzo è obbligatorio", en: "Home address is required" },
+  errorCountry: { it: "Il paese è obbligatorio", en: "Country is required" },
+  errorTaxId: { it: "Inserisci un Codice Fiscale valido (16 caratteri)", en: "Valid ID Number/Tax ID is required" },
+  errorEmail: { it: "Inserisci un’email valida", en: "Please enter a valid email address" },
+  errorPhone: { it: "Inserisci un numero di telefono valido", en: "Please enter a valid phone number" },
+  errorPhoneDigits: { it: "Il numero deve avere almeno 8 cifre", en: "Please enter a valid phone number with at least 8 digits" },
+  errorBooked: {
+    it: "Hai già prenotato questo evento. Controlla la tua email per la conferma.",
+    en: "You have already booked this event. Please check your email for confirmation.",
+  },
+  errorTermsPrivacy: {
+    it: "Devi accettare termini e privacy per procedere",
+    en: "You must accept the terms and conditions and privacy policy to proceed",
+  },
+
+  // Termini e Privacy
+  terms: {
+    it: "Accetto i ",
+    en: "I accept the "
+  },
+  termsLink: {
+    it: "Termini e Condizioni",
+    en: "Terms and Conditions"
+  },
+  privacy: {
+    it: "Acconsento al trattamento dei miei dati personali secondo la ",
+    en: "I consent to the processing of my personal data as per the "
+  },
+  privacyLink: {
+    it: "Privacy Policy",
+    en: "Privacy Policy"
+  },
+
+  // Bottoni
+  back: { it: "← Indietro", en: "← Back" },
+  cancel: { it: "Annulla", en: "Cancel" },
+  next: { it: "Avanti →", en: "Next →" },
+  holdOn: { it: "Un attimo...", en: "Hold on..." },
+  wait: { it: "Attendi...", en: "Wait..." },
+  continuePayment: { it: "Vai al Pagamento", en: "Continue to Payment" },
+  confirmBooking: { it: "Conferma Prenotazione", en: "Confirm Booking" },
+  pay: { it: "Paga", en: "Pay" },
+  book: { it: "Prenota", en: "Book" },
+};
+
 
 function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existingData = {}, event,
   isBooked = false, bookingStatus = null, userEmail = null, eventCardRef = null }) {
@@ -21,6 +161,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [country, setCountry] = useState('');
+  const { t } = useComponentText(BOOKING_TRANSLATIONS);
 
   // Determine if we need pagination (first time or confirmation)
   const needsPagination = isFirstTime;
@@ -150,24 +291,24 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
       if (isFirstTime && !hasPersonalDetails) {
         return (
           <>
-            <strong>Welcome to Urban pH!</strong>
+            <strong>{t('introWelcome')}</strong>
             <br />
-            We need some information to register you for {currentYear}.
+            {t('introRegister').replace('{year}', currentYear)}
           </>
         );
       } else if (isFirstTime && hasPersonalDetails) {
         return (
           <>
-            <strong>Welcome back,{userEmail ? ` ${userEmail}` : ''}!</strong>
+            <strong>{t('introWelcomeBack').replace('{email}', userEmail || '')}</strong>
             <br />
-            Please confirm your personal details are still correct for {currentYear}.
+            {t('introConfirm').replace('{year}', currentYear)}
           </>
         );
       }
     } else if (needsPagination && currentPage === 2) {
-      return "Please provide your contact details and any special requests for this event.";
+      return t('introContact');
     } else {
-      return "Please check your contact details to complete your booking.";
+      return t('introCheck');
     }
   };
 
@@ -212,15 +353,15 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     if (needsPagination) {
       if (currentPage === 1) {
         if (isFirstTime && hasPersonalDetails) {
-          return `Renew Membership for ${currentYear}`;
+          return `${t('formTitleRenew')} ${currentYear}`;
         } else if (isFirstTime) {
-          return `Membership for ${currentYear}`;
+          return `${t('formTitleMembership')} ${currentYear}`;
         }
       } else {
-        return "Event Details";
+        return t('formTitleEvent');
       }
     } else {
-      return "Booking Details";
+      return t('formTitleBooking');
     }
   };
 
@@ -247,64 +388,64 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     if (currentPage === 1 && needsPagination) {
       // Page 1: Personal details validation
       if (!name.trim()) {
-        setError('Name is required');
+        setError(t('errorName'));
         return false;
       }
       if (!surname.trim()) {
-        setError('Surname is required');
+        setError(t('errorSurname'));
         return false;
       }
       if (!birthDate) {
-        setError('Birth date is required');
+        setError(t('errorBirthDate'));
         return false;
       }
       if (!address.trim()) {
-        setError('Home address is required');
+        setError(t('errorAddress'));
         return false;
       }
       if (!country) {
-        setError('Country is required');
+        setError(t('errorCountry'));
         return false;
       }
       if (!taxId.trim() || !validateTaxId(taxId)) {
-        setError('Valid Tax ID/Codice Fiscale is required (16 characters)');
+        setError(t('errorTaxId'));
         return false;
       }
     } else {
       // Page 2 with pagination OR single page: Contact details validation
       if (!email.trim() || !validateEmail(email)) {
-        setError('Please enter a valid email address');
+        setError(t('errorEmail'));
         return false;
       }
       if (!phone.trim() || !validatePhone(phone)) {
-        setError('Please enter a valid phone number');
+        setError(t('errorPhone'));
         return false;
       }
 
       // Validate personal details ONLY if single page for first time users
       if (!needsPagination && isFirstTime) {
         if (!name.trim()) {
-          setError('Name is required');
+          setError(t('errorName'));
           return false;
         }
         if (!surname.trim()) {
-          setError('Surname is required');
+          setError(t('errorSurname'));
           return false;
         }
         if (!birthDate) {
-          setError('Birth date is required');
+          setError(t('errorBirthDate'));
           return false;
         }
         if (!address.trim()) {
-          setError('Home address is required');
+          setError(t('errorAddress'));
           return false;
         }
         if (!country) {
-          setError('Country is required');
+          setError(t('errorCountry'));
           return false;
         }
         if (!taxId.trim() || !validateTaxId(taxId)) {
-          setError('Valid Tax ID/Codice Fiscale is required (16 characters)');
+          setError(t('errorTaxId'));
           return false;
         }
       }
@@ -335,7 +476,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
     }
 
     if (isBooked && bookingStatus !== 'cancelled') {
-      setError('You have already booked this event. Please check your email for confirmation.');
+      setError(t('errorBooked'));
       return;
     }
 
@@ -345,7 +486,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
     // Check terms and privacy ONLY on final submit
     if (!acceptTerms || !acceptPrivacy) {
-      setError('You must accept the terms and conditions and privacy policy to proceed');
+      setError(t('errorTermsPrivacy'));
       return;
     }
 
@@ -426,11 +567,10 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
           {isBooked && bookingStatus !== 'cancelled' && (
             <div className="mb-4 p-3 bg-[#FFFADE] border border-[#FFFADE] rounded-md">
               <p className="text-green-900 font-medium">
-                ⚠️ Oops! It looks like you have already booked this one
+                {t('alreadyBookedTitle')}
               </p>
               <p className="text-sm text-[#3c6c64] mt-1">
-                Please check your email for confirmation details. If you need to make changes,
-                please contact us directly.
+                {t('alreadyBookedDesc')}
               </p>
               {/* Add a close button and return early */}
               <div className="mt-3 text-center">
@@ -465,10 +605,12 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
               {event?.paymentAmount > 0 && currentPage === totalPages && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="font-medium text-blue-700">
-                    Payment required: €{event.paymentAmount} {event.paymentCurrency || 'EUR'}
+                    {t('paymentNotice')
+                      .replace('{amount}', event.paymentAmount)
+                      .replace('{currency}', event.paymentCurrency || 'EUR')}
                   </p>
                   <p className="text-sm text-blue-600 mt-1">
-                    You'll be redirected to a secure payment page after completing this form.
+                    {t('paymentRedirect')}
                   </p>
                 </div>
               )}
@@ -480,7 +622,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="name">
-                          Name *
+                          {t('name')}
                         </label>
                         <input
                           type="text"
@@ -488,14 +630,14 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-
+                          placeholder="Raffaella"
                           required
                         />
                       </div>
 
                       <div>
                         <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname">
-                          Surname *
+                          {t('surname')}
                         </label>
                         <input
                           type="text"
@@ -503,6 +645,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           value={surname}
                           onChange={(e) => setSurname(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                          placeholder="Domini"
                           required
                         />
                       </div>
@@ -510,7 +653,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate">
-                        Birth Date * <span className="text-xs text-gray-500">(must be 18+)</span>
+                        {t('birthDate')} <span className="text-xs text-gray-500">{t('birthDateMax')}</span>
                       </label>
                       <input
                         type="date"
@@ -525,7 +668,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address">
-                        Street Address *
+                        {t('address')}
                       </label>
                       <input
                         type="text"
@@ -534,13 +677,13 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         onChange={(e) => setAddress(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         required
-                        placeholder="Street, number, city, zip code"
+                        placeholder={t('placeholderAddress')}
                       />
                     </div>
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country">
-                        Country *
+                        {t('country')}
                       </label>
                       <select
                         id="country"
@@ -549,7 +692,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         required
                       >
-                        <option value="">Select a country</option>
+                        <option value="">{t('selectCountry')}</option>
                         {countries.map(c => (
                           <option key={c} value={c}>{c}</option>
                         ))}
@@ -558,7 +701,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId">
-                        ID Number/Codice Fiscale *
+                        {t('taxId')}
                       </label>
                       <input
                         type="text"
@@ -569,7 +712,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           }`}
                         required
                         maxLength={16}
-                        placeholder="16 characters"
+                        placeholder={t('placeholderTaxId')}
                       />
                       {taxId && !validateTaxId(taxId) && (
                         <p className="text-xs text-red-500 mt-1">
@@ -589,7 +732,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="name-single">
-                              Name *
+                              {t('name')}
                             </label>
                             <input
                               type="text"
@@ -597,13 +740,14 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                               value={name}
                               onChange={(e) => setName(e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                              placeholder="Raffaella"
                               required
                             />
                           </div>
 
                           <div>
                             <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="surname-single">
-                              Surname *
+                              {t('surname')}
                             </label>
                             <input
                               type="text"
@@ -611,6 +755,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                               value={surname}
                               onChange={(e) => setSurname(e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                              placeholder="Domini"
                               required
                             />
                           </div>
@@ -618,7 +763,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                         <div>
                           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="birthDate-single">
-                            Birth Date * <span className="text-xs text-gray-500">(must be 18+)</span>
+                            {t('birthDate')} <span className="text-xs text-gray-500">{t('birthDateMax')}</span>
                           </label>
                           <input
                             type="date"
@@ -633,7 +778,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                         <div>
                           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="address-single">
-                            Street Address *
+                            {t('address')}
                           </label>
                           <input
                             type="text"
@@ -648,7 +793,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                         <div>
                           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="country-single">
-                            Country *
+                            {t('country')}
                           </label>
                           <select
                             id="country-single"
@@ -657,7 +802,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                             required
                           >
-                            <option value="">Select a country</option>
+                            <option value="">{t('selectCountry')}</option>
                             {countries.map(c => (
                               <option key={c} value={c}>{c}</option>
                             ))}
@@ -666,7 +811,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                         <div>
                           <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="taxId-single">
-                            ID Number/Codice Fiscale *
+                            {t('taxId')}
                           </label>
                           <input
                             type="text"
@@ -677,7 +822,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                               }`}
                             required
                             maxLength={16}
-                            placeholder="16 characters"
+                            placeholder={t('placeholderTaxId')}
                           />
                           {taxId && !validateTaxId(taxId) && (
                             <p className="text-xs text-red-500 mt-1">
@@ -690,7 +835,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="email">
-                        Email Address *
+                        {t('email')}
                       </label>
                       <input
                         type="email"
@@ -699,19 +844,19 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         onChange={(e) => setEmail(e.target.value)}
                         className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${email && !validateEmail(email) ? 'border-red-300 bg-red-50' : 'border-gray-300'
                           }`}
-                        placeholder="your@email.com"
+                        placeholder={t('placeholderEmail')}
                         required
                       />
                       {email && !validateEmail(email) && (
                         <p className="text-xs text-red-500 mt-1">
-                          Please enter a valid email address
+                          {t('errorEmail')}
                         </p>
                       )}
                     </div>
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="phone">
-                        Phone Number *
+                        {t('phone')}
                       </label>
                       <input
                         type="tel"
@@ -732,7 +877,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
 
                     <div>
                       <label className="block text-gray-700 font-medium mb-1 text-sm sm:text-sm" htmlFor="instagram">
-                        Instagram Name (optional)
+                        {t('instagram')}
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-base pointer-events-none z-10">@</span>
@@ -742,14 +887,14 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           value={instagram}
                           onChange={(e) => setInstagram(e.target.value)}
                           className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                          placeholder="yourinstagram"
+                          placeholder={t('placeholderInstagram')}
                         />
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1" htmlFor="requests">
-                        Any Specific Request (optional)
+                        {t('requests')}
                       </label>
                       <textarea
                         id="requests"
@@ -757,7 +902,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         onChange={(e) => setRequests(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                         rows="3"
-                        placeholder="Any special requirements or requests..."
+                        placeholder={t('placeholderRequests')}
                       />
                     </div>
 
@@ -772,14 +917,14 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                         />
                         <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
-                          I accept the <a
+                           {t('terms')} <a
                             href="src/assets/termsandco.pdf"
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="text-blue-600 hover:underline cursor-pointer"
                           >
-                            Terms and Conditions
+                            {t('termsLink')}
                           </a> *
                         </label>
                       </div>
@@ -792,14 +937,14 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                           className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                         />
                         <label htmlFor="acceptPrivacy" className="ml-2 block text-sm text-gray-700">
-                          I consent to the processing of my personal data as per the <a
+                          {t('privacy')} <a
                             href="src/assets/termsandco.pdf"
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="text-blue-600 hover:underline cursor-pointer"
                           >
-                            Privacy Policy
+                            {t('privacyLink')}
                           </a> *
                         </label>
                       </div>
@@ -822,7 +967,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         onClick={handlePrevious}
                         className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs sm:text-sm"
                       >
-                        ← Back
+                        {t('back')}
                       </button>
                     )}
                   </div>
@@ -833,7 +978,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                       onClick={onCancel}
                       className="px-3 py-2 sm:px-3 sm:py-1.5 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs sm:text-sm"
                     >
-                      Cancel
+                      {t('cancel')}
                     </button>
 
                     {needsPagination && currentPage < totalPages ? (
@@ -842,7 +987,7 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         onClick={handleNext}
                         className="px-3 py-2 sm:px-4 sm:py-1.5 bg-[#3c6c64] text-white rounded hover:bg-[#5f8c85] text-xs sm:text-sm"
                       >
-                        Next →
+                        {t('next')}
                       </button>
                     ) : (
                       <button
@@ -854,16 +999,16 @@ function BookingForm({ onSubmit, onCancel, loading, isFirstTime = false, existin
                         {loading ? (
                           <>
                             <LoadingSpinner size={12} color="#ffffff" className="sm:w-4 sm:h-4" />
-                            <span className="hidden sm:inline">Hold on...</span>
-                            <span className="sm:hidden">Wait...</span>
+                            <span className="hidden sm:inline">{t('holdOn')}</span>
+                            <span className="sm:hidden">{t('wait')}</span>
                           </>
                         ) : (
                           <>
                             <span className="hidden sm:inline">
-                              {event?.paymentAmount > 0 ? 'Continue to Payment' : 'Confirm Booking'}
+                              {event?.paymentAmount > 0 ? t('continuePayment') : t('confirmBooking')}
                             </span>
                             <span className="sm:hidden font-bold">
-                              {event?.paymentAmount > 0 ? 'Pay' : 'Book'}
+                              {event?.paymentAmount > 0 ? t('pay') : t('book')}
                             </span>
                           </>
                         )}

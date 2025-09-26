@@ -369,7 +369,9 @@ export const bookEventSimple = async (eventId, userData) => {
       const bookingRef = doc(db, 'bookings', existingBookingId);
       await updateDoc(bookingRef, {
         status: 'confirmed',
-        paymentStatus: userData.paymentDetails ? 'COMPLETED' : 'NOT_REQUIRED',
+        paymentStatus: userData.paymentDetails?.paymentId ?
+          (userData.paymentDetails.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING') :
+          'NOT_REQUIRED',
         updatedAt: serverTimestamp(),
         // Update contact info if provided
         contactInfo: {
@@ -530,6 +532,10 @@ export const bookEventSimple = async (eventId, userData) => {
       (userData.paymentDetails.status === 'COMPLETED' ||
         userData.paymentDetails.status === 'completed');
 
+    // Check if payment details exist (regardless of eventData.paymentAmount)
+    const hasPaymentDetails = userData.paymentDetails && userData.paymentDetails.paymentId;
+
+
     // 4. Create the booking with payment details - safely handling undefined values
     const newBooking = {
       userId: userData.userId,
@@ -538,8 +544,9 @@ export const bookEventSimple = async (eventId, userData) => {
       // Otherwise, set to confirmed
       status: (eventData.paymentAmount > 0 && !paymentCompleted) ? 'payment-pending' : 'confirmed',
       // Same logic for payment status
-      paymentStatus: (eventData.paymentAmount > 0 && !paymentCompleted) ? 'PENDING' :
-        (eventData.paymentAmount > 0) ? 'COMPLETED' : 'NOT_REQUIRED',
+      paymentStatus: hasPaymentDetails ?
+        (paymentCompleted ? 'COMPLETED' : 'PENDING') :
+        'NOT_REQUIRED',
       createdAt: serverTimestamp(),
       contactInfo: {
         email: userData.email || '',

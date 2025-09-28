@@ -30,19 +30,6 @@ const router = createBrowserRouter([
     path: '/admin',
     element: <AdminPanel />,
   },
-  // English routes with /en prefix
-  {
-    path: '/en',
-    element: <App />,
-  },
-  {
-    path: '/en/events',
-    element: <App />,
-  },
-  {
-    path: '/en/admin',
-    element: <AdminPanel />,
-  },
   {
     path: '*',
     element: <NotFound />

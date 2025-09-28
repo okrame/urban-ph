@@ -1,4 +1,4 @@
-// src/contexts/LanguageContext.jsx
+// src/contexts/LanguageContext.jsx - Versione con Query Parameters
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -16,14 +16,15 @@ export const LanguageProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Determine language from URL path
-  const getLanguageFromPath = () => {
-    return location.pathname.startsWith('/en') ? 'en' : 'it';
+  // Determine language from URL search params
+  const getLanguageFromURL = () => {
+    const urlParams = new URLSearchParams(location.search);
+    return urlParams.get('lang') === 'en' ? 'en' : 'it';
   };
 
   const [language, setLanguage] = useState(() => {
-    // First check URL, then localStorage
-    const urlLanguage = getLanguageFromPath();
+    // First check URL params, then localStorage
+    const urlLanguage = getLanguageFromURL();
     if (urlLanguage === 'en') return 'en';
     
     if (typeof window !== 'undefined') {
@@ -35,9 +36,9 @@ export const LanguageProvider = ({ children }) => {
 
   // Update language when URL changes
   useEffect(() => {
-    const urlLanguage = getLanguageFromPath();
+    const urlLanguage = getLanguageFromURL();
     setLanguage(urlLanguage);
-  }, [location.pathname]);
+  }, [location.search]);
 
   // Persist language choice
   useEffect(() => {
@@ -50,16 +51,19 @@ export const LanguageProvider = ({ children }) => {
     const newLanguage = language === 'it' ? 'en' : 'it';
     setLanguage(newLanguage);
     
-    // Navigate to appropriate URL
+    // Update URL with query parameter
+    const searchParams = new URLSearchParams(location.search);
+    
     if (newLanguage === 'en') {
-      // Add /en prefix
-      const newPath = location.pathname === '/' ? '/en' : `/en${location.pathname}`;
-      navigate(newPath);
+      searchParams.set('lang', 'en');
     } else {
-      // Remove /en prefix
-      const newPath = location.pathname.replace(/^\/en/, '') || '/';
-      navigate(newPath);
+      searchParams.delete('lang');
     }
+    
+    const newSearch = searchParams.toString();
+    const newUrl = `${location.pathname}${newSearch ? '?' + newSearch : ''}`;
+    
+    navigate(newUrl);
   };
 
   const isItalian = language === 'it';

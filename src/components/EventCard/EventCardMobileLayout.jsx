@@ -172,7 +172,7 @@ const EventCardMobileLayout = ({
                   {localizedDate}
                 </RoughNotationText>
               </div>
-              <span>{localizedTitle}</span>
+              <span>{event.time}</span>
               <span className="flex gap-1 text-xs sm:text-sm">
                 <MapPin className="w-4 h-4" />
                 {localizedVenueName || event.location}

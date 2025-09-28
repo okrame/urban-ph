@@ -36,6 +36,10 @@ const HERO_TRANSLATIONS = {
     it: 'Esci',
     en: 'Sign Out'
   },
+  cityPhrase: {
+    it: "La città è di tuttə, così come l'arte e la fotografia.",
+    en: "City, art, and photography are for all."
+  },
   loading: {
     it: 'Caricamento...',
     en: 'Loading...'
@@ -372,7 +376,7 @@ function Hero({ user, onSignInClick }) {
                 className="text-lg md:text-xl opacity-90 mb-8 mr-10"
                 style={{ color: '#FFFADE' }}
               >
-                La città è di tuttə, così come l'arte e la fotografia.
+                {t('cityPhrase')}
               </p>
             </div>
           </div>
@@ -388,10 +392,10 @@ function Hero({ user, onSignInClick }) {
               className="font-medium leading-tight"
               style={{ color: '#FFFADE' }}
             >
-              <div className="text-4xl sm:text-4xl">ESPLORARE</div>
-              <div className="text-4xl sm:text-4xl">IL CORPO</div>
+              <div className="text-4xl sm:text-4xl">{t('title1')}</div>
+              <div className="text-4xl sm:text-4xl">{t('title2')}</div>
               <div className="text-4xl sm:text-4xl">
-                URBAN<span ref={startLetterRef}>O</span>
+                {t('title3')}<span ref={startLetterRef}> </span>
               </div>
             </h1>
           </div>
@@ -591,7 +595,7 @@ function Hero({ user, onSignInClick }) {
       {/* Paragrafo mobile: FISSATO IN BASSO SOPRA L'IMMAGINE */}
       <div className="absolute bottom-[2px] left-0 right-0 z-20 md:hidden flex justify-center">
         <p className="text-[#FFFADE] text-base sm:text-lg font-light text-center bg-black/40 px-2 py-1 rounded-md w-fit mx-auto pointer-events-none select-none">
-          La città è di tuttə, così come l'arte e la fotografia.
+          {t('cityPhrase')}
         </p>
       </div>
     </section>

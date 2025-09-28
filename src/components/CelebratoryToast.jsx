@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, X, Calendar, MapPin, Share2 } from 'lucide-react';
 import Confetti from 'react-confetti';
 import UPHLogo from '../assets/UPH_Logo(black).png';
+import { useLanguage } from '../contexts/LanguageContext';
 
 function CelebratoryToast({
   isVisible,
@@ -16,6 +17,8 @@ function CelebratoryToast({
   eventUrl,
   eventId
 }) {
+
+  const { language } = useLanguage();
   const [windowDimension, setWindowDimension] = useState({
     width: window.innerWidth,
     height: window.innerHeight
@@ -217,6 +220,11 @@ function CelebratoryToast({
     const params = new URLSearchParams();
     params.set('open', eventId);
     if (eventName) params.set('name', eventName);
+
+    // Include language parameter if not Italian (default)
+    if (language === 'en') {
+      params.set('lang', 'en');
+    }
 
     return `${baseUrl}?${params.toString()}`;
   };

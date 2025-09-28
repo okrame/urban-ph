@@ -23,9 +23,11 @@ import {
   getButtonState,
   getButtonText
 } from '../utils/eventCardUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const TRANSLATION = {
 holdOn: { it: "Un attimo...", en: "Hold on..." },
+booked: { it: "Prenotato!", en: "Booked!" },
 
 };
 
@@ -33,6 +35,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
   const [isMobile, setIsMobile] = useState(false);
   const { t } = useComponentText(TRANSLATION);
+  const { language } = useLanguage();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -383,7 +386,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     if (state.isBooked && state.bookingStatus !== 'cancelled') {
       return (
         <div className="flex items-center mt-5 -mb-5 gap-2">
-          <span>Booked!</span>
+          <span>{t('booked')}</span>
         </div>
       )
     }
@@ -404,7 +407,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
       state.isBookable,
       state.eventStatus,
       user,
-      state.bookableReason
+      state.bookableReason,
+      language
     );
   };
 
@@ -481,7 +485,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
           state.isBookable,
           state.eventStatus,
           user,
-          state.bookableReason
+          state.bookableReason,
+          language
         )}
         isInteractiveButton={isInteractiveButton}
         handleBookEvent={handlers.handleBookEvent}
@@ -519,7 +524,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
           state.isBookable,
           state.eventStatus,
           user,
-          state.bookableReason
+          state.bookableReason,
+          language
         )}
         isInteractiveButton={isInteractiveButton}
         handleBookEvent={handlers.handleBookEvent}

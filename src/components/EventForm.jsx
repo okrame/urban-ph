@@ -7,21 +7,33 @@ import { db } from '../../firebase/config';
 import ImageUploader from './ImageUploader';
 import EmojiPicker from 'emoji-picker-react';
 import MDEditor from '@uiw/react-md-editor';
+import { generateBilingualDates } from '../utils/eventCardUtils';
+
 
 function EventForm({ onSuccess, onCancel, initialValues = {} }) {
+  // Stato per la lingua attualmente selezionata per l'editing
+  const [currentLanguage, setCurrentLanguage] = useState('it');
+
   const [formData, setFormData] = useState({
-    title: '',
+    // Campi bilingue
+    title_it: '',
+    title_en: '',
+    description_it: '',
+    description_en: '',
+    venueName_it: '',
+    venueName_en: '',
+
+    // Campi comuni (non bilingue)
     type: 'hunt',
     date: '',
     time: '',
     location: '',
-    venueName: '', // New field for custom venue name
-    description: '',
     spots: 10,
     image: '',
     secondaryImage: '',
     status: 'active',
-    // Updated payment fields for member pricing
+
+    // Campi di pagamento
     isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
     memberPrice: initialValues.memberPrice !== undefined ? initialValues.memberPrice : 0,
     nonMemberPrice: initialValues.nonMemberPrice !== undefined ? initialValues.nonMemberPrice : 0,
@@ -164,7 +176,8 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     setFormData({
       ...formData,
       location: suggestion.formatted,
-      venueName: extractVenueName(suggestion) // Auto-populate venue name from suggestion
+      // Auto-populate venue name for current language
+      [`venueName_${currentLanguage}`]: extractVenueName(suggestion)
     });
     setShowLocationSuggestions(false);
     setLocationSuggestions([]);
@@ -241,17 +254,27 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   useEffect(() => {
     // Update form when initialValues changes
     setFormData({
-      title: '',
+      // Campi bilingue - inizializza da initialValues se esistono, altrimenti vuoti
+      title_it: initialValues.title_it || initialValues.title || '',
+      title_en: initialValues.title_en || '',
+      description_it: initialValues.description_it || initialValues.description || '',
+      description_en: initialValues.description_en || '',
+      venueName_it: initialValues.venueName_it || initialValues.venueName || '',
+      venueName_en: initialValues.venueName_en || '',
+
+      date_it: initialValues.date_it || '',
+      date_en: initialValues.date_en || '',
+
+      // Campi comuni
       type: 'hunt',
       date: '',
       time: '',
       location: '',
-      venueName: '',
-      description: '',
       spots: 10,
       image: '',
       secondaryImage: '',
       status: 'active',
+
       // Initialize payment fields with member pricing
       isPaid: initialValues.memberPrice !== undefined || initialValues.nonMemberPrice !== undefined ? true : false,
       memberPrice: initialValues.memberPrice !== undefined ? initialValues.memberPrice : 0,
@@ -329,17 +352,16 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   const formatDateForDisplay = (date) => {
     if (!date) return '';
 
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
+    // Generate bilingual dates
+    const bilingualDates = generateBilingualDates(date);
 
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
-
-    return `${month} ${day}, ${year}`;
-  };
+    return {
+      date_it: bilingualDates.date_it,
+      date_en: bilingualDates.date_en,
+      // Keep English as default for backward compatibility
+      date: bilingualDates.date_en
+    };
+  }
 
   // Format time for display in the required format
   const formatTimeForDisplay = () => {
@@ -350,9 +372,10 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Update date selection
   const handleDateSelect = (date) => {
     setSelectedDate(date);
+    const formattedDates = formatDateForDisplay(date);
     setFormData({
       ...formData,
-      date: formatDateForDisplay(date)
+      ...formattedDates
     });
     setShowDatePicker(false);
   };
@@ -413,6 +436,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
   // Handle emoji selection
   const handleEmojiClick = (emojiObject) => {
     const emoji = emojiObject.emoji;
+    const descriptionField = `description_${currentLanguage}`;
 
     // Get the actual textarea element from MDEditor
     const textarea = mdEditorRef.current?.querySelector('textarea');
@@ -420,7 +444,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     if (textarea) {
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const text = formData.description || '';
+      const text = formData[descriptionField] || '';
 
       // Insert emoji at cursor position
       const newDescription =
@@ -430,7 +454,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
 
       setFormData({
         ...formData,
-        description: newDescription
+        [descriptionField]: newDescription
       });
 
       // Restore focus and set cursor position after emoji
@@ -443,7 +467,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       // Fallback: append at end if we can't find textarea
       setFormData({
         ...formData,
-        description: formData.description + emoji
+        [descriptionField]: formData[descriptionField] + emoji
       });
     }
 
@@ -484,7 +508,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     }
 
     // For description field, update cursor position
-    if (name === 'description') {
+    if (name.startsWith('description_')) {
       setCursorPosition(e.target.selectionStart);
     }
 
@@ -539,9 +563,9 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
     setSecondaryImageUrl(url);
   };
 
+  // Validate that at least one date format is valid
   const validateDateFormat = (dateStr) => {
-    // Format: Month DD, YYYY
-    const dateRegex = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i;
+    const dateRegex = /^(January|February|March|April|May|June|July|August|September|October|November|December|Gennaio|Febbraio|Marzo|Aprile|Maggio|Giugno|Luglio|Agosto|Settembre|Ottobre|Novembre|Dicembre)\s+\d{1,2},\s+\d{4}$/i;
     return dateRegex.test(dateStr);
   };
 
@@ -570,6 +594,44 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         return;
       }
 
+      // Validate required bilingual fields
+      if (!formData.title_it.trim()) {
+        setError('Il titolo in italiano è obbligatorio');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.title_en.trim()) {
+        setError('English title is required');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.venueName_it.trim()) {
+        setError('Il nome del venue in italiano è obbligatorio');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.venueName_en.trim()) {
+        setError('English venue name is required');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.date_it || !formData.date_en) {
+        setError('Both Italian and English date formats are required');
+        setLoading(false);
+        return;
+      }
+
+      if (!validateDateFormat(formData.date_en)) {
+        setError('English date format must be "Month DD, YYYY" (e.g., "April 20, 2025")');
+        setLoading(false);
+        return;
+      }
+
+
       // Ensure spots is at least equal to bookings count for existing events
       if (initialValues.id && formData.spots < bookingsCount) {
         setError(`Cannot set spots less than the number of current bookings (${bookingsCount})`);
@@ -587,13 +649,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
       // Validate location - ensure it's not empty
       if (!formData.location.trim()) {
         setError('Please enter a valid location address');
-        setLoading(false);
-        return;
-      }
-
-      // Validate venue name - ensure it's not empty
-      if (!formData.venueName.trim()) {
-        setError('Please enter a venue name');
         setLoading(false);
         return;
       }
@@ -631,7 +686,13 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         paymentCurrency: formData.isPaid ? formData.paymentCurrency : null,
         // Use uploaded image URL
         image: imageUrl,
-        secondaryImage: secondaryImageUrl
+        secondaryImage: secondaryImageUrl,
+
+        // Mantieni i campi legacy per compatibilità retroattiva
+        title: formData.title_it, // Default al titolo italiano
+        description: formData.description_it, // Default alla descrizione italiana
+        venueName: formData.venueName_it, // Default al nome venue italiano
+        date: formData.date_en,
       };
 
       // Remove isPaid as it's not needed in the database
@@ -748,22 +809,157 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
         </div>
       )}
 
+      {/* Language Toggle */}
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">Content Language</h3>
+        <div className="flex space-x-2">
+          <button
+            type="button"
+            onClick={() => setCurrentLanguage('it')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${currentLanguage === 'it'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+          >
+            🇮🇹 Italiano
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentLanguage('en')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${currentLanguage === 'en'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+          >
+            🇬🇧 English
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Switch between languages to edit content. Both Italian and English content are required.
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-              required
-            />
+        {/* Bilingual Content Section */}
+        <div className="mb-6 border rounded-lg p-4">
+          <h3 className="text-lg font-medium mb-4">
+            {currentLanguage === 'it' ? '🇮🇹 Contenuto Italiano' : '🇬🇧 English Content'}
+          </h3>
+
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            {/* Title in current language */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {currentLanguage === 'it' ? 'Titolo (Italiano) *' : 'Title (English) *'}
+              </label>
+              <input
+                type="text"
+                name={`title_${currentLanguage}`}
+                value={formData[`title_${currentLanguage}`]}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                placeholder={currentLanguage === 'it' ? 'Inserisci il titolo in italiano...' : 'Enter title in English...'}
+                required
+              />
+            </div>
+
+            {/* Venue Name in current language */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {currentLanguage === 'it' ? 'Nome Venue (Italiano) *' : 'Venue Name (English) *'}
+              </label>
+              <input
+                type="text"
+                name={`venueName_${currentLanguage}`}
+                value={formData[`venueName_${currentLanguage}`]}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                placeholder={currentLanguage === 'it'
+                  ? 'es. Caffè delle Arti, Studio Fotografico Roma...'
+                  : 'e.g., Art Café, Rome Photography Studio...'
+                }
+                required
+              />
+            </div>
+
+            {/* Description in current language */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  {currentLanguage === 'it' ? 'Descrizione (Italiano)' : 'Description (English)'}
+                </label>
+                <button
+                  type="button"
+                  onClick={toggleEmojiPicker}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  😊 Add Emoji
+                </button>
+              </div>
+
+              <div data-color-mode="light" ref={mdEditorRef}>
+                <MDEditor
+                  value={formData[`description_${currentLanguage}`]}
+                  onChange={(value) => setFormData({
+                    ...formData,
+                    [`description_${currentLanguage}`]: value || ''
+                  })}
+                  preview="edit"
+                  height={200}
+                  textareaProps={{
+                    placeholder: currentLanguage === 'it'
+                      ? "Scrivi la descrizione usando markdown..."
+                      : "Write description using markdown...",
+                  }}
+                />
+              </div>
+
+              {/* Emoji picker */}
+              {showEmojiPicker && (
+                <div ref={emojiPickerRef} className="absolute right-0 z-10 mt-1">
+                  <EmojiPicker
+                    onEmojiClick={handleEmojiClick}
+                    disableAutoFocus={true}
+                    native={true}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Progress indicator */}
+          <div className="bg-gray-100 rounded p-3">
+            <div className="flex justify-between text-xs text-gray-600 mb-1">
+              <span>Content Completion:</span>
+              <span>
+                {currentLanguage === 'it' ? 'IT' : 'EN'}: {
+                  [
+                    formData[`title_${currentLanguage}`]?.trim(),
+                    formData[`venueName_${currentLanguage}`]?.trim(),
+                    formData[`description_${currentLanguage}`]?.trim()
+                  ].filter(Boolean).length
+                } / 3
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${(
+                    [
+                      formData[`title_${currentLanguage}`]?.trim(),
+                      formData[`venueName_${currentLanguage}`]?.trim(),
+                      formData[`description_${currentLanguage}`]?.trim()
+                    ].filter(Boolean).length / 3
+                  ) * 100}%`
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Common/Shared Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Type
@@ -791,7 +987,7 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
               <input
                 type="text"
                 name="date"
-                value={formData.date}
+                value={formData.date_en || formData.date}
                 placeholder="Select a date"
                 onClick={() => setShowDatePicker(!showDatePicker)}
                 className="w-full p-2 border rounded cursor-pointer bg-white"
@@ -802,6 +998,14 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
                 📅
               </span>
             </div>
+
+            {/* Mostra le date bilingue sotto al campo */}
+            {(formData.date_it || formData.date_en) && (
+              <div className="mt-1 text-xs text-gray-600 space-y-1">
+                {formData.date_it && <p>🇮🇹 IT: {formData.date_it}</p>}
+                {formData.date_en && <p>🇬🇧 EN: {formData.date_en}</p>}
+              </div>
+            )}
 
             {/* Calendar date picker */}
             {showDatePicker && (
@@ -1037,25 +1241,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
             </p>
           </div>
 
-          {/* Venue Name field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Venue Name
-            </label>
-            <input
-              type="text"
-              name="venueName"
-              value={formData.venueName}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-              placeholder="e.g., Caffè delle Arti, Studio Fotografico Roma..."
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Display name for the venue (shown to users)
-            </p>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Total Spots
@@ -1253,45 +1438,6 @@ function EventForm({ onSuccess, onCancel, initialValues = {} }) {
           <p className="text-xs text-gray-500 mt-1">
             Upload secondary image to display below the map (PNG, JPG, GIF up to 5MB)
           </p>
-        </div>
-
-        {/* Description with markdown editor */}
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <button
-              type="button"
-              onClick={toggleEmojiPicker}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              😊 Add Emoji
-            </button>
-          </div>
-
-          <div data-color-mode="light" ref={mdEditorRef}>
-            <MDEditor
-              value={formData.description}
-              onChange={(value) => setFormData({ ...formData, description: value || '' })}
-              preview="edit"
-              height={200}
-              textareaProps={{
-                placeholder: "Write description using markdown...",
-              }}
-            />
-          </div>
-
-          {/* Keep your existing emoji picker as is */}
-          {showEmojiPicker && (
-            <div ref={emojiPickerRef} className="absolute right-0 z-10 mt-1">
-              <EmojiPicker
-                onEmojiClick={handleEmojiClick}
-                disableAutoFocus={true}
-                native={true}
-              />
-            </div>
-          )}
         </div>
 
         <div className="flex justify-end space-x-2">

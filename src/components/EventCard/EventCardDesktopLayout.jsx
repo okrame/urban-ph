@@ -7,8 +7,7 @@ import {
   getImageRoundingDesktop,
   getImageSource,
   getMapHeight,
-  shouldTruncateDescription,
-  DESCRIPTION_LIMIT,
+  getDescriptionLimit,
   getActiveFrameThickness
 } from '../../utils/eventCardUtils';
 import ReactMarkdown from 'react-markdown';
@@ -16,6 +15,8 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { MapPin } from 'lucide-react';
 import { useComponentText } from '../../hooks/useText';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { getLocalizedEventField } from '../../utils/eventCardUtils';
 
 const ECARD_TRANSLATIONS = {
   // Titoli e intestazioni
@@ -61,10 +62,16 @@ const EventCardDesktopLayout = ({
   isBooked,
   loading
 }) => {
-  const shouldTruncate = shouldTruncateDescription(event.description);
+  
 
   const { t } = useComponentText(ECARD_TRANSLATIONS);
-
+  const { language } = useLanguage();
+  const localizedTitle = getLocalizedEventField(event, 'title', language);
+  const localizedDescription = getLocalizedEventField(event, 'description', language);
+  const localizedVenueName = getLocalizedEventField(event, 'venueName', language);
+  const localizedDate = getLocalizedEventField(event, 'date', language);
+  const descriptionLimit = getDescriptionLimit(language);
+  const shouldTruncate = localizedDescription && localizedDescription.length > descriptionLimit;
 
   return (
     <div
@@ -97,7 +104,7 @@ const EventCardDesktopLayout = ({
         <div className="h-[26rem] overflow-hidden">
           <img
             src={getImageSource(event, imageError)}
-            alt={event.title}
+            alt={localizedTitle}
             className={`w-full h-full object-cover ${getImageRoundingDesktop(index, showFullDescription)}`}
             onError={handleImageError}
           />
@@ -143,7 +150,7 @@ const EventCardDesktopLayout = ({
             <div className="w-full overflow-hidden">
               <img
                 src={event.secondaryImage}
-                alt={`${event.title} - Additional view`}
+                alt={`${localizedTitle} - Additional view`}
                 className="w-full h-auto object-cover mt-20 p-4"
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -166,7 +173,7 @@ const EventCardDesktopLayout = ({
         viewport={shouldAnimate ? { once: true, amount: 0.25 } : undefined}
       >
         <div ref={contentRef} className="flex-1 -mb-6">
-          <h3 className="text-2xl font-bold text-black mb-4">{event.title}</h3>
+          <h3 className="text-2xl font-bold text-black mb-4">{localizedTitle}</h3>
           {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
 
             <div className="flex items-center font-mono text-sm text-black opacity-70 mb-4 flex-wrap gap-2">
@@ -179,14 +186,14 @@ const EventCardDesktopLayout = ({
                 //disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
               >
-                {event.date}
+                {localizedDate}
               </RoughNotationText>
               <span className="mx-2">·</span>
               <span>{event.time}</span>
               <div className="w-full mt-1">
                 <span className="flex items-center gap-1 text-sm text-gray-800">
                   <MapPin className="w-4 h-4" />
-                  {event.venueName || event.location}
+                  {localizedVenueName || event.location}
                 </span>
               </div>
             </div>
@@ -221,7 +228,7 @@ const EventCardDesktopLayout = ({
                     },
                   }}
                 >
-                  {event.description.substring(0, DESCRIPTION_LIMIT) + '...'}
+                  {localizedDescription.substring(0, descriptionLimit) + '...'}
                 </ReactMarkdown>
                 <button
                   onClick={() => setShowFullDescription(true)}
@@ -246,7 +253,7 @@ const EventCardDesktopLayout = ({
                     ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
                   }}
                 >
-                  {event.description}
+                  {localizedDescription}
                 </ReactMarkdown>
                 {shouldTruncate && (
                   <button

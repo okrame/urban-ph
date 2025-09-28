@@ -1,10 +1,9 @@
 // utils/eventCardUtils.js 
 
-//import { useLanguage } from '../contexts/LanguageContext';
-
-export const DESCRIPTION_LIMIT = 320;
-
-//const { language } = useLanguage();
+export const DESCRIPTION_LIMITS = {
+  it: 320,  // Italiano: limite attuale
+  en: 280   // Inglese: ridotto del ~12% per compensare parole più corte
+};
 
 
 const BOOKING_TRANSLATIONS = {
@@ -18,15 +17,73 @@ const BOOKING_TRANSLATIONS = {
   signInToBook: { it: "Accedi per Prenotare", en: "Sign In to Book" }
 };
 
+export const getDescriptionLimit = (language = 'it') => {
+  return DESCRIPTION_LIMITS[language] || DESCRIPTION_LIMITS.it;
+};
 
-// Funzione di traduzione semplice
-const getTranslation = (key, language) => {
-  // Se non viene passata la lingua, leggila dal localStorage
+// NEW: Function to get localized event field
+export const getLocalizedEventField = (event, fieldBase, language) => {
+  // If language not provided, get from localStorage as fallback
   if (!language) {
-    language = (typeof window !== 'undefined') ? 
+    language = (typeof window !== 'undefined') ?
       localStorage.getItem('urban-ph-language') || 'it' : 'it';
   }
+
+  // Try localized field first (title_it, title_en, etc.)
+  const localizedField = `${fieldBase}_${language}`;
+  if (event[localizedField]) {
+    return event[localizedField];
+  }
+
+  // Fallback to opposite language
+  const fallbackLang = language === 'it' ? 'en' : 'it';
+  const fallbackField = `${fieldBase}_${fallbackLang}`;
+  if (event[fallbackField]) {
+    return event[fallbackField];
+  }
+
+  // Final fallback to legacy field
+  return event[fieldBase] || '';
+};
+
+export const formatDateBilingual = (date, language = 'it') => {
+  if (!date) return '';
+
+  const monthsIT = [
+    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+  ];
+
+  const monthsEN = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const month = language === 'it' ? monthsIT[date.getMonth()] : monthsEN[date.getMonth()];
+  const day = date.getDate();
+  const year = date.getFullYear();
+
+  return `${month} ${day}, ${year}`;
+};
+
+// Generate both language versions of a date
+export const generateBilingualDates = (date) => {
+  if (!date) return { date_it: '', date_en: '' };
   
+  return {
+    date_it: formatDateBilingual(date, 'it'),
+    date_en: formatDateBilingual(date, 'en')
+  };
+};
+
+// Updated translation function to accept language parameter
+const getTranslation = (key, language) => {
+  // If no language provided, read from localStorage
+  if (!language) {
+    language = (typeof window !== 'undefined') ?
+      localStorage.getItem('urban-ph-language') || 'it' : 'it';
+  }
+
   return BOOKING_TRANSLATIONS[key]?.[language] || BOOKING_TRANSLATIONS[key]?.it || key;
 };
 
@@ -68,7 +125,7 @@ export const getImageRoundingDesktop = (index, showFullDescription = false) => {
   if (showFullDescription) {
     return "";
   }
-  
+
   if (index % 2 === 0) {
     return "rounded-bl-[22px]";
   } else {
@@ -168,16 +225,12 @@ export const getMapHeight = (showFullDescription, contentHeight) => {
   return minMapHeight;
 };
 
-export const shouldTruncateDescription = (description) => {
-  return description && description.length > DESCRIPTION_LIMIT;
-};
-
 // BUTTON STATE LOGIC
 export const getButtonState = (isBooked, bookingStatus, loading, isBookable) => {
   const isClosedForBooking = !isBookable;
   const isFullyBooked = isClosedForBooking;
   const isInteractiveButton = !((isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled'));
-  
+
   return {
     isClosedForBooking,
     isFullyBooked,
@@ -185,24 +238,24 @@ export const getButtonState = (isBooked, bookingStatus, loading, isBookable) => 
   };
 };
 
-// ✅ FUNZIONE CHE ACCETTA 't' COME PARAMETRO
-export const getButtonText = (isBooked, bookingStatus, loading, isBookable, eventStatus, user, bookableReason) => {
-  
-  if (loading) return getTranslation('loading');
-  
-  if (eventStatus === 'past') return getTranslation('eventEnded');
-  
-  if (isBooked && bookingStatus !== 'cancelled') return getTranslation('confirmed');
-  
+// Updated to accept language parameter
+export const getButtonText = (isBooked, bookingStatus, loading, isBookable, eventStatus, user, bookableReason, language) => {
+
+  if (loading) return getTranslation('loading', language);
+
+  if (eventStatus === 'past') return getTranslation('eventEnded', language);
+
+  if (isBooked && bookingStatus !== 'cancelled') return getTranslation('confirmed', language);
+
   if (!isBookable && bookingStatus !== 'cancelled') {
-    if (bookableReason === "No spots left") return getTranslation('fullyBooked');
-    return getTranslation('bookingClosed');
+    if (bookableReason === "No spots left") return getTranslation('fullyBooked', language);
+    return getTranslation('bookingClosed', language);
   }
-  
+
   if (user) {
-    if (bookingStatus === 'cancelled') return getTranslation('bookAgain');
-    return getTranslation('bookbutton');
+    if (bookingStatus === 'cancelled') return getTranslation('bookAgain', language);
+    return getTranslation('bookbutton', language);
   }
-  
-  return getTranslation('signInToBook');
+
+  return getTranslation('signInToBook', language);
 };

@@ -833,13 +833,14 @@ if (!admin.apps.length) admin.initializeApp();
 
 exports.share = onRequest(
   {
-    region: "europe-west3", 
+    region: "europe-west3",
     cors: false,
     maxInstances: 3
   },
   async (req, res) => {
     try {
-      const { open, name } = req.query;
+      // MODIFICARE QUESTA RIGA per includere lang:
+      const { open, name, lang } = req.query;
       if (!open) return res.status(400).send('Missing "open" param');
 
       const snap = await admin.firestore().collection('events').doc(String(open)).get();
@@ -855,7 +856,8 @@ exports.share = onRequest(
         .slice(0, 160) + ((e.description || '').length > 160 ? '...' : '');
 
       const image = e.image || 'https://urbanph.it/camera-icon.svg';
-      const appUrl = `https://urbanph.it/?open=${encodeURIComponent(open)}${name ? `&name=${encodeURIComponent(name)}` : ''}`;
+
+      const appUrl = `https://urbanph.it/?open=${encodeURIComponent(open)}${name ? `&name=${encodeURIComponent(name)}` : ''}${lang ? `&lang=${encodeURIComponent(lang)}` : ''}`;
 
       const eventInfo = [];
       if (e.date) eventInfo.push(e.date);

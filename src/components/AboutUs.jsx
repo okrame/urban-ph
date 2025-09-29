@@ -201,7 +201,7 @@ export default function AboutUs() {
     },
     {
       name: 'Marco',
-      role: 'Web Designer',
+      role: 'Web Designer & Developer',
       image: marcoImg,
       bio: "I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I've been observing for years. Sharing these experiences with others turns it into a genuine journey."
     }

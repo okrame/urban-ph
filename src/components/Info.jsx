@@ -135,6 +135,10 @@ function Info() {
       title: "Hunts",
       text: "<span class='text-2xl font-bold inline'>Photo hunts</span> offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences."
     },
+    walks: {
+      title: "Walks",
+      text: "<span class='text-2xl font-bold inline'>The walks</span> we organize are a spinoff of our hunts, they are in-depth guided explorations focusing on <strong>storytelling</strong>, local history, and discovering the city from different perspectives and expert knowledges – from cinema, to wildlife to art history and more."
+    },
     workshops: {
       title: "Workshops",
       text: "<span class='text-2xl font-bold inline'>The workshops</span> we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>,  <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, <strong>photoshop & canvas</strong> and more.<br>We are always open to new collaborations."
@@ -143,12 +147,7 @@ function Info() {
     exhibitions: {
       title: "Exhibitions",
       text: "We regularly organize <strong>exhibitions</strong> to showcase the <strong>artwork</strong> of our community, be it photos, collages or other. This year, our <strong>biggest exhibit</strong>, a 10-year archive outing, is in the making: <strong>10 years of everyday Rome</strong> in its micro neighbourhood realities. <br>STAY TUNED"
-
     },
-    walks: {
-      title: "Walks",
-      text: "<span class='text-2xl font-bold inline'>The walks</span> we organize are a spinoff of our hunts, they are in-depth guided explorations focusing on <strong>storytelling</strong>, local history, and discovering the city from different perspectives and expert knowledges – from cinema, to wildlife to art history and more."
-    }
   };
 
   const currentContent = content[activityKind];
@@ -263,13 +262,18 @@ function Info() {
 
       <motion.button
         onClick={() => setActivityKind(
-          activityKind === 'hunts' ? 'workshops' :
-            activityKind === 'workshops' ? 'exhibitions' :
-              activityKind === 'exhibitions' ? 'walks' :  
+          activityKind === 'hunts' ? 'walks' :
+            activityKind === 'walks' ? 'workshops' :
+              activityKind === 'workshops' ? 'exhibitions' :
                 'hunts'
         )}
         className="absolute p-2 bg-gray-200/50 rounded-full transition-all duration-200 
-            focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"        aria-label={`Switch to ${activityKind === 'hunts' ? 'workshops' : 'hunts'}`}
+      focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
+        aria-label={`Switch to ${activityKind === 'hunts' ? 'walks' :
+            activityKind === 'walks' ? 'workshops' :
+              activityKind === 'workshops' ? 'exhibitions' :
+                'hunts'
+          }`}
         aria-expanded={activityKind === 'workshops'}
         style={{
           left: '50%',
@@ -282,6 +286,7 @@ function Info() {
           pointerEvents: 'auto'
         }}
       >
+
         <svg
           width={isMobile ? "18" : "24"}
           height={isMobile ? "18" : "24"}

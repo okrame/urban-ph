@@ -10,6 +10,16 @@ import workshop2 from '../assets/workshops/2.jpeg';
 import workshop3 from '../assets/workshops/3.jpeg';
 import workshop4 from '../assets/workshops/4.jpeg';
 import workshop5 from '../assets/workshops/5.jpeg';
+import walks1 from '../assets/walks/1.jpeg';
+import walks3 from '../assets/walks/2.jpeg';
+import walks2 from '../assets/walks/3.jpeg';
+import walks4 from '../assets/walks/4.jpeg';
+import walks5 from '../assets/walks/5.jpeg';
+import exhibition1 from '../assets/exhibitions/2.jpeg';
+import exhibition2 from '../assets/exhibitions/4.jpeg';
+import exhibition3 from '../assets/exhibitions/4.jpeg';
+import exhibition4 from '../assets/exhibitions/4.jpeg';
+import exhibition5 from '../assets/exhibitions/4.jpeg';
 
 const ImageFiller = ({
   square1X,
@@ -239,7 +249,9 @@ const ImageFiller = ({
 
   const imageSets = {
     hunts: [hunt1, hunt2, hunt3, hunt4, hunt5],
-    workshops: [workshop1, workshop2, workshop3, workshop4, workshop5]
+    walks: [walks1, walks2, walks3, walks4, walks5],
+    workshops: [workshop1, workshop2, workshop3, workshop4, workshop5],
+    exhibitions: [exhibition1, exhibition2, exhibition3, exhibition4, exhibition5]
   };
 
 
@@ -264,7 +276,9 @@ const ImageFiller = ({
     return unsubscribe;
   }, [shouldShow]);
 
-  const imageSet = currentContent === 'workshops' ? 'workshops' : 'hunts';
+  const imageSet = ['hunts', 'walks', 'workshops', 'exhibitions'].includes(currentContent)
+  ? currentContent
+  : 'hunts';
   const currentImages = imageSets[imageSet];
 
   const images = [

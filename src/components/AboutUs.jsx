@@ -3,12 +3,89 @@ import { motion, useMotionValue, useTransform, animate, useInView } from "framer
 import { getCurrentUsersCount } from "../utils/statsCount";
 import RoughNotationText from "./RoughNotationText";
 import RoughNotationCircle from "./RoughNotationCircle";
+import { useComponentText } from '../hooks/useText';
 // Import profile images
 import beatriceImg from "../assets/profiles/Beatrice.png";
 import lucaImg from "../assets/profiles/Luca.png";
 import raffaellaImg from "../assets/profiles/Raffaella.png";
 import niccoloImg from "../assets/profiles/Niccolò.png";
 import marcoImg from "../assets/profiles/Marco.png";
+
+
+const TRANSLATIONS = {
+  title1: {
+    it: 'Chi Siamo',
+    en: 'About Us'
+  },
+  paragraphBeforeCircle: {
+    it: "Iniziando da Londra nel 2015, passando per Barcellona nel 2016 e Roma nel 2017, abbiamo trasformato un hobby in",
+    en: 'Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a'
+  },
+  culturalAssociation: {
+    it: "un' associazione culturale",
+    en: 'cultural association'
+  },
+  paragraphAfterCircle: {
+    it: 'dedicata a <strong>re-immaginare la città</strong> e il nostro posto al suo interno. Organizziamo camminate, workshop e altri eventi, offrendo ai partecipanti una piattaforma per esprimere la propria creatività e scoprire le molteplici sfaccettature delle aree locali. Il nostro obiettivo è <strong>creare una connessione più profonda e consapevole tra gli individui e gli spazi</strong> che attraversano, incoraggiandoli a interagire, esplorare e riflettere sulle <strong>esperienze visive e mentali</strong> che le città offrono, promuovendo al contempo un senso di cura per gli ambienti urbani.',
+    en: 'dedicated to <strong>reimagining the city</strong> and our place within it. We organize walks, workshops, and other events, providing participants with a platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore, and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.'
+  },
+  activeMembers: {
+    it: 'membri attivi',
+    en: 'active members'
+  },
+  events: {
+    it: 'eventi',
+    en: 'events'
+  },
+  locations: {
+    it: 'quartieri',
+    en: 'locations'
+  },
+  partnerships: {
+    it: 'partnership',
+    en: 'partnerships'
+  },
+  beatriceRole: {
+    it: 'Presidente e Fondatrice',
+    en: 'President & Founder'
+  },
+  beatriceBio: {
+    it: "Crescere fra tre città diverse - Bologna, Roma e Londra - un'esperienza a Barcellona e un lungo viaggio fra le capitali del Sud-Est asiatico hanno fatto sì che sviluppassi una profonda curiosità per le realtà urbane, mentre la fotografia è stata una mia passione fin da piccola. A Londra ho fuso questi interessi in un master in sociologia visuale e in un dottorato in antropologia urbana, per poi unire i frutti di entrambi nell'associazione culturale Urban pH, dove la creazione di immagini si unisce all'esplorazione collettiva delle realtà urbane.",
+    en: "Growing up between three different cities - Bologna, Rome and London - an experience in Barcelona and a long journey between the capitals of SouthEast Asia made me develop a deep curiosity for urban realities, while photography has been a passion of mine since childhood. In London I merged these interests into a master degree in visual sociology and a doctorate in urban anthropology, and then combined the fruits of both in the cultural association Urban pH, where image-making is combined with the collective exploration of urban realities."
+  },
+  lucaRole: {
+    it: 'Vice Presidente',
+    en: 'Vice President'
+  },
+  lucaBio: {
+    it: "Nato nel 1991 a Roma, ho sempre avuto la passione per la fotografia. Ho studiato diverse tecniche e stili, partecipando a mostre e collezionando libri. Ultimamente mi sono orientato principalmente verso la fotografia analogica, godendomi il passaggio alla stampa e allo sviluppo delle immagini nella mia camera oscura domestica. Questo mi permette di dare un tocco personale e autentico a ogni fotografia e workshop di Urban pH.",
+    en: "Born in 1991 in Rome, I have always had a passion for photography. I have studied different techniques and styles, participating in exhibitions and collecting books. Lately I have been mainly oriented towards analogue photography, enjoying the transition to printing and developing images in my home darkroom. This allows me to bring a personal and authentic touch to each photograph and workshop at Urban pH."
+  },
+  raffaellaRole: {
+    it: 'Tesoriera',
+    en: 'Treasurer'
+  },
+  raffaellaBio: {
+    it: "Mi piace avere interazioni, creare reti e connettere le persone. La parte che preferisco delle cacce fotografiche che organizziamo è lasciarmi sorprendere da come i partecipanti interpretano i temi proposti e dagli spunti che sanno dare per costruire un dibattito...qualche volta scatto anche foto carine!",
+    en: "I like to have interactions, create networks and connect people. My favorite part of the photo hunts we organize is being surprised by how participants interpret the proposed topics and the insights they can give to build a debate...sometimes I even take pretty pictures!"
+  },
+  niccoloRole: {
+    it: 'Segretario',
+    en: 'Secretary'
+  },
+  niccoloBio: {
+    it: "Sono nato e cresciuto a Roma, studioso di storia dell'arte con una passione per la street art e i segreti che lo spazio urbano nasconde. Grazie a Urban pH, posso esplorare questi mondi in modo creativo e condiviso, confrontandomi con persone che condividono le mie stesse passioni.",
+    en: "I am a Roman, an art historian and passionate about street art and the secrets held within urban realms. Thanks to Urban pH I can explore these worlds in a creative and collaborative way, engaging with those who share my passions."
+  },
+  marcoRole: {
+    it: 'Web Designer',
+    en: 'Web Designer'
+  },
+  marcoBio: {
+    it: "Sono una persona molto scientifica e razionale ma la fotografia mi ha permesso di andare oltre. Scoprire, scoprirsi e scoperchiare nuovi mondi fotografando è quello che vedo da anni sulla mia strada. Poterlo condividere con altre persone lo fa diventare un vero e proprio viaggio.",
+    en: "I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I've been observing for years. Sharing these experiences with others turns it into a genuine journey."
+  }
+}
 
 export default function AboutUs() {
   const sectionRef = useRef(null);
@@ -28,6 +105,7 @@ export default function AboutUs() {
   const [aLeftPx, setALeftPx] = useState(null);
   const [usRightPx, setUsRightPx] = useState(null);
   const [isTextInView, setIsTextInView] = useState(false);
+  const { t } = useComponentText(TRANSLATIONS);
 
   // Animated counters setup
   const membersCount = useMotionValue(0);
@@ -177,33 +255,33 @@ export default function AboutUs() {
   const teamMembers = [
     {
       name: 'Beatrice',
-      role: 'President & Founder',
+      role: t('beatriceRole'),
       image: beatriceImg,
-      bio: `Growing up between three different cities - Bologna, Rome and London - an experience in Barcelona and a long journey between the capitals of SouthEast Asia made me develop a deep curiosity for urban realities, while photography has been a passion of mine since childhood. In London I merged these interests into a master degree in visual sociology and a doctorate in urban anthropology, and then combined the fruits of both in the cultural association Urban pH, where image-making is combined with the collective exploration of urban realities.`
+      bio: t('beatriceBio')
     },
     {
       name: 'Luca',
-      role: 'Vice President',
+      role: t('lucaRole'),
       image: lucaImg,
-      bio: 'Born in 1991 in Rome, I have always had a passion for photography. I have studied different techniques and styles, participating in exhibitions and collecting books. Lately I have been mainly oriented towards analogue photography, enjoying the transition to printing and developing images in my home darkroom. This allows me to bring a personal and authentic touch to each photograph and workshop at Urban pH'
+      bio: t('lucaBio')
     },
     {
       name: 'Raffaella',
-      role: 'Treasurer',
+      role: t('raffaellaRole'),
       image: raffaellaImg,
-      bio: 'I like to have interactions, create networks and connect people. My favorite part of the photo hunts we organize is being surprised by how participants interpret the proposed topics and the insights they can give to build a debate...sometimes I even take pretty pictures!'
+      bio: t('raffaellaBio')
     },
     {
       name: 'Niccolò',
-      role: 'Secretary',
+      role: t('niccoloRole'),
       image: niccoloImg,
-      bio: 'I am a Roman, an art historian and passionate about street art and the secrets held within urban realms. Thanks to Urban pH I can explore these worlds in a creative and collaborative way, engaging with those who share my passions.'
+      bio: t('niccoloBio')
     },
     {
       name: 'Marco',
-      role: 'Web Designer & Developer',
+      role: t('marcoRole'),
       image: marcoImg,
-      bio: "I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I've been observing for years. Sharing these experiences with others turns it into a genuine journey."
+      bio: t('marcoBio')
     }
   ];
 
@@ -222,7 +300,7 @@ export default function AboutUs() {
         {/* Title - Desktop: split across vertical line, Mobile: centered */}
         <div ref={titleRef} className={`relative z-10 flex items-center ${isMobile ? 'justify-center' : 'justify-left'} h-[10px] mb-8`}>
           <h1 className="text-2xl sm:text-4xl font-bold text-black text-center">
-            About us
+            {t('title1')}
           </h1>
         </div>
 
@@ -247,25 +325,27 @@ export default function AboutUs() {
               paddingRight: isMobile ? '' : '0'
             }}
           >
-            Starting in London in 2015, moving through Barcelona in 2016, and Rome in 2017, we transformed a hobby into a <RoughNotationCircle
+            {t('paragraphBeforeCircle')}{' '}
+            <RoughNotationCircle
               color="#8B5CF6"
               animate={true}
               animationDelay={1100}
               strokeWidth={1.1}
               trigger={isTextInView}
-            ><span className="inline-block break-before-all">
-    cultural association
-  </span></RoughNotationCircle> dedicated to <strong>reimagining the city</strong> and our place within it. We organize workshops, exhibitions, and other events, providing participants with a
-            platform to express their creativity and explore the many facets of local areas. Our goal is to create a <strong>deeper, more mindful connection between individuals and the spaces</strong> they navigate, encouraging them to interact, explore,
-            and reflect on the visual and mental experiences that cities offer, while fostering a sense of <strong>care for the urban environments</strong> they inhabit.
+            >
+              <span className="inline-block break-before-all">
+                {t('culturalAssociation')}
+              </span>
+            </RoughNotationCircle>{' '}
+            <span dangerouslySetInnerHTML={{ __html: t('paragraphAfterCircle') }} />
           </div>
 
           {/* RIGHT: 4 stats - centered on mobile, right-aligned on desktop */}
           <div ref={counterRef} className="relative z-10 p-8 bg-transparent">
             <div
               ref={statsRef}
-                className={`grid grid-cols-2 gap-4 sm:gap-6 justify-items-center sm:justify-items-end text-center
-    ${isMobile ? '-mt-10' : 'mt-0'}`} 
+              className={`grid grid-cols-2 gap-4 sm:gap-6 justify-items-center sm:justify-items-end text-center
+    ${isMobile ? '-mt-10' : 'mt-0'}`}
             >
               {/* Members */}
               <motion.div
@@ -281,7 +361,7 @@ export default function AboutUs() {
                   {membersRounded}
                 </motion.h3>
                 <p className="text-xs sm:text-sm text-purple-600 font-medium uppercase tracking-wider mt-1">
-                  active members
+                  {t('activeMembers')}
                 </p>
               </motion.div>
 
@@ -299,7 +379,7 @@ export default function AboutUs() {
                   {eventsRounded}
                 </motion.h3>
                 <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
-                  events
+                  {t('events')}
                 </p>
               </motion.div>
 
@@ -317,7 +397,7 @@ export default function AboutUs() {
                   {locationsRounded}
                 </motion.h3>
                 <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
-                  locations
+                  {t('locations')}
                 </p>
               </motion.div>
 
@@ -335,7 +415,7 @@ export default function AboutUs() {
                   {partnershipsRounded}
                 </motion.h3>
                 <p className="text-xs sm:text-sm text-green-800 font-medium uppercase tracking-wider mt-1">
-                  partnerships
+                  {t('partnerships')}
                 </p>
               </motion.div>
             </div>

@@ -8,7 +8,8 @@ import {
   signInWithEmailLink,
   browserLocalPersistence,
   browserSessionPersistence,
-  setPersistence
+  setPersistence,
+  fetchSignInMethodsForEmail
 } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { createUserProfile } from '../../firebase/userServices';
@@ -107,6 +108,22 @@ const AUTHMODAL_TRANSLATIONS = {
   promptEmailForConfirm: {
     it: 'Inserisci la tua email per confermare',
     en: 'Please provide your email for confirmation'
+  },
+  accountExists: {
+    it: 'Account esistente rilevato',
+    en: 'Existing Account Detected'
+  },
+  accountExistsMsg: {
+    it: 'Questo indirizzo email è già registrato con un altro metodo di accesso. Per collegare Facebook, devi prima accedere con:',
+    en: 'This email address is already registered with a different sign-in method. To link Facebook, please sign in first with:'
+  },
+  signInFirst: {
+    it: 'Accedi prima con Email Link',
+    en: 'Sign In with Email Link First'
+  },
+  thenRetry: {
+    it: 'Poi riprova con Facebook per collegare i tuoi account.',
+    en: 'Then retry with Facebook to link your accounts.'
   }
 
 };
@@ -248,7 +265,7 @@ function AuthModal({ isOpen, onClose, event }) {
           setTimeout(() => {
             window.scrollTo({
               top: parseInt(savedPosition),
-              behavior: 'instant' 
+              behavior: 'instant'
             });
             // Pulisci il valore salvato
             sessionStorage.removeItem('modalScrollPosition');
@@ -411,11 +428,28 @@ function AuthModal({ isOpen, onClose, event }) {
     setLoading(true);
 
     try {
-      await setPersistence(auth, keepSignedIn ? browserLocalPersistence : browserSessionPersistence);
+      await setPersistence(
+        auth,
+        keepSignedIn ? browserLocalPersistence : browserSessionPersistence
+      );
 
       const provider = new FacebookAuthProvider();
-      const result = await signInWithPopup(auth, provider);
 
+      // Se l'utente è già autenticato, prova a linkare invece di fare sign-in
+      if (auth.currentUser) {
+        try {
+          const result = await linkWithCredential(auth.currentUser,
+            FacebookAuthProvider.credential(null) // Dummy, verrà sostituito dal popup
+          );
+          // In realtà dobbiamo usare linkWithPopup (non disponibile direttamente)
+          // Quindi facciamo il popup normale e gestiamo l'errore
+        } catch (linkError) {
+          // Se il linking fallisce, procedi con il normale sign-in
+          console.log('Linking failed, trying normal sign-in', linkError);
+        }
+      }
+
+      const result = await signInWithPopup(auth, provider);
       await createUserProfile(result.user);
 
       setAuthSuccess(result.user.displayName || result.user.email);
@@ -426,11 +460,63 @@ function AuthModal({ isOpen, onClose, event }) {
     } catch (error) {
       console.error("Facebook sign-in error:", error);
       setAuthSuccess(false);
-      setError('Facebook sign-in failed. Please try again.');
+
+      // GESTIONE DELL'ERRORE ACCOUNT ESISTENTE
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        try {
+          const credential = FacebookAuthProvider.credentialFromError(error);
+          const email = error.customData?.email;
+
+          if (email) {
+            // Salva le informazioni per un eventuale retry
+            window.sessionStorage.setItem('pendingFacebookCredential', JSON.stringify({
+              email: email,
+              timestamp: Date.now()
+            }));
+
+            // Controlla quali metodi di sign-in sono disponibili
+            const methods = await fetchSignInMethodsForEmail(auth, email);
+            const methodsList = methods.map(m => {
+              if (m === 'emailLink') return 'Email Link';
+              if (m === 'google.com') return 'Google';
+              return m;
+            }).join(', ');
+
+            // Messaggio chiaro per l'utente
+            setError(
+              `⚠️ ${t('accountExists')}\n\n` +
+              `${t('accountExistsMsg')}\n\n` +
+              `📧 ${methodsList}\n\n` +
+              `${t('thenRetry')}`
+            );
+
+            // Se è email link, passa automaticamente a quella modalità
+            if (methods.includes('emailLink')) {
+              setTimeout(() => {
+                setUseMagicLink(true);
+                setEmail(email);
+              }, 3000);
+            }
+          } else {
+            setError('Unable to link account. Please try signing in with your original method first.');
+          }
+        } catch (checkError) {
+          console.error('Error checking sign-in methods:', checkError);
+          setError('This email is already registered. Please sign in with your original method first, then retry Facebook.');
+        }
+      } else if (error.code === 'auth/popup-blocked') {
+        setError('Popup blocked. Please allow popups and try again.');
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in was cancelled. Please try again.');
+      } else {
+        setError('Facebook sign-in failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+
   return (
     <div style={modalStyle}>
       <div style={modalContentStyle}>
@@ -631,7 +717,7 @@ function AuthModal({ isOpen, onClose, event }) {
               }}>
                 {email}
               </p>
-              
+
             </div>
 
             <button

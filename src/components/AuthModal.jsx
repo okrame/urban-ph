@@ -181,7 +181,7 @@ function AuthModal({ isOpen, onClose, event }) {
       setIsSigningIn(true);
 
       const processSignInLink = async () => {
-        let storedEmail = window.localStorage.getItem('emailForSignIn');
+        let storedEmail = window.localStorage.getItem('emailForSignIn') || window.localStorage.getItem('pendingLinkEmail');
 
         // Se non c'è email salvata, chiedi SOLO SE non stiamo già processando
         if (!storedEmail) {
@@ -242,6 +242,8 @@ function AuthModal({ isOpen, onClose, event }) {
             }
           }
           window.localStorage.removeItem('emailForSignIn');
+          window.localStorage.removeItem('pendingLinkEmail');
+          window.localStorage.removeItem('pendingProvider');
           sessionStorage.removeItem('isProcessingSignIn');
           cleanupUrl();
           onClose();

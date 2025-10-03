@@ -12,7 +12,34 @@ const TRANSLATIONS = {
     it: 'Cacce',
     en: 'Hunts'
   },
-
+  title2: {
+    it: 'Passeggiate',
+    en: 'Walks'
+  },
+  title3: {
+    it: 'Workshop',
+    en: 'Workshops'
+  },
+  title4: {
+    it: 'Mostre',
+    en: 'Exhibitions'
+  },
+  huntsText: {
+    it: "Le nostre <span class='text-2xl font-bold inline'>cacce fotografiche</span> sono <strong>esplorazioni di quartieri</strong> e non solo, delineate da temi elaborati da esperti in vari settori, che vanno dalla cultura, alla storia, all'urbanistica, all'ecologia, alla psicologia, per citarne qualcuno. I partecipanti scoprono le realtà di quartiere interpretando i temi tramite la fotografia, condividendo poi immagini ed esperienze nel corso di <strong>aperitivi in centri culturali locali</strong>.",
+    en: "<span class='text-2xl font-bold inline'>Photo hunts</span> offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ''aperitivo'' in <strong>super-local venues</strong>, where you can share your photos and experiences."
+  },
+  walksText: {
+    it: "<span class='text-2xl font-bold inline'>Le passeggiate</span> che organizziamo sono uno spinoff delle nostre cacce, sono esplorazioni guidate e approfondite incentrate sullo <strong>storytelling</strong>, la storia locale e la scoperta della città da diverse prospettive e conoscenze esperte – dal cinema, alla fauna selvatica, alla storia dell'arte e altro ancora.",
+    en: "<span class='text-2xl font-bold inline'>The walks</span> we organize are a spinoff of our hunts, they are in-depth guided explorations focusing on <strong>storytelling</strong>, local history, and discovering the city from different perspectives and expert knowledges – from cinema, to wildlife to art history and more."
+  },
+  workshopsText: {
+    it: "<span class='text-2xl font-bold inline'>I workshop</span> che conduciamo spaziano dalla fotografia e <strong>stampa analogica</strong> alla <strong>fotografia stenopeica</strong>, <strong>cianotipia</strong>, <strong>disegno e illustrazione</strong>, <strong>collage</strong>, <strong>photoshop e canvas</strong> e altro ancora.<br>Siamo sempre aperti a nuove collaborazioni.",
+    en: "<span class='text-2xl font-bold inline'>The workshops</span> we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>,  <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, <strong>photoshop & canvas</strong> and more.<br>We are always open to new collaborations."
+  },
+  exhibitionsText: {
+    it: "Organizziamo regolarmente <strong>mostre</strong> per esporre le creazioni dei nostri partecipanti, che comprendono fotografie, collage e altre opere. Inoltre, ospitiamo un <strong>evento semestrale</strong>, con un'edizione estiva e una invernale, chiamato <em>Boring Exhibition</em>, che attraverso una open call raccoglie immagini che intendono ridare significato alle foto delle vacanze.",
+    en: "We regularly organize <strong>exhibitions</strong> to showcase the <strong>artwork</strong> of our community, be it photos, collages or other. This year, our <strong>biggest exhibit</strong>, a 10-year archive outing, is in the making: <strong>10 years of everyday Rome</strong> in its micro neighbourhood realities. <br>STAY TUNED"
+  }
 }
 
 function Info() {
@@ -144,20 +171,19 @@ function Info() {
   const content = {
     hunts: {
       title: t('title1'),
-      text: "<span class='text-2xl font-bold inline'>Photo hunts</span> offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences."
+      text: t('huntsText')
     },
     walks: {
-      title: "Walks",
-      text: "<span class='text-2xl font-bold inline'>The walks</span> we organize are a spinoff of our hunts, they are in-depth guided explorations focusing on <strong>storytelling</strong>, local history, and discovering the city from different perspectives and expert knowledges – from cinema, to wildlife to art history and more."
+      title: t('title2'),
+      text: t('walksText')
     },
     workshops: {
-      title: "Workshops",
-      text: "<span class='text-2xl font-bold inline'>The workshops</span> we conduct range from photography and <strong>analog printing</strong> to <strong>pinhole photography</strong>,  <strong>cyanotype</strong>, <strong>drawing & illustration</strong>, <strong>collage</strong>, <strong>photoshop & canvas</strong> and more.<br>We are always open to new collaborations."
+      title: t('title3'),
+      text: t('workshopsText')
     },
-
     exhibitions: {
-      title: "Exhibitions",
-      text: "We regularly organize <strong>exhibitions</strong> to showcase the <strong>artwork</strong> of our community, be it photos, collages or other. This year, our <strong>biggest exhibit</strong>, a 10-year archive outing, is in the making: <strong>10 years of everyday Rome</strong> in its micro neighbourhood realities. <br>STAY TUNED"
+      title: t('title4'),
+      text: t('exhibitionsText')
     },
   };
 

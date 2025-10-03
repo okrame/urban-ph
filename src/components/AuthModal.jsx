@@ -228,7 +228,7 @@ function AuthModal({ isOpen, onClose, event }) {
           const result = await signInWithEmailLink(auth, storedEmail, window.location.href);
           await createUserProfile(result.user);
           // 🔗 Se esiste una credenziale Facebook pendente, linkala ora
-          const fbToken = sessionStorage.getItem('pendingFbAccessToken');
+          const fbToken = localStorage.getItem('pendingFbAccessToken');
           if (fbToken) {
             try {
               const fbCred = FacebookAuthProvider.credential(fbToken);
@@ -236,9 +236,9 @@ function AuthModal({ isOpen, onClose, event }) {
             } catch (linkErr) {
               console.error('Linking Facebook after email sign-in failed', linkErr);
             } finally {
-              sessionStorage.removeItem('pendingFbAccessToken');
-              sessionStorage.removeItem('pendingLinkEmail');
-              sessionStorage.removeItem('pendingProvider');
+              localStorage.removeItem('pendingFbAccessToken');
+              localStorage.removeItem('pendingLinkEmail');
+              localStorage.removeItem('pendingProvider');
             }
           }
           window.localStorage.removeItem('emailForSignIn');
@@ -493,10 +493,10 @@ function AuthModal({ isOpen, onClose, event }) {
           if (email) {
             // Salva SOLO ciò che serve per linkare dopo il login email
             if (credential?.accessToken) {
-              sessionStorage.setItem('pendingFbAccessToken', credential.accessToken);
+              localStorage.setItem('pendingFbAccessToken', credential.accessToken);
             }
-            sessionStorage.setItem('pendingLinkEmail', email);
-            sessionStorage.setItem('pendingProvider', 'facebook');
+            localStorage.setItem('pendingLinkEmail', email);
+            localStorage.setItem('pendingProvider', 'facebook');
 
             const methods = await fetchSignInMethodsForEmail(auth, email);
             const methodsList = methods.map(m =>

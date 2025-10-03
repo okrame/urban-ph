@@ -227,6 +227,20 @@ function AuthModal({ isOpen, onClose, event }) {
         try {
           const result = await signInWithEmailLink(auth, storedEmail, window.location.href);
           await createUserProfile(result.user);
+          // 🔗 Se esiste una credenziale Facebook pendente, linkala ora
+          const fbToken = sessionStorage.getItem('pendingFbAccessToken');
+          if (fbToken) {
+            try {
+              const fbCred = FacebookAuthProvider.credential(fbToken);
+              await linkWithCredential(result.user, fbCred);
+            } catch (linkErr) {
+              console.error('Linking Facebook after email sign-in failed', linkErr);
+            } finally {
+              sessionStorage.removeItem('pendingFbAccessToken');
+              sessionStorage.removeItem('pendingLinkEmail');
+              sessionStorage.removeItem('pendingProvider');
+            }
+          }
           window.localStorage.removeItem('emailForSignIn');
           sessionStorage.removeItem('isProcessingSignIn');
           cleanupUrl();

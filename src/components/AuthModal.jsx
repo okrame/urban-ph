@@ -493,9 +493,13 @@ function AuthModal({ isOpen, onClose, event }) {
           const email = error.customData?.email;
 
           if (email) {
-            // Salva SOLO ciò che serve per linkare dopo il login email
-            if (credential?.accessToken) {
-              localStorage.setItem('pendingFbAccessToken', credential.accessToken);
+            // Salva SOLO ciò che serve per linkare dopo il login email (con fallback)
+            const fbAccessToken =
+              credential?.accessToken ||
+              error?.customData?._tokenResponse?.oauthAccessToken ||
+              error?._tokenResponse?.oauthAccessToken;
+            if (fbAccessToken) {
+              localStorage.setItem('pendingFbAccessToken', fbAccessToken);
             }
             localStorage.setItem('pendingLinkEmail', email);
             localStorage.setItem('pendingProvider', 'facebook');
@@ -849,3 +853,50 @@ function AuthModal({ isOpen, onClose, event }) {
 }
 
 export default AuthModal;
+
+// --- BOOTSTRAP: processa Email Link + eventuale linking FB anche se il modal non è montato ---
+(async () => {
+  try {
+    if (typeof window !== 'undefined' && isSignInWithEmailLink(auth, window.location.href)) {
+      // Prendi l'email salvata o quella passata in URL, oppure chiedila
+      let storedEmail =
+        window.localStorage.getItem('emailForSignIn') ||
+        window.localStorage.getItem('pendingLinkEmail') ||
+        new URLSearchParams(window.location.search).get('email');
+
+      if (!storedEmail) {
+        const promptEmail = window.prompt('Please provide your email for confirmation');
+        if (!promptEmail) return;
+        storedEmail = promptEmail;
+        window.localStorage.setItem('emailForSignIn', promptEmail);
+      }
+
+      // Completa l'accesso via Email Link
+      const result = await signInWithEmailLink(auth, storedEmail, window.location.href);
+
+      // Se c'è un token FB pendente, linkalo ora
+      const fbToken = window.localStorage.getItem('pendingFbAccessToken');
+      if (fbToken) {
+        try {
+          const fbCred = FacebookAuthProvider.credential(fbToken);
+          await linkWithCredential(result.user, fbCred);
+        } catch (e) {
+          console.error('Bootstrap: linking Facebook after email sign-in failed', e);
+        }
+      }
+
+      // Pulizie finali
+      window.localStorage.removeItem('pendingFbAccessToken');
+      window.localStorage.removeItem('pendingLinkEmail');
+      window.localStorage.removeItem('pendingProvider');
+      window.localStorage.removeItem('emailForSignIn');
+
+      // Ripulisci l'URL dai parametri actionCode
+      const url = new URL(window.location.href);
+      ['apiKey', 'oobCode', 'mode', 'lang', 'email'].forEach(p => url.searchParams.delete(p));
+      window.history.replaceState({}, document.title, url.pathname + url.hash);
+    }
+  } catch (e) {
+    console.error('Bootstrap: email-link processing failed', e);
+  }
+})();

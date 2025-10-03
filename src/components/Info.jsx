@@ -4,6 +4,16 @@ import { motion, useInView, useScroll, useTransform, useMotionValue, useMotionTe
 import { useEventCardPosition } from '../contexts/EventCardPositionContext';
 import { useDisplayDetection } from '../hooks/useDisplayDetection';
 import ImageFiller from './ImageFiller';
+import LanguageToggle from './LanguageToggle';
+import { useComponentText } from '../hooks/useText';
+
+const TRANSLATIONS = {
+  title1: {
+    it: 'Cacce',
+    en: 'Hunts'
+  },
+
+}
 
 function Info() {
   const [activityKind, setActivityKind] = useState('hunts');
@@ -16,6 +26,7 @@ function Info() {
 
   const borderRadius = 30;
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useComponentText(TRANSLATIONS);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -132,7 +143,7 @@ function Info() {
 
   const content = {
     hunts: {
-      title: "Hunts",
+      title: t('title1'),
       text: "<span class='text-2xl font-bold inline'>Photo hunts</span> offer a unique opportunity to <strong>explore the soul of the city</strong> in a creative and sociable way. Through themes developed by experts in culture, history, art history, architecture, ecology, psychology, cuisine and other fields, you will creatively capture the essence of places and discover hidden aspects of the city. The hunts end with an ‘’aperitivo‘’ in <strong>super-local venues</strong>, where you can share your photos and experiences."
     },
     walks: {

@@ -21,7 +21,7 @@ import { getLocalizedEventField } from '../../utils/eventCardUtils';
 const ECARD_TRANSLATIONS = {
   // Titoli e intestazioni
   showmore: {
-    it: "SCOPRI DI PIU",
+    it: "SCOPRI DI PIÙ",
     en: "SHOW MORE",
   },
 
@@ -59,10 +59,11 @@ const EventCardDesktopLayout = ({
   getButtonText,
   isInteractiveButton,
   handleBookEvent,
+  layoutStable,
   isBooked,
   loading
 }) => {
-  
+
 
   const { t } = useComponentText(ECARD_TRANSLATIONS);
   const { language } = useLanguage();
@@ -182,7 +183,7 @@ const EventCardDesktopLayout = ({
                 color="#4A7E74"
                 strokeWidth={2}
                 animationDelay={roughAnimationsReady ? 200 : 0}
-                animate="false"
+                animate={false}
                 //disabled={!allowRoughAnimations || !roughAnimationsReady}
                 trigger={annotationTrigger}
               >
@@ -343,12 +344,13 @@ const EventCardDesktopLayout = ({
                 getButtonContent()
               ) : isInteractiveButton ? (
                 <RoughNotationText
+                  key={`desktop-btn-${showFullDescription ? 'expanded' : 'collapsed'}-${layoutStable}`}
                   type="box"
                   color="#4A7E74"
                   strokeWidth={2}
-                  animationDelay={roughAnimationsReady ? 100 : 0}
+                  animationDelay={showFullDescription ? 300 : (roughAnimationsReady ? 100 : 0)}
                   disabled={!allowRoughAnimations || !roughAnimationsReady}
-                  trigger={annotationTrigger}
+                  trigger={showFullDescription && !layoutStable ? false : (annotationTrigger || true)}
                 >
                   {getButtonText()}
                 </RoughNotationText>

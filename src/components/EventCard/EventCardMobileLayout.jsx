@@ -22,7 +22,7 @@ import { getLocalizedEventField } from '../../utils/eventCardUtils';
 const ECARD_TRANSLATIONS = {
   // Titoli e intestazioni
   showmore: {
-    it: "SCOPRI DI PIU",
+    it: "SCOPRI DI PIÙ",
     en: "SHOW MORE",
   },
 

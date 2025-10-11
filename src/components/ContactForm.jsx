@@ -1,8 +1,64 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import RoughNotationText from './RoughNotationText';
 import { db } from "../../firebase/config";
 import cameraroute from '../assets/cameraroute.png';
+import { useComponentText } from '../hooks/useText';
+
+const CONTACT_TRANSLATIONS = {
+  title: {
+    it: "Parliamone",
+    en: "Let's chat"
+  },
+  namePlaceholder: {
+    it: "nome",
+    en: "name"
+  },
+  emailPlaceholder: {
+    it: "email",
+    en: "email"
+  },
+  messagePlaceholder: {
+    it: "messaggio ... ",
+    en: "message ... "
+  },
+  sendButton: {
+    it: "Invia Messaggio",
+    en: "Send Message"
+  },
+  sending: {
+    it: "Invio...",
+    en: "Sending..."
+  },
+  description: {
+    it: "Vuoi partecipare a uno dei nostri eventi o hai un'idea da condividere?",
+    en: "Do you wanna take part in any of our events or have an idea to share?"
+  },
+  emailLabel: {
+    it: "✉️ email:",
+    en: "✉️ email:"
+  },
+  telephoneLabel: {
+    it: "📱 telefono:",
+    en: "📱 telephone:"
+  },
+  locationLabel: {
+    it: "📍 in giro per la città ;)",
+    en: "📍 around the city ;)"
+  },
+  errorRequired: {
+    it: "Per favore compila tutti i campi.",
+    en: "Please fill in all fields."
+  },
+  successMessage: {
+    it: "Messaggio inviato! Ti risponderemo presto.",
+    en: "Message sent! We'll get back to you soon."
+  },
+  errorMessage: {
+    it: "Errore nell'invio del messaggio. Riprova più tardi.",
+    en: "Error sending message. Please try again later."
+  }
+};
 
 export default function ContactForm() {
   const [name, setName] = useState("");
@@ -12,9 +68,13 @@ export default function ContactForm() {
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isImageVisible, setIsImageVisible] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
 
   const mobileImageRef = useRef(null);
   const desktopImageRef = useRef(null);
+
+  const { t } = useComponentText(CONTACT_TRANSLATIONS);
 
   // Mobile detection
   useEffect(() => {
@@ -33,12 +93,12 @@ export default function ContactForm() {
       ([entry]) => {
         if (entry.isIntersecting && !isImageVisible) {
           setIsImageVisible(true);
-          observer.disconnect(); // Stop observing after first trigger
+          observer.disconnect();
         }
       },
       {
-        threshold: 0.1, // Trigger when 10% of the image is visible
-        rootMargin: "50px" // Start animation 50px before the element enters viewport
+        threshold: 0.1,
+        rootMargin: "50px"
       }
     );
 
@@ -64,12 +124,19 @@ export default function ContactForm() {
     }
   }, [status]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasAnimated(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus({ type: "", text: "" });
 
     if (!name.trim() || !email.trim() || !message.trim()) {
-      setStatus({ type: "error", text: "Please fill in all fields." });
+      setStatus({ type: "error", text: t('errorRequired') });
       return;
     }
 
@@ -118,7 +185,7 @@ This message was sent from the Urban pH contact form.
 
       setStatus({
         type: "success",
-        text: "Message sent! We'll get back to you soon.",
+        text: t('successMessage'),
       });
 
       setName("");
@@ -128,7 +195,7 @@ This message was sent from the Urban pH contact form.
       console.error("Error sending message:", err);
       setStatus({
         type: "error",
-        text: "Error sending message. Please try again later.",
+        text: t('errorMessage'),
       });
     } finally {
       setLoading(false);
@@ -139,9 +206,30 @@ This message was sent from the Urban pH contact form.
     ? "animate-fade-in-left"
     : "opacity-0 translate-x-8";
 
+
+  const submitButton = useMemo(() => (
+    <button
+      type="submit"
+      disabled={loading}
+      className="relative group"
+    >
+      <RoughNotationText
+        type="box"
+        color="#4A7E74"
+        strokeWidth={2}
+        animationDelay={800}
+        trigger={hasAnimated}
+      >
+        <span className={`inline-block px-6 py-2 font-medium transition-opacity ${loading ? "opacity-50" : "group-hover:opacity-80"}`}>
+          {loading ? t('sending') : t('sendButton')}
+        </span>
+      </RoughNotationText>
+    </button>
+  ), [loading, hasAnimated, t]); // Si ri-renderizza solo quando cambiano questi valori
+
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInLeft {
           from {
             opacity: 0;
@@ -163,8 +251,8 @@ This message was sent from the Urban pH contact form.
 
           {/* Title + small image on the right (mobile only image) */}
           <div className="flex items-center justify-between relative">
-            <h2 className="text-2xl md:text-3xl font-bold text-black">
-              Let's chat
+            <h2 className="text-2xl md:text-3xl font-bold text-black md:-top-16 mb-2 md:mb-12">
+              {t('title')}
             </h2>
             <div className="relative block md:hidden">
               <img
@@ -197,7 +285,7 @@ This message was sent from the Urban pH contact form.
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors bg-transparent"
-                    placeholder="name"
+                    placeholder={t('namePlaceholder')}
                   />
                 </div>
 
@@ -209,7 +297,7 @@ This message was sent from the Urban pH contact form.
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors bg-transparent"
-                    placeholder="email"
+                    placeholder={t('emailPlaceholder')}
                   />
                 </div>
 
@@ -221,29 +309,12 @@ This message was sent from the Urban pH contact form.
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-black focus:outline-none transition-colors resize-none bg-transparent"
-                    placeholder="message ... "
+                    placeholder={t('messagePlaceholder')}
                   />
                 </div>
 
                 <div className="pt-4">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="relative group"
-                  >
-                    <RoughNotationText
-                      type="box"
-                      color="#4A7E74"
-                      strokeWidth={2}
-                      animationDelay={800}
-                      trigger={!loading}
-                    >
-                      <span className={`inline-block px-6 py-2 font-medium transition-opacity ${loading ? "opacity-50" : "group-hover:opacity-80"
-                        }`}>
-                        {loading ? "Sending..." : "Send Message"}
-                      </span>
-                    </RoughNotationText>
-                  </button>
+                  {submitButton}
                 </div>
 
                 {status.text && (
@@ -260,8 +331,7 @@ This message was sent from the Urban pH contact form.
 
               <div className="space-y-3 justify-between">
                 <p className="text-green-900 md:text-xl md:mb-6 md:-ml-[75px]">
-                  Do you wanna take part in any of our events <br />
-                  or have an idea to share?
+                  {t('description')}
                 </p>
               </div>
 
@@ -278,13 +348,13 @@ This message was sent from the Urban pH contact form.
               {/* Contact Info */}
               <div className="space-y-3 justify-between">
                 <p className="text-sm md:text-base mt-6">
-                  ✉️ email: <a href="mailto:urbanphotohunts.roma@gmail.com" className="underline hover:no-underline">urbanphotohunts.roma@gmail.com</a>
+                  {t('emailLabel')} <a href="mailto:urbanphotohunts.roma@gmail.com" className="underline hover:no-underline">urbanphotohunts.roma@gmail.com</a>
                 </p>
                 <p className="text-sm md:text-base">
-                  📱 telephone: <a href="tel:+39 3491148545" className="underline hover:no-underline">+39 3491148545</a>
+                  {t('telephoneLabel')} <a href="tel:+39 3491148545" className="underline hover:no-underline">+39 3491148545</a>
                 </p>
                 <p className="text-sm md:text-base">
-                  📍 around the city ;)
+                  {t('locationLabel')}
                 </p>
               </div>
             </div>

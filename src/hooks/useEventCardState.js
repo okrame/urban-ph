@@ -42,6 +42,7 @@ export const useEventCardState = (event, user) => {
   const [annotationTrigger, setAnnotationTrigger] = useState(0);
   const [allowRoughAnimations, setAllowRoughAnimations] = useState(true);
   const [bookingJustCompleted, setBookingJustCompleted] = useState(false);
+  const [layoutStable, setLayoutStable] = useState(true);
   
   // Auth states
   const [prevUserState, setPrevUserState] = useState(null);
@@ -152,16 +153,49 @@ export const useEventCardState = (event, user) => {
     setBookingStatus('none');
   }, [user]);
 
-  // Effect to measure content height
+  // Effect to measure content height - wait for images to load
   useEffect(() => {
     if (showFullDescription && contentRef.current) {
+      // Reset layout stable state when expanding
+      setLayoutStable(false);
+      
       const measureHeight = () => {
         const height = contentRef.current.scrollHeight;
         setContentHeight(height);
+        // Mark layout as stable after measurement
+        setTimeout(() => setLayoutStable(true), 150);
       };
-      measureHeight();
+      
+      // Wait for all images in the content to load
+      const images = contentRef.current.querySelectorAll('img');
+      
+      if (images.length > 0) {
+        let loadedCount = 0;
+        const totalImages = images.length;
+        
+        const checkAllLoaded = () => {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            // All images loaded, measure final height
+            setTimeout(measureHeight, 50);
+          }
+        };
+        
+        images.forEach(img => {
+          if (img.complete) {
+            checkAllLoaded();
+          } else {
+            img.addEventListener('load', checkAllLoaded);
+            img.addEventListener('error', checkAllLoaded);
+          }
+        });
+      } else {
+        // No images, measure immediately and mark as stable
+        measureHeight();
+      }
     } else {
       setContentHeight(0);
+      setLayoutStable(true); // Reset to stable when collapsed
     }
   }, [showFullDescription, event.description]);
 
@@ -193,6 +227,7 @@ export const useEventCardState = (event, user) => {
     prevUserState, setPrevUserState,
     authRequested, setAuthRequested,
     contentHeight,
+    layoutStable,
     
     // Refs
     contentRef,

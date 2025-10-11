@@ -331,6 +331,18 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     }
   }, [state.showFullDescription, state.roughAnimationsReady]);
 
+  // Re-trigger annotation when layout becomes stable after expansion
+  useEffect(() => {
+    if (state.showFullDescription && state.layoutStable && state.roughAnimationsReady) {
+      // When layout stabilizes, re-trigger annotation to show it
+      const timeoutId = setTimeout(() => {
+        state.setAnnotationTrigger(prev => prev + 1);
+      }, 50);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [state.layoutStable, state.showFullDescription, state.roughAnimationsReady]);
+
   useEffect(() => {
     // let resizeTimer;
     // const handleResize = () => {
@@ -493,6 +505,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         isBooked={state.isBooked}
         loading={state.loading}
         shouldShowBookedState={shouldShowBookedState}
+        layoutStable={state.layoutStable}
       />
 
       {/* Mobile Layout */}

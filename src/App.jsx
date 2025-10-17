@@ -456,7 +456,7 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
           {events.length > 0 ? (
             <div className="space-y-0 relative">
               {/* CAMBIA QUESTA LINEA: */}
-              {(showAllEvents ? events : events.slice(0, 3)).map((event, index, array) => (
+              {(showAllEvents ? events : events.slice(0, 5)).map((event, index, array) => (
                 <div key={event.id} className="relative">
                   <EventCard
                     event={event}
@@ -507,12 +507,12 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
                 </div>
               ))}
 
-              {events.length > 3 && (
+              {events.length > 5 && (
                 <div
                   className={`mt-8 pt-8 flex 
       ${
                     // calcola il lato: sx se ultimo evento pari, dx se dispari
-                    ((showAllEvents ? events : events.slice(0, 3)).length - 1) % 2 === 0
+                    ((showAllEvents ? events : events.slice(0, 5)).length - 1) % 2 === 0
                       ? 'justify-start' // ultimo evento pari → sx
                       : 'justify-end'   // ultimo evento dispari → dx
                     }`}

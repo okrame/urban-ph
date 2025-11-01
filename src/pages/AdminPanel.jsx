@@ -8,7 +8,8 @@ import {
 } from '../../firebase/firestoreServices';
 import {
   createNewEvent,
-  deleteEvent
+  deleteEvent,
+  duplicateEvent
 } from '../../firebase/adminServices';
 import { updatePublicUserCount } from '../utils/statsCount';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -61,16 +62,16 @@ function AdminPanel() {
 
 
   const handleUpdateUserCount = async () => {
-  setUpdatingUserCount(true);
-  try {
-    await updatePublicUserCount();
-    alert('User count updated successfully!');
-  } catch (error) {
-    alert('Failed to update user count');
-  } finally {
-    setUpdatingUserCount(false);
-  }
-};
+    setUpdatingUserCount(true);
+    try {
+      await updatePublicUserCount();
+      alert('User count updated successfully!');
+    } catch (error) {
+      alert('Failed to update user count');
+    } finally {
+      setUpdatingUserCount(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -485,6 +486,23 @@ function AdminPanel() {
     setActiveTab('create');
   };
 
+  const handleDuplicateEvent = async (event, e) => {
+    e.stopPropagation();
+
+    if (!window.confirm(`Are you sure you want to duplicate "${event.title}"?`)) {
+      return;
+    }
+
+    try {
+      await duplicateEvent(event);
+      await fetchAllEventTypes();
+      alert('Event duplicated successfully!');
+    } catch (error) {
+      console.error('Error duplicating event:', error);
+      alert('Failed to duplicate event. Please try again.');
+    }
+  };
+
   const handleFormSuccess = async () => {
     try {
       await fetchAllEventTypes();
@@ -538,14 +556,14 @@ function AdminPanel() {
       <div className="min-h-screen bg-gray-100">
         {/* Simple Back to Home Button */}
         <div className="container mx-auto px-4 py-4">
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
           >
             ← Back to home
           </Link>
         </div>
-        
+
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-3xl font-bold mb-4">Admin Panel</h1>
           <p className="mb-8">You need to be logged in as an admin to access this page.</p>
@@ -561,8 +579,8 @@ function AdminPanel() {
     <div className="min-h-screen bg-gray-100">
       {/* Simple Back to Home Button */}
       <div className="container mx-auto px-4 py-4">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
         >
           ← Back to home
@@ -612,10 +630,10 @@ function AdminPanel() {
             initialValues={editingEvent || {}}
           />
         ) : activeTab === 'database' ? (
-          <UsersDatabase 
-  onUpdateUserCount={handleUpdateUserCount}
-  updatingUserCount={updatingUserCount}
-/>
+          <UsersDatabase
+            onUpdateUserCount={handleUpdateUserCount}
+            updatingUserCount={updatingUserCount}
+          />
         ) : (
           <>
             <div className="flex mb-6 border-b items-center">
@@ -695,6 +713,12 @@ function AdminPanel() {
                             <h3 className="font-semibold">{event.title}</h3>
                             <div className="space-x-1 flex flex-wrap justify-end">
                               <button
+                                onClick={(e) => handleDuplicateEvent(event, e)}
+                                className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 mb-1"
+                              >
+                                Duplicate
+                              </button>
+                              <button
                                 onClick={(e) => handleEditEvent(event, e)}
                                 className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 mb-1"
                               >
@@ -704,7 +728,9 @@ function AdminPanel() {
                                 onClick={(e) => handleDeleteEvent(event.id, e)}
                                 className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 mb-1"
                               >
-                                Delete
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                               </button>
                             </div>
                           </div>
@@ -742,8 +768,8 @@ function AdminPanel() {
                         onClick={downloadEventBookingsCSV}
                         disabled={downloadingCSV || !bookings.length}
                         className={`px-4 py-2 text-sm rounded flex items-center ${downloadingCSV || !bookings.length
-                            ? 'bg-gray-400 cursor-not-allowed text-white'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          ? 'bg-gray-400 cursor-not-allowed text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
                           }`}
                         title="Download bookings as CSV file"
                       >

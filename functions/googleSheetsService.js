@@ -26,10 +26,14 @@ const createOrUpdateEventSheet = async (eventData, bookingsData) => {
     const spreadsheetId = googleSheetsSpreadsheetId.value();
     
     // Clean event title for sheet name (remove special characters)
-    const sheetTitle = eventData.title
+    const cleanTitle = eventData.title
       .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
-      .substring(0, 100) // Limit length
+      .substring(0, 80) // Limit length to leave space for ID
       .trim();
+    
+    // Add eventId to make sheet name unique (use last 8 chars for readability)
+    const eventIdSuffix = eventData.id ? eventData.id.substring(eventData.id.length - 8) : 'unknown';
+    const sheetTitle = `${cleanTitle} (${eventIdSuffix})`;
 
     console.log(`Creating/updating sheet: "${sheetTitle}"`);
 

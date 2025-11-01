@@ -93,6 +93,26 @@ export const createNewEvent = async (eventData) => {
   }
 };
 
+// Duplica un evento esistente (solo admin)
+export const duplicateEvent = async (eventData) => {
+  try {
+    // Rimuovi id e timestamp dall'evento originale
+    const { id, createdAt, updatedAt, attendees, ...eventToDuplicate } = eventData;
+    
+    // Reset dei posti disponibili al valore originale
+    const duplicatedEvent = {
+      ...eventToDuplicate,
+      spotsLeft: eventToDuplicate.spots
+    };
+    
+    // Usa createNewEvent per creare il duplicato
+    return await createNewEvent(duplicatedEvent);
+  } catch (error) {
+    console.error('Error duplicating event:', error);
+    throw error;
+  }
+};
+
 export const updateEvent = async (eventId, eventData) => {
   try {
     const eventRef = doc(db, 'events', eventId);

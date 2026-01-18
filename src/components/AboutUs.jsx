@@ -82,8 +82,8 @@ const TRANSLATIONS = {
     en: 'Web Designer'
   },
   marcoBio: {
-    it: "Sono una persona molto scientifica e razionale ma la fotografia mi ha permesso di andare oltre. Scoprire, scoprirsi e scoperchiare nuovi mondi fotografando è quello che vedo da anni sulla mia strada. Poterlo condividere con altre persone lo fa diventare un vero e proprio viaggio.",
-    en: "I consider myself to be very scientific and rational, but photography has opened up a new dimension for me. Through capturing images, I have discovered and uncovered new worlds that I've been observing for years. Sharing these experiences with others turns it into a genuine journey."
+    it: "Come mi fu osservato da una saggia signora, non si è scientifici in quanto tali: si può semmai assumere o esercitare un approccio scientifico, giacché la scientificità non costituisce una proprietà ontologica del soggetto, ma una certa disciplina del pensiero. Tuttavia, io credo che la lingua disponga di strumenti per designare non solo ciò che si è, ma anche ciò che si è divenuti per una disposizione acquisita. È in questo senso che la fotografia mi ha insegnato a osservare, a misurare, a fare esperienza diretta della natura e delle sue metamorfosi. Ed è per questa formazione interiore che continuo a considerarmi scientifico, anche là dove lo sguardo si fa inevitabilmente soggettivo.",
+    en: "As a wise woman once remarked to me, one is not scientific in and of oneself: at most, one can adopt or practice a scientific approach, since scientificity is not an ontological property of the subject, but rather a discipline of thought. Still, I believe language has the means to name not only what one is, but also what one has become through an acquired disposition. In this sense, photography has taught me to observe, to measure, and to engage directly with nature and its transformations; and it is through this inner formation that I continue to regard myself as scientific, even where the gaze inevitably becomes subjective.",
   }
 }
 

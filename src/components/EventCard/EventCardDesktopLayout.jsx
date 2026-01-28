@@ -19,12 +19,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { getLocalizedEventField } from '../../utils/eventCardUtils';
 
 const ECARD_TRANSLATIONS = {
-  // Titoli e intestazioni
-  showmore: {
-    it: "SCOPRI DI PIÙ",
-    en: "SHOW MORE",
-  },
-
   showless: {
     it: "MOSTRA MENO",
     en: "SHOW LESS",
@@ -231,12 +225,6 @@ const EventCardDesktopLayout = ({
                 >
                   {localizedDescription.substring(0, descriptionLimit) + '...'}
                 </ReactMarkdown>
-                <button
-                  onClick={() => setShowFullDescription(true)}
-                  className="ml-2 text-[#000000] hover:text-green-800 underline text-sm"
-                >
-                  {t('showmore')}
-                </button>
               </>
             ) : (
               <>

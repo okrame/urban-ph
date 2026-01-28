@@ -28,6 +28,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 const TRANSLATION = {
 holdOn: { it: "Un attimo...", en: "Hold on..." },
 booked: { it: "Prenotato!", en: "Booked!" },
+showmore: { it: "Scopri di più", en: "Show more" },
 
 };
 
@@ -435,6 +436,15 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     return baseClasses;
   };
 
+  // In preview (collapsed), the Book button expands the card instead of booking
+  const handlePreviewBookEvent = state.showFullDescription
+    ? handlers.handleBookEvent
+    : () => handleToggleDescription(true);
+
+  const previewGetButtonText = () => state.showFullDescription
+    ? getButtonText(state.isBooked, state.bookingStatus, state.loading, state.isBookable, state.eventStatus, user, state.bookableReason, language)
+    : t('showmore');
+
   // Render the main event card component
   const eventCardComponent = (
     <motion.div
@@ -490,18 +500,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         isFullyBooked={isFullyBooked}
         isClosedForBooking={isClosedForBooking}
         getButtonContent={getButtonContent}
-        getButtonText={() => getButtonText(
-          state.isBooked,
-          state.bookingStatus,
-          state.loading,
-          state.isBookable,
-          state.eventStatus,
-          user,
-          state.bookableReason,
-          language
-        )}
+        getButtonText={previewGetButtonText}
         isInteractiveButton={isInteractiveButton}
-        handleBookEvent={handlers.handleBookEvent}
+        handleBookEvent={handlePreviewBookEvent}
         isBooked={state.isBooked}
         loading={state.loading}
         shouldShowBookedState={shouldShowBookedState}
@@ -530,18 +531,9 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         isFullyBooked={isFullyBooked}
         isClosedForBooking={isClosedForBooking}
         getButtonContent={getButtonContent}
-        getButtonText={() => getButtonText(
-          state.isBooked,
-          state.bookingStatus,
-          state.loading,
-          state.isBookable,
-          state.eventStatus,
-          user,
-          state.bookableReason,
-          language
-        )}
+        getButtonText={previewGetButtonText}
         isInteractiveButton={isInteractiveButton}
-        handleBookEvent={handlers.handleBookEvent}
+        handleBookEvent={handlePreviewBookEvent}
         isBooked={state.isBooked}
         loading={state.loading}
         shouldShowBookedState={shouldShowBookedState}

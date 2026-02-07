@@ -93,8 +93,6 @@ const EventCardMobileLayout = ({
 
   return (
     <motion.div
-      id={`event-${event.id}`}
-      ref={cardRef}
       style={{
         marginLeft: "7.5px",
         marginRight: "7px",
@@ -240,8 +238,8 @@ const EventCardMobileLayout = ({
                     setShowFullDescription(false);
                     setTimeout(() => {
                       cardRef.current?.scrollIntoView({
-                        behavior: 'instant',
-                        block: 'smooth'
+                        behavior: 'smooth',
+                        block: 'start'
                       });
                     }, 150);
                   }}

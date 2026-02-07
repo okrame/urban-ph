@@ -174,6 +174,36 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     return new URLSearchParams(location.search).get('open');
   };
 
+  const getCardScrollTarget = () => {
+    return document.getElementById(`event-${event.id}`) ?? state.cardRef.current;
+  };
+
+  const scrollToCardTop = (behavior = 'smooth') => {
+    let attempts = 0;
+    const maxAttempts = 4;
+
+    const tryScroll = () => {
+      const target = getCardScrollTarget();
+      if (!target) {
+        if (attempts < maxAttempts) {
+          attempts += 1;
+          setTimeout(tryScroll, 120);
+        }
+        return;
+      }
+
+      target.scrollIntoView({ behavior, block: 'start' });
+
+      // Some browsers ignore the first scroll right after mount/layout shifts.
+      if (Math.abs(target.getBoundingClientRect().top) > 24 && attempts < maxAttempts) {
+        attempts += 1;
+        setTimeout(tryScroll, 160);
+      }
+    };
+
+    tryScroll();
+  };
+
   // Write to URL using the router (keeps everything in sync)
   const setOpenInURL = (idOrNull, title) => {
     const params = new URLSearchParams(location.search);
@@ -204,10 +234,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
       // Scroll to top of event card when closing
       setTimeout(() => {
-        state.cardRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
+        scrollToCardTop('smooth');
       }, 150);
     }
   };
@@ -226,9 +253,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
 
         if (shouldScroll) {
           setTimeout(() => {
-            (state.cardRef.current ??
-              document.getElementById(`event-${event.id}`))
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            scrollToCardTop('smooth');
           }, 200);
         }
       }

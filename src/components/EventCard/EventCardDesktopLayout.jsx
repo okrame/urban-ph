@@ -70,7 +70,6 @@ const EventCardDesktopLayout = ({
 
   return (
     <div
-      id={`event-${event.id}`}
       className={`hidden lg:flex ${isImageLeft ? 'flex-row' : 'flex-row-reverse'} 
     ${getBorderClasses(index)} 
     ${showFullDescription ? getActiveFrameThickness(index) : ''}`}

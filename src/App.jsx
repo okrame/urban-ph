@@ -455,9 +455,8 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
 
           {events.length > 0 ? (
             <div className="space-y-0 relative">
-              {/* CAMBIA QUESTA LINEA: */}
               {(showAllEvents ? events : events.slice(0, 5)).map((event, index, array) => (
-                <div key={event.id} className="relative">
+                <div key={event.id} id={`event-${event.id}`} className="relative">
                   <EventCard
                     event={event}
                     user={user}
@@ -566,7 +565,7 @@ function EventsSection({ events, specificEvent, user, setSelectedEvent, setShowA
             </div>
           ) : specificEvent ? (
             <div className="space-y-8">
-              <div className="relative">
+              <div className="relative" id={`event-${specificEvent.id}`}>
                 <EventCard
                   key={specificEvent.id}
                   event={specificEvent}

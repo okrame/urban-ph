@@ -29,6 +29,7 @@ const TRANSLATION = {
 holdOn: { it: "Un attimo...", en: "Hold on..." },
 booked: { it: "Prenotato!", en: "Booked!" },
 showmore: { it: "Scopri di più", en: "Show more" },
+waitlist: { it: "Scrivici a urbanphotohunts.roma@gmail.com per entrare in lista d'attesa", en: "Write to urbanphotohunts.roma@gmail.com to get on a waitlist" },
 
 };
 
@@ -154,7 +155,8 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
     state.isBooked,
     state.bookingStatus,
     state.loading,
-    state.isBookable
+    state.isBookable,
+    state.bookableReason
   );
 
   // Check if event should appear as "completed/booked"
@@ -532,6 +534,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         loading={state.loading}
         shouldShowBookedState={shouldShowBookedState}
         layoutStable={state.layoutStable}
+        t={t}
       />
 
       {/* Mobile Layout */}
@@ -562,6 +565,7 @@ function EventCard({ event, user, onAuthNeeded, index = 0, authModalCloseCounter
         isBooked={state.isBooked}
         loading={state.loading}
         shouldShowBookedState={shouldShowBookedState}
+        t={t}
       />
     </motion.div>
   );

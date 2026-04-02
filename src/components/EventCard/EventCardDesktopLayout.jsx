@@ -55,7 +55,8 @@ const EventCardDesktopLayout = ({
   handleBookEvent,
   layoutStable,
   isBooked,
-  loading
+  loading,
+  t: parentT
 }) => {
 
 
@@ -267,9 +268,7 @@ const EventCardDesktopLayout = ({
           {!isBooked && (
             <div className="flex flex-wrap gap-3 text-xs text-black opacity-70 mb-4">
               {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
-                event.spotsLeft === 0 ? (
-                  <span className="px-2 py-1">Fully booked</span>
-                ) : event.spotsLeft < 4 ? (
+                event.spotsLeft > 0 && event.spotsLeft < 4 ? (
                   <span className="px-2 py-1">{event.spotsLeft} spots left !</span>
                 ) : null
               )}
@@ -290,18 +289,6 @@ const EventCardDesktopLayout = ({
             </div>
           )} */}
 
-              {isFullyBooked && bookingStatus !== 'cancelled' && (
-                <div className="absolute mb-3 p-3" style={{ backgroundColor: '#FFFADE' }}>
-                  <p className="font-medium text-black text-sm">This event is fully booked</p>
-                </div>
-              )}
-
-
-              {isClosedForBooking && bookingStatus !== 'cancelled' && (
-                <div className="absolute p-3" style={{ backgroundColor: '#FFFADE' }}>
-                  <p className="font-medium text-black text-sm">Booking closed</p>
-                </div>
-              )}
 
             </>
           )}
@@ -312,24 +299,24 @@ const EventCardDesktopLayout = ({
         <div className="w-full mt-2">
           <button
             onClick={handleBookEvent}
-            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')}
+            disabled={(isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled' && showFullDescription && event.id !== 'Xx35S2HvQhoCW3eLzfCM')}
             className={`w-full py-4 px-4 text-lg font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
               ? 'bg-transparent text-black'
               : loading
                 ? 'bg-transparent text-black cursor-wait'
-                : (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
+                : (!isBookable && bookingStatus !== 'cancelled' && showFullDescription && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                   : 'bg-transparent text-black hover:text-green-800 transition-colors'
               }`}
             style={{
-              background: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'transparent' : undefined,
-              border: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton) ? 'none' : undefined
+              background: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton || !showFullDescription) ? 'transparent' : undefined,
+              border: ((isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton || !showFullDescription) ? 'none' : undefined
             }}
           >
             {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
               ((isBooked && bookingStatus !== 'cancelled') || loading) ? (
                 getButtonContent()
-              ) : isInteractiveButton ? (
+              ) : (isInteractiveButton || !showFullDescription) ? (
                 <RoughNotationText
                   key={`desktop-btn-${showFullDescription ? 'expanded' : 'collapsed'}-${layoutStable}`}
                   type="box"
@@ -346,6 +333,9 @@ const EventCardDesktopLayout = ({
               )
             )}
           </button>
+          {isFullyBooked && bookingStatus !== 'cancelled' && showFullDescription && event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+            <p className="text-xs text-gray-500 text-center mt-1">{parentT('waitlist')}</p>
+          )}
         </div>
       </motion.div>
     </div>

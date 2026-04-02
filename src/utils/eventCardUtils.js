@@ -226,9 +226,9 @@ export const getMapHeight = (showFullDescription, contentHeight) => {
 };
 
 // BUTTON STATE LOGIC
-export const getButtonState = (isBooked, bookingStatus, loading, isBookable) => {
+export const getButtonState = (isBooked, bookingStatus, loading, isBookable, bookableReason) => {
   const isClosedForBooking = !isBookable;
-  const isFullyBooked = isClosedForBooking;
+  const isFullyBooked = !isBookable && bookableReason === "No spots left";
   const isInteractiveButton = !((isBooked && bookingStatus !== 'cancelled') || loading || (!isBookable && bookingStatus !== 'cancelled'));
 
   return {

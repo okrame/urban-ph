@@ -54,7 +54,8 @@ const EventCardMobileLayout = ({
   handleBookEvent,
   isBooked,
   loading,
-  shouldShowBookedState
+  shouldShowBookedState,
+  t: parentT
 }) => {
 
   const { t } = useComponentText(ECARD_TRANSLATIONS);
@@ -275,9 +276,7 @@ const EventCardMobileLayout = ({
         {!isBooked && (
           <div className="flex flex-wrap gap-2 text-xs text-black opacity-70 mb-4">
             {event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
-              event.spotsLeft === 0 ? (
-                <span className="px-2 py-1">Fully booked</span>
-              ) : event.spotsLeft < 4 ? (
+              event.spotsLeft > 0 && event.spotsLeft < 4 ? (
                 <span className="px-2 py-1">{event.spotsLeft} spots left</span>
               ) : null
             )}
@@ -302,11 +301,6 @@ const EventCardMobileLayout = ({
 
 
 
-            {isClosedForBooking && bookingStatus !== 'cancelled' && (
-              <div className="absolute mt-5 left-5" style={{ backgroundColor: '#FFFADE' }}>
-                <p className="font-medium text-black text-sm">Booking closed</p>
-              </div>
-            )}
           </>
         )}
 
@@ -317,23 +311,23 @@ const EventCardMobileLayout = ({
             disabled={
               (isBooked && bookingStatus !== 'cancelled') ||
               loading ||
-              (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
+              (!isBookable && bookingStatus !== 'cancelled' && showFullDescription && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
             }
             className={`relative w-full py-3 px-4 text-base font-light transition-all duration-300 ${(isBooked && bookingStatus !== 'cancelled')
               ? 'bg-transparent text-black'
               : loading
                 ? 'bg-transparent text-black cursor-wait'
-                : (!isBookable && bookingStatus !== 'cancelled' && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
+                : (!isBookable && bookingStatus !== 'cancelled' && showFullDescription && event.id !== 'Xx35S2HvQhoCW3eLzfCM')
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300'
                   : 'bg-transparent text-black hover:text-purple-700 transition-colors'
               }`}
             style={{
               background:
-                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
+                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton || !showFullDescription
                   ? 'transparent'
                   : undefined,
               border:
-                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton
+                (isBooked && bookingStatus !== 'cancelled') || loading || isInteractiveButton || !showFullDescription
                   ? 'none'
                   : undefined,
               position: 'relative',
@@ -348,7 +342,7 @@ const EventCardMobileLayout = ({
                   <span className="relative z-[70]">
                     {getButtonContent()}
                   </span>
-                ) : isInteractiveButton ? (
+                ) : (isInteractiveButton || !showFullDescription) ? (
                   <span
                     ref={btnRef}
                     className="inline-block align-middle relative z-[70]"
@@ -373,6 +367,9 @@ const EventCardMobileLayout = ({
             )}
 
           </button>
+          {isFullyBooked && bookingStatus !== 'cancelled' && showFullDescription && event.id !== 'Xx35S2HvQhoCW3eLzfCM' && (
+            <p className="text-xs text-gray-500 text-center mt-1">{parentT('waitlist')}</p>
+          )}
         </div>
       </motion.div>
     </motion.div>
